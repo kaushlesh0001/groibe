@@ -133,6 +133,8 @@ Implement each as a PHP backed Enum plus an Action class per transition (`app/Ac
 - Resume: `on_hold -> <the state it was held from>` (staffing or active), recorded in `projects.status_before_hold` and cleared on resume. Hold and cancel reasons are kept in the activity log.
 - `staffing -> active` requires at least one active assignment.
 - `delivered -> accepted` happens when all milestones are client-accepted.
+- `active -> in_qa` is an admin action. `in_qa -> delivered` is an admin action, allowed once every milestone is `shared` or later.
+- Assignments: invites are allowed only while the project is `staffing` or `active`. Active assignments become `completed` automatically when the project reaches `accepted`. When an assignment is `removed`, the contributor's unfinished tasks return to unassigned (`assignment_id` null, status `todo`) and the delivery manager is notified.
 - `closed` triggers: review prompts, proof-of-work drafts, reputation recompute.
 
 ### 6.3 SOW
@@ -168,6 +170,8 @@ Implement each as a PHP backed Enum plus an Action class per transition (`app/Ac
 Milestone: `planned -> in_progress -> in_qa -> shared -> client_accepted | client_changes_requested`
 - `shared` means visible to client. Only Admin can share.
 - `client_changes_requested` returns the milestone to `in_progress` with a change note; tasks are reopened by Admin.
+- `planned -> in_progress` happens automatically when the first task on the milestone starts. `in_progress -> in_qa` happens automatically when every task on the milestone is `submitted` or `approved`. Sharing (`in_qa -> shared`) is an explicit admin action.
+- Task and submission linkage: QA approve sets the submission to `qa_approved` and the task to `approved`. QA request changes sets the submission to `qa_changes_requested` and the task to `changes_requested`. A resubmission creates a new `submissions` row with `version` + 1.
 
 ### 6.10 Contributor onboarding
 `registered -> profile_complete -> pending_review -> active | rejected` ; `active -> suspended` ; `suspended -> active` (reinstate)
@@ -212,14 +216,14 @@ Conventions:
 **brief_skills**: brief_id, skill_id.
 **brief_files**: use media library (collection `brief_files`, private).
 
-**projects**: id, uuid, brief_id (nullable), organization_id, code (unique, e.g. `GRB-2026-0001`), title, slug, summary, scope_summary, project_type_id, status, contract_value, currency, start_date, due_date, delivery_manager_id, client_can_view_shortlist, showcase_consent (`none|anonymous|named`), zoho_invoice_ref (nullable), status_before_hold (nullable), closed_at, deleted_at.
+**projects**: id, uuid, brief_id (nullable), organization_id, code (unique, e.g. `GRB-2026-0001`), title, slug, summary, scope_summary, project_type_id, status, contract_value, currency, start_date, due_date, delivery_manager_id, client_can_view_shortlist, hide_team (bool, default false), showcase_consent (`none|anonymous|named`), zoho_invoice_ref (nullable), status_before_hold (nullable), closed_at, deleted_at.
 **project_skills**: project_id, skill_id.
 **sows**: id, project_id, version (int), status, title, body_html, body_variables (json), total_value, currency, payment_terms, sent_at, accepted_at, accepted_by, accepted_ip, accepted_user_agent, superseded_by. Unique (project_id, version).
 **milestones**: id, project_id, title, description, sort, due_date, value (nullable), status, shared_at, client_accepted_at, client_accepted_by, client_note.
 **tasks**: id, milestone_id, project_id, assignment_id (nullable), title, description, estimate_hours, due_date, status, approved_at, approved_by.
 **task_comments**: id, task_id, user_id, body, is_internal (hides from client).
 **submissions**: id, task_id, assignment_id, user_id, note, status, qa_note, reviewed_by, reviewed_at, version.
-Submission files: media library, collection `submission_files`, private.
+Submission files: media library, collection `submission_files`, private. Any admin holding `submissions.view` (`delivery_manager`, `super_admin`) can read all submission files.
 **deliverables**: id, milestone_id, title, summary, shared_at. **deliverable_submission**: deliverable_id, submission_id.
 
 ### 7.4 Staffing
@@ -371,8 +375,8 @@ Navigation: Dashboard, Briefs, Projects, Deliverables, Messages, Notifications, 
 - **Registration**: account, organization details. The organization owner accepts the Client MSA on its own page (`/app/client/agreements/client-msa`) before the first brief or SOW acceptance (spec 8).
 - **Dashboard**: active projects with progress, awaiting-your-action items (SOW to accept, deliverables to review), briefs status.
 - **Briefs**: create (guided steps: problem, desired outcome, type, skills, budget band, timeline, confidentiality, files), list, view status and admin questions (`needs_info`).
-- **Projects**: list, detail (milestones, progress, team shown by first name + role + headline unless confidentiality blocks), SOW view/accept, change requests.
-- **Deliverables**: review shared deliverables, accept or request changes with a note.
+- **Projects**: list, detail (milestones, progress, team shown by first name + role + headline once the SOW is accepted and unless `hide_team` is set), SOW view/accept, change requests.
+- **Deliverables**: review shared deliverables, accept or request changes with a note. Only `owner` and `manager` may accept or request changes; `viewer` is read-only.
 - **Reviews**: review contributors after acceptance; give showcase consent (none / anonymous / named).
 - **Organization**: profile, invite team members (owner only), org roles.
 - Clients never see: contributor rates, payouts, internal comments, unapproved submissions, applicant lists (unless enabled).
@@ -552,3 +556,7 @@ Stored in `feature_flags`, cached, toggled in Admin. Defaults:
 | 2026-10-10 | 5, 22 | SCR-009: clients do not see draft projects or draft SOWs until the SOW is sent | Founder |
 | 2026-10-10 | 12 | SCR-010: Client MSA is accepted by the owner on its own page, not in registration | Founder |
 | 2026-10-10 | 6.10 | SCR-011: added `suspended -> active` (reinstate); `rejected` is terminal in v1 | Founder |
+| 2026-10-10 | 7.3, 12 | SCR-012: added `projects.hide_team`; clients see the team only after SOW acceptance and when not hidden | Founder |
+| 2026-10-10 | 7.3 | SCR-013: any admin with `submissions.view` reads all submission files | Founder |
+| 2026-10-10 | 6.2 | SCR-014: invites only in `staffing`/`active`; assignments auto-complete on `accepted`; removal unassigns open tasks | Founder |
+| 2026-10-10 | 6.2, 6.9, 12 | Pass 4 decisions, no SCR: admin-triggered project `in_qa` and `delivered`; automatic milestone `in_progress` and `in_qa`; task and submission QA linkage; only client `owner` and `manager` accept deliverables | Founder |
