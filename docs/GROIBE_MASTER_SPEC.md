@@ -94,7 +94,10 @@ Legend: C create, R read, U update, D delete, A approve, own = own records only,
 | Public pages | R | R | R | R | R | R | R |
 | Own profile | - | CRU own | CRU own | - | - | - | all |
 | Contributor (others) | R if public | - | R only if assigned to their project (limited fields) | RU | CRUA | R | all |
-| Organization | - | - | RU own org | CRU | R | R | all |
+| Organization | - | - | RU own org (owner and manager update, viewer read-only) | CRU | R | R | all |
+| Client users (accounts) | - | - | RU own | CRU | R | R | all |
+| Admin users | - | - | - | - | - | - | CRUD |
+| Taxonomy (categories, skills, project types) | - | - | - | R | CRUD (skills, categories) | - | all |
 | Brief | - | - | CR org (U while draft) | RUA | R | - | all |
 | Project | - | R if assigned (limited) | R org | CRUA | R | R | all |
 | SOW | - | - | R org, accept | CRU | - | R | all |
@@ -531,3 +534,7 @@ Stored in `feature_flags`, cached, toggled in Admin. Defaults:
 | Date | Section | Change | Approved by |
 |---|---|---|---|
 | (initial) | all | v1.0 frozen | Founder |
+| 2026-10-10 | 5 | SCR-001: added Taxonomy row (delivery_manager R, community_manager CRUD on skills and categories, super_admin all) | Founder |
+| 2026-10-10 | 5, 12 | SCR-002: client org update by owner and manager, viewer read-only; only owner invites members | Founder |
+| 2026-10-10 | 5 | SCR-003: added Admin users row, super_admin only; only it may change roles or admin permission sets | Founder |
+| 2026-10-10 | 5 | SCR-004: added Client users row mirroring the Organization row for admin roles | Founder |
