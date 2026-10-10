@@ -53,10 +53,11 @@ Proposed changes only. The spec is edited by the founder, between passes, and lo
 
 ## SCR-008: Project on_hold exit and reason storage (spec sections 6.2, 7.3)
 
-- **Status:** PROPOSED. Not accepted. The spec is unchanged.
+- **Status:** ACCEPTED 2026-10-10. Option (a). Spec sections 6.2, 7.3 and 23 updated.
 - **Gap:** 6.2 adds `on_hold` as a side state from `staffing` and `active`, but names no way out. Today the only exit is `cancelled`, so a held project cannot resume. Separately, 6.2 requires a cancel reason, but `projects` has no column for it, and there is nowhere to remember which state a held project came from.
 - **Options:**
   - (a) Add `projects.status_before_hold` (nullable string). A new "resume" Action returns the project to that state and clears the column.
   - (b) Resume always returns to `staffing`. No new column, but an `active` project loses its place.
 - **Recommendation:** (a). Keep hold and cancel reasons in the activity log for v1, which is where they live now.
-- **Code status:** Pass 2 builds `PutProjectOnHold` and `CancelProject` (reason required, stored in the activity log). No resume Action exists, and the admin panel offers none. A test pins this so the decision is explicit.
+- **Decision:** add `projects.status_before_hold`. Hold records the state it came from, and a resume Action returns the project there and clears the column. Reasons stay in the activity log.
+- **Code status:** Implemented (`PutProjectOnHold`, `ResumeProject`, migration, admin Resume action, tests).
