@@ -123,6 +123,7 @@ Implement each as a PHP backed Enum plus an Action class per transition (`app/Ac
 
 ### 6.1 Brief
 `draft -> submitted -> in_review -> needs_info -> in_review -> scoped -> converted` ; also `in_review -> declined`.
+- `in_review -> scoped` is an explicit admin action ("mark scoped"). Convert to Project requires `scoped`.
 - `converted` means a Project was created from it (link `projects.brief_id`).
 - Client can edit only in `draft` and `needs_info`.
 
@@ -135,7 +136,10 @@ Implement each as a PHP backed Enum plus an Action class per transition (`app/Ac
 
 ### 6.3 SOW
 `draft -> sent -> accepted | rejected | superseded`
-- Editing a sent SOW creates a new version; the old becomes `superseded`.
+- Editing a sent SOW creates a new version; the old becomes `superseded`. The project stays `sow_sent`.
+- An accepted SOW is immutable.
+- `rejected` exists as a state but v1 has no client reject action. Clients message admin, and admin supersedes the SOW.
+- `{{milestones_table}}` renders an empty-state line until milestones exist.
 - Acceptance stores: user id, org id, SOW version, timestamp, IP, user agent.
 
 ### 6.4 Open Role
@@ -538,3 +542,6 @@ Stored in `feature_flags`, cached, toggled in Admin. Defaults:
 | 2026-10-10 | 5, 12 | SCR-002: client org update by owner and manager, viewer read-only; only owner invites members | Founder |
 | 2026-10-10 | 5 | SCR-003: added Admin users row, super_admin only; only it may change roles or admin permission sets | Founder |
 | 2026-10-10 | 5 | SCR-004: added Client users row mirroring the Organization row for admin roles | Founder |
+| 2026-10-10 | 6.1 | SCR-005: added explicit "mark scoped" action; Convert requires `scoped` | Founder |
+| 2026-10-10 | 6.3 | SCR-006: no client reject action in v1; `rejected` state kept, unused | Founder |
+| 2026-10-10 | 6.3, 8 | SCR-007: accepted SOW immutable; editing a sent SOW keeps project at `sow_sent`; `{{milestones_table}}` empty-state until milestones exist | Founder |

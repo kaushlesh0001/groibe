@@ -29,3 +29,24 @@ Proposed changes only. The spec is edited by the founder, between passes, and lo
 - **Gap:** The matrix had "Contributor (others)" and "Organization" but no row for client user accounts.
 - **Decision:** a `clients.*` permission set mirroring the Organization row for admin roles: `delivery_manager` CRU, `community_manager` R, `finance_ops` R, `super_admin` all.
 - **Code status:** Implemented in Pass 1 (`PermissionMatrix`, `UserPolicy`) and covered by tests.
+
+## SCR-005: Brief "scoped" transition (spec section 6.1)
+
+- **Status:** ACCEPTED 2026-10-10. Accepted as recommended (option a). Spec sections 6.1 and 23 updated.
+- **Gap:** 6.1 lists `in_review -> scoped -> converted`, but no action triggered `scoped`.
+- **Decision:** Add an explicit admin "mark scoped" action (`in_review -> scoped`). Convert to Project requires `scoped`.
+- **Code status:** Pass 2.
+
+## SCR-006: SOW rejection (spec section 6.3)
+
+- **Status:** ACCEPTED 2026-10-10. Accepted as recommended (option b). Spec sections 6.3 and 23 updated.
+- **Gap:** 6.3 lists `rejected`, but the permission matrix gives clients only "R org, accept".
+- **Decision:** No client reject action in v1. The `rejected` enum case is kept but unused. Clients message admin, and admin supersedes the SOW.
+- **Code status:** Pass 2. No reject Action is built.
+
+## SCR-007: SOW edge cases (spec sections 6.3, 8)
+
+- **Status:** ACCEPTED 2026-10-10. Accepted as recommended. Spec sections 6.3 and 23 updated.
+- **Gap:** The spec did not say what happens when a SOW is edited after being sent or accepted, or what `{{milestones_table}}` renders before milestones exist (Pass 4).
+- **Decision:** An accepted SOW is immutable. Editing a sent SOW supersedes it and the project stays `sow_sent`. `{{milestones_table}}` renders an empty-state line until milestones exist.
+- **Code status:** Pass 2.
