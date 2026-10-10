@@ -2,6 +2,7 @@
 
 use App\Enums\AdminRole;
 use App\Enums\BriefStatus;
+use App\Enums\OnboardingState;
 use App\Enums\ProjectStatus;
 use App\Filament\Admin\Resources\Briefs\Pages\ListBriefs;
 use App\Filament\Admin\Resources\Projects\Pages\EditProject;
@@ -11,6 +12,9 @@ use App\Filament\Admin\Resources\Projects\RelationManagers\AssignmentsRelationMa
 use App\Filament\Admin\Resources\Projects\RelationManagers\MilestonesRelationManager;
 use App\Filament\Admin\Resources\Projects\RelationManagers\SowsRelationManager;
 use App\Filament\Admin\Resources\Projects\RelationManagers\TasksRelationManager;
+use App\Livewire\Contributor\Work\MyWork;
+use App\Livewire\Contributor\Work\ProjectBoard;
+use App\Livewire\Contributor\Work\TaskDetail;
 use App\Models\Assignment;
 use App\Models\Brief;
 use App\Models\Milestone;
@@ -18,7 +22,9 @@ use App\Models\Organization;
 use App\Models\Project;
 use App\Models\ProjectType;
 use App\Models\Sow;
+use App\Models\Submission;
 use App\Models\Task;
+use App\Models\TaskComment;
 use Filament\Actions\Testing\TestAction;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
@@ -95,6 +101,40 @@ it('does not query more per task or milestone in the project work plan screens',
     }
 
     $addRows(5);
+
+    foreach ($screens as $name => $open) {
+        expect(queries($open))->toBe($small[$name], $name);
+    }
+});
+
+it('does not query more per row on the contributor work pages', function () {
+    $me = contributorIn(OnboardingState::Active);
+    $project = Project::factory()->status(ProjectStatus::Active)->create(['organization_id' => $this->org->id]);
+    $seat = Assignment::factory()->active()->create(['project_id' => $project->id, 'user_id' => $me->id]);
+    $milestone = Milestone::factory()->create(['project_id' => $project->id]);
+    $task = Task::factory()->create(['milestone_id' => $milestone->id, 'assignment_id' => $seat->id]);
+    $addRows = function (int $n) use ($me, $milestone, $seat, $task): void {
+        Assignment::factory()->count($n)->create(['user_id' => $me->id]);
+        Task::factory()->count($n)->create(['milestone_id' => $milestone->id, 'assignment_id' => $seat->id]);
+        foreach (range(1, $n) as $i) {
+            TaskComment::factory()->create(['task_id' => $task->id]);
+            Submission::factory()->create(['task_id' => $task->id, 'assignment_id' => $seat->id, 'version' => $task->submissions()->count() + 1]);
+        }
+    };
+    $screens = [
+        'my work' => fn () => Livewire::actingAs($me)->test(MyWork::class),
+        'board' => fn () => Livewire::actingAs($me)->test(ProjectBoard::class, ['project' => $project]),
+        'task' => fn () => Livewire::actingAs($me)->test(TaskDetail::class, ['task' => $task]),
+    ];
+
+    $addRows(2);
+    $small = [];
+    foreach ($screens as $name => $open) {
+        $open(); // warm caches
+        $small[$name] = queries($open);
+    }
+
+    $addRows(6);
 
     foreach ($screens as $name => $open) {
         expect(queries($open))->toBe($small[$name], $name);

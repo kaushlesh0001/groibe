@@ -17,6 +17,7 @@ use App\Models\ProjectType;
 use App\Models\Setting;
 use App\Models\Skill;
 use App\Models\Sow;
+use App\Models\Submission;
 use App\Models\Task;
 use App\Models\User;
 use App\Policies\ActivityPolicy;
@@ -33,6 +34,7 @@ use App\Policies\ProjectPolicy;
 use App\Policies\ProjectTypePolicy;
 use App\Policies\SettingPolicy;
 use App\Policies\SowPolicy;
+use App\Policies\SubmissionPolicy;
 use App\Policies\TaskPolicy;
 use App\Policies\TaxonomyPolicy;
 use App\Policies\UserPolicy;
@@ -92,6 +94,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Assignment::class, AssignmentPolicy::class);
         Gate::policy(Milestone::class, MilestonePolicy::class);
         Gate::policy(Task::class, TaskPolicy::class);
+        Gate::policy(Submission::class, SubmissionPolicy::class);
         Gate::policy(Sow::class, SowPolicy::class);
         Gate::policy(Media::class, MediaPolicy::class);
 
