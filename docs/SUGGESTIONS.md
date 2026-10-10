@@ -223,3 +223,11 @@ All of it traces to a pass item or an accepted decision, and none adds a screen 
 122. **Not done: the second hero button "Explore Opportunities"** (spec 10.1). Its page, `/opportunities`, belongs to a later pass. The hero has "Join Groibe" and "Need work delivered? Submit a brief".
 123. **Cleanup, low:** `components/layouts/auth/card.blade.php` and `split.blade.php` are unused starter-kit layouts (`split` shows random quotes). Delete them. `app/header.blade.php` still has the starter-kit repo and docs links (item 107).
 124. **Reference images:** `docs/brand/*.png` are the AI-generated style samples from the brief. They are committed as documentation only, never served or copied from.
+
+## Agreement Templates screen and demo data
+
+125. **Cause of the "missing" screen:** the resource was registered under System, but the local database had no templates (`AgreementTemplateSeeder` never ran there) and the screen could not create any, so it opened as an empty list. Create is now available to the super admin ("New version"). On any other database, `php artisan db:seed --class=AgreementTemplateSeeder` adds the placeholders, and is safe to repeat.
+126. **Decision, low: the effective date cannot be in the future.** A version becomes the current one the moment it is published, and the Member Agreement and Client MSA gates read "current" from `is_active`. A future-dated version would need the old one to stay current until then, plus a scheduled switch. Backdating is allowed. Needs a spec decision if future-dated versions matter.
+127. **`/terms` and `/privacy` are not built yet** (spec 10.2). The Terms and Privacy templates can be edited and versioned, and the screen says nothing shows them yet. They go live with the public pages.
+128. **Demo dataset is smaller than spec 19** by the founder's request: 12 contributors, 4 organizations, 6 briefs, 4 projects. Spec 19 lists 30, 12, 8 and 6. Open roles, applications, reviews and proof-of-work items are not seeded because those models are not built yet. Extend the seeder when they are.
+129. **Risk, medium: every demo account shares one documented password** (`docs/DEMO_DATA.md`). Fine on a local machine. On a staging site reachable from the internet, put it behind HTTP auth or change the password constant before seeding, because the repo documents it.
