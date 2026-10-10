@@ -6,6 +6,7 @@ use App\Livewire\Client\Briefs\BriefForm;
 use App\Livewire\Client\Briefs\BriefIndex;
 use App\Livewire\Client\Briefs\BriefShow;
 use App\Livewire\Client\Dashboard;
+use App\Livewire\Client\Deliverables\DeliverableIndex;
 use App\Livewire\Client\Projects\ProjectIndex;
 use App\Livewire\Client\Projects\ProjectShow;
 use Illuminate\Support\Facades\Route;
@@ -22,6 +23,8 @@ Route::middleware(['auth', 'verified', 'role:client'])
         Route::livewire('briefs/create', BriefForm::class)->name('briefs.create');
         Route::livewire('briefs/{brief}/edit', BriefForm::class)->name('briefs.edit');
         Route::livewire('briefs/{brief}', BriefShow::class)->name('briefs.show');
+
+        Route::livewire('deliverables', DeliverableIndex::class)->name('deliverables');
 
         Route::livewire('projects', ProjectIndex::class)->name('projects.index');
         Route::livewire('projects/{project}', ProjectShow::class)->name('projects.show');

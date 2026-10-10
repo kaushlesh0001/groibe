@@ -31,12 +31,16 @@ class MilestonesRelationManager extends RelationManager
                 TextColumn::make('tasks_count')->label('Tasks')->counts('tasks'),
                 TextColumn::make('due_date')->date()->placeholder('-'),
                 TextColumn::make('value')->money('INR')->placeholder('-')->toggleable(),
+                TextColumn::make('shared_at')->dateTime()->placeholder('Not shared')->toggleable(),
+                TextColumn::make('client_note')->label('Client note')->limit(60)->placeholder('-')->tooltip(fn (Milestone $record): ?string => $record->client_note),
             ])
             ->defaultSort('sort')
             ->headerActions([
                 WorkPlanActions::addMilestone(fn (): Project => $this->ownerProject()),
             ])
             ->recordActions([
+                WorkPlanActions::shareMilestone(),
+                WorkPlanActions::reopenMilestone(),
                 WorkPlanActions::editMilestone(),
                 WorkPlanActions::deleteMilestone(),
             ]);

@@ -2,6 +2,7 @@
 
 namespace App\Actions\Tasks;
 
+use App\Actions\Milestones\SyncMilestoneStatus;
 use App\Actions\Work\Concerns\GuardsWorkPlan;
 use App\Enums\MilestoneStatus;
 use App\Enums\TaskStatus;
@@ -31,13 +32,14 @@ class CreateTask
 
             $this->ensureProjectIsPlannable($locked->project);
 
-            if (! in_array($locked->status, [MilestoneStatus::Planned, MilestoneStatus::InProgress], true)) {
-                throw ActionBlocked::guardFailed('Tasks can only be added to a milestone that is planned or in progress.');
+            // Until the milestone is shared with the client. A task added in QA pulls it back to in progress (SCR-015).
+            if (! in_array($locked->status, [MilestoneStatus::Planned, MilestoneStatus::InProgress, MilestoneStatus::InQa], true)) {
+                throw ActionBlocked::guardFailed('Tasks can only be added to a milestone that has not been shared with the client.');
             }
 
             $assignment = $this->resolveAssignment($locked->project, $data['assignment_id'] ?? null);
 
-            return Task::query()->create([
+            $task = Task::query()->create([
                 'milestone_id' => $locked->getKey(),
                 'project_id' => $locked->project_id,
                 'assignment_id' => $assignment?->getKey(),
@@ -47,6 +49,10 @@ class CreateTask
                 'due_date' => $data['due_date'] ?? null,
                 'status' => TaskStatus::Todo,
             ]);
+
+            app(SyncMilestoneStatus::class)($locked);
+
+            return $task;
         });
 
         $task->loadMissing('assignment.user', 'milestone.project');

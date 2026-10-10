@@ -29,15 +29,20 @@ function projectIn(ProjectStatus $status): Project
 }
 
 /** A stand-in for the guards, to test the project state machine in isolation. */
-function fakeGuards(bool $assignment, bool $milestones): void
+function fakeGuards(bool $assignment, bool $milestones, bool $shared = true): void
 {
-    app()->instance(ProjectTransitionGuards::class, new class($assignment, $milestones) implements ProjectTransitionGuards
+    app()->instance(ProjectTransitionGuards::class, new class($assignment, $milestones, $shared) implements ProjectTransitionGuards
     {
-        public function __construct(private bool $assignment, private bool $milestones) {}
+        public function __construct(private bool $assignment, private bool $milestones, private bool $shared) {}
 
         public function hasActiveAssignment(Project $project): bool
         {
             return $this->assignment;
+        }
+
+        public function allMilestonesShared(Project $project): bool
+        {
+            return $this->shared;
         }
 
         public function allMilestonesAccepted(Project $project): bool
@@ -52,6 +57,8 @@ it('moves a project along the happy path and logs each step', function () {
     $project = projectIn(ProjectStatus::SowAccepted);
 
     foreach ([StartStaffing::class, ActivateProject::class, MoveProjectToQa::class, MarkProjectDelivered::class, AcceptProject::class, CloseProject::class] as $action) {
+        // The client accepts the milestones after delivery, so they only count as accepted from that point.
+        fakeGuards(true, in_array($action, [AcceptProject::class, CloseProject::class], true));
         app($action)($project, $this->dm);
     }
 
@@ -203,10 +210,25 @@ it('only reopens a delivered project', function (ProjectStatus $from) {
 })->with([ProjectStatus::Draft, ProjectStatus::Staffing, ProjectStatus::Active, ProjectStatus::InQa, ProjectStatus::Accepted, ProjectStatus::Closed, ProjectStatus::OnHold, ProjectStatus::Cancelled]);
 
 it('lets an admin mark a reopened project delivered again', function () {
-    fakeGuards(true, true);
+    fakeGuards(true, false);
     $project = projectIn(ProjectStatus::Delivered);
 
     app(ReopenProjectForChanges::class)($project, clientUser($project->organization));
 
     expect(app(MarkProjectDelivered::class)($project, $this->dm)->status)->toBe(ProjectStatus::Delivered);
+});
+
+it('requires every milestone to be shared before delivery', function () {
+    fakeGuards(true, false, shared: false);
+    $project = projectIn(ProjectStatus::InQa);
+
+    expect(fn () => app(MarkProjectDelivered::class)($project, $this->dm))->toThrow(ActionBlocked::class, 'shared with the client');
+    expect($project->refresh()->status)->toBe(ProjectStatus::InQa);
+});
+
+it('accepts a project at delivery when every milestone is already accepted', function () {
+    fakeGuards(true, true);
+    $project = projectIn(ProjectStatus::InQa);
+
+    expect(app(MarkProjectDelivered::class)($project, $this->dm)->status)->toBe(ProjectStatus::Accepted);
 });
