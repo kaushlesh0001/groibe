@@ -11,7 +11,7 @@ Rule: read this whole document before generating any code.
 - Groibe is a community-powered professional ecosystem and project delivery platform.
 - Target members: skilled Indian professionals. Target clients: mid-market businesses.
 - Strategy: "Collective Delivery". Clients buy outcomes from Groibe. Groibe assembles and manages a team of contributors.
-- Tagline: "Ideas find people. Work gets done."
+- Tagline: "Where Ideas Find People"
 - Managed delivery is the CORE. Open applications are a CONTROLLED ADD-ON.
 - Groibe (the company, operated by Admin users) is the accountable party to the client. Contributors are accountable to Groibe.
 - v1 goals:
@@ -318,7 +318,7 @@ Tech: Blade + Livewire + Alpine + Tailwind. Server-rendered, SEO-friendly, fast.
 
 ### 10.1 Homepage sections (each toggleable and ordered in Admin)
 
-1. Hero: "Ideas find people. Work gets done." + two CTAs ("Explore Opportunities", "Join Groibe") and a secondary line for clients ("Need work delivered? Submit a brief").
+1. Hero: "Where Ideas Find People" (the word "People" highlighted in green) + two CTAs ("Explore Opportunities", "Join Groibe") and a secondary line for clients ("Need work delivered? Submit a brief").
 2. Ecosystem: "One platform. Two sides. One delivery loop." Contributors card, Clients card.
 3. How it works: Brief -> Scope -> Staff -> Deliver -> Prove (contributor view and client view tabs).
 4. Live open roles (featured, dynamic, hidden if flag `open_roles` off or none).
@@ -345,9 +345,12 @@ Tech: Blade + Livewire + Alpine + Tailwind. Server-rendered, SEO-friendly, fast.
 
 ### 10.3 Brand and design
 
-- Colors (Tailwind tokens): navy `#001844` (primary text and dark surfaces), green `#14C352` (primary action and success), blue `#137AE5` (links and secondary accent).
-- Tone: modern, calm, professional. Lots of whitespace, strong typography, subtle borders, minimal cards, no gradient overload, no stock-photo look.
-- Typeface: one sans family via self-hosted font files (no third-party font requests).
+- Name: GROIBE in all caps in the logo, "Groibe" in running text.
+- Colors (Tailwind tokens): `brand-navy` `#042B65` (primary text, and dark hero, header and footer surfaces), `brand-green` `#0EAE44` (primary action and success), `brand-green-alt` `#25A446` (green on white surfaces, large text and graphics only), `brand-blue` `#046CEA` (links and secondary accent), `brand-teal` `#06A2A7` (decorative accent, never text).
+- Color use under WCAG AA: green buttons carry navy text, never white (white on green is 2.9:1). Green is never text on white. Blue links stay on light surfaces (blue on navy is 2.8:1). Navy surfaces carry the white logo, white text, and green for actions and one highlighted word per headline.
+- Logo: the files in `public/brand` (SVG on the web, PNG only where SVG is not supported, such as emails and PDFs). Never retype, recolor or stretch the logo. Icons: `public/favicon.ico`, `public/apple-touch-icon.png`, `public/brand/icon-512.png`.
+- Tone: modern, calm, professional. Clean white or deep-navy surfaces, rounded corners, lots of whitespace, strong typography, subtle borders, minimal cards, no gradient overload, no stock-photo look. No invented member counts or other numbers.
+- Typeface: Inter, self-hosted (no third-party font requests). Bold for headings, regular for body. No other fonts.
 - Mobile-first. Dark mode not required in v1.
 - Accessibility: WCAG AA contrast, keyboard navigation, labels on all inputs.
 - Copy rules: no em dashes, no AI-related language in public copy.
@@ -564,3 +567,4 @@ Stored in `feature_flags`, cached, toggled in Admin. Defaults:
 | 2026-10-10 | 6.2, 6.9, 12 | Pass 4 decisions, no SCR: admin-triggered project `in_qa` and `delivered`; automatic milestone `in_progress` and `in_qa`; task and submission QA linkage; only client `owner` and `manager` accept deliverables | Founder |
 | 2026-10-10 | 6.9 | SCR-015: added `in_qa -> in_progress`, automatic when a task leaves `submitted` or `approved` (QA changes requested, or removal returns a task to `todo`) | Founder |
 | 2026-10-10 | 6.2 | SCR-016: added `delivered -> in_qa`, automatic when the client requests changes on a milestone | Founder |
+| 2026-10-10 | 1, 10.1, 10.3 | SCR-017: new brand: colors (navy `#042B65`, green `#0EAE44`, blue `#046CEA`, plus green-alt and teal), Inter, logo files and rules, contrast rules, tagline "Where Ideas Find People" | Founder |
