@@ -72,3 +72,18 @@ None of these are built. Each needs a spec decision or a later pass.
 35. **Low: public photo responses are `private, max-age=60`.** Short and private so a profile made private is not served from a shared cache for long. Cloudflare will not cache them. Revisit if photo load matters.
 36. **Low: bulk contributor actions skip silently per record.** The notification reports the counts, not which records were skipped.
 37. **Low: the starter-kit settings page still has name and email edit.** A contributor can change their display name there, and it flows to their public profile at once, with no review. Decide whether public name changes need approval.
+
+## Pass 3 review (audit against spec and Done-when)
+
+No critical or high findings. Checked: route and Filament authorization, N+1 on every new page (query-count tests for the directory and the admin list, lazy loading is on in tests), indexes, secrets and hard-coded values, public copy rules, mass assignment, and scope creep. Medium and low items, none fixed except the tests noted:
+
+38. **Medium: no admin edit for contributors.** Spec 5 gives `delivery_manager` RU and `community_manager` CRUA on contributors, and spec 13 says admins create and edit any record in Filament. `ContributorResource` has a list and a review page only, so no admin can correct a profile, and `contributors.update` has no screen. Needs a decision: an edit page, or accept review-only for v1.
+39. **Medium: a pending contributor has no way to accept a newer Member Agreement.** If a new version is published while someone is in `pending_review`, approval fails the agreement gate (correctly), but the onboarding page is read-only and offers no acceptance step. The admin has to contact the contributor. Needs a decision: show the acceptance on the pending page, or re-check only at submit.
+40. **Medium: a soft-deleted contributor disappears from the admin list.** The resource scopes through the user, which excludes soft-deleted users, so an admin cannot see or restore them. This is safe for privacy (they are also hidden from the public). Add a trashed filter when deletion requests are processed (spec 17.2).
+41. **Low: the Member Agreement body is rendered unsanitized on the onboarding page.** Same exposure as item 3 in the Pass 2 list, now also reaching contributors. Fix with the HTML sanitizer in Pass 9.
+42. **Low: profile links are validated as https only in the Livewire form.** A future import or admin edit could store another scheme, and the public page renders the value as an `href`. Render a link only when it starts with `https://`, or validate in the model layer, when imports arrive (Pass 9).
+43. **Low: concurrent first-publish could race on the slug.** The unique index prevents a duplicate, and a clash would surface as an error for one request. A six character random suffix makes it very unlikely. Retry on the unique violation if it ever shows up.
+44. **Low: no throttle on directory search.** Each search runs a FULLTEXT query. The `public_directories` flag is the only brake. Add a throttle with the Pass 9 hardening.
+45. **Low: a duplicate Member Agreement acceptance is possible under a double submit.** `AcceptMemberAgreement` checks first, but there is no unique index (same gap as item 24). The gate only needs one row, so the effect is a duplicate row.
+46. **Low: `EnsureActiveContributor` returns 403 to guests when used without `auth`.** Every current use sits behind `auth`, so nothing is exposed. Keep `auth` ahead of it.
+
