@@ -14,6 +14,6 @@ class MoveProjectToQa
 
     public function __invoke(Project $project, User $actor): Project
     {
-        return $this->moveProject($project, ProjectStatus::InQa, $actor);
+        return $this->moveProject($project, ProjectStatus::InQa, $actor, guard: $this->mustBeIn(ProjectStatus::Active, ProjectStatus::InQa));
     }
 }

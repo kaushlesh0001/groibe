@@ -14,6 +14,6 @@ class StartStaffing
 
     public function __invoke(Project $project, User $actor): Project
     {
-        return $this->moveProject($project, ProjectStatus::Staffing, $actor);
+        return $this->moveProject($project, ProjectStatus::Staffing, $actor, guard: $this->mustBeIn(ProjectStatus::SowAccepted, ProjectStatus::Staffing));
     }
 }
