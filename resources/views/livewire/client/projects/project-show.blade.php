@@ -45,6 +45,59 @@
         </div>
     </dl>
 
+    @if ($milestoneTotal > 0)
+        <section aria-labelledby="progress-heading" class="flex flex-col gap-4">
+            <flux:heading id="progress-heading" size="lg" level="2">Progress</flux:heading>
+            <p>{{ $milestonesAccepted }} of {{ $milestoneTotal }} {{ \Illuminate\Support\Str::plural('milestone', $milestoneTotal) }} accepted</p>
+            <div class="h-2 w-full overflow-hidden rounded bg-zinc-100" role="progressbar" aria-label="Milestones accepted" aria-valuemin="0" aria-valuemax="{{ $milestoneTotal }}" aria-valuenow="{{ $milestonesAccepted }}">
+                <div class="h-2 bg-brand-green" style="width: {{ round($milestonesAccepted / $milestoneTotal * 100) }}%"></div>
+            </div>
+
+            @if ($milestones->isNotEmpty())
+                <ul class="flex flex-col gap-3">
+                    @foreach ($milestones as $milestone)
+                        <li wire:key="milestone-{{ $milestone->id }}" class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-zinc-200 p-3">
+                            <span class="flex flex-col">
+                                <span class="font-medium">{{ $milestone->title }}</span>
+                                <span class="text-sm text-zinc-600">
+                                    @if ($milestone->client_accepted_at) Accepted {{ $milestone->client_accepted_at->format('j M Y') }}
+                                    @elseif ($milestone->shared_at) Shared {{ $milestone->shared_at->format('j M Y') }} @endif
+                                    @if ($milestone->due_date) &middot; due {{ $milestone->due_date->format('j M Y') }} @endif
+                                </span>
+                            </span>
+                            <x-status-badge :status="$milestone->status" />
+                        </li>
+                    @endforeach
+                </ul>
+                <a class="text-brand-blue underline" href="{{ route('client.deliverables') }}" wire:navigate>Review deliverables</a>
+            @else
+                <flux:text>Finished work appears here once our team has checked it and shared it with you.</flux:text>
+            @endif
+        </section>
+    @endif
+
+    @unless ($teamHidden)
+        <section aria-labelledby="team-heading" class="flex flex-col gap-4">
+            <flux:heading id="team-heading" size="lg" level="2">Your team</flux:heading>
+
+            @if (! $teamAvailable)
+                <flux:text>The team working on your project is introduced once the Statement of Work is accepted.</flux:text>
+            @elseif ($teamMembers->isEmpty())
+                <flux:text>Your team is being put together.</flux:text>
+            @else
+                <ul class="grid gap-3 sm:grid-cols-2">
+                    @foreach ($teamMembers as $member)
+                        <li class="flex flex-col rounded-lg border border-zinc-200 p-3">
+                            <span class="font-medium">{{ $member['first_name'] }}</span>
+                            <span class="text-sm">{{ $member['role'] }}</span>
+                            @if ($member['headline']) <span class="text-sm text-zinc-600">{{ $member['headline'] }}</span> @endif
+                        </li>
+                    @endforeach
+                </ul>
+            @endif
+        </section>
+    @endunless
+
     <section aria-labelledby="sow-heading" class="flex flex-col gap-4">
         <flux:heading id="sow-heading" size="lg" level="2">Statement of Work</flux:heading>
 

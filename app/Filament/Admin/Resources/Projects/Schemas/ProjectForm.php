@@ -44,6 +44,7 @@ class ProjectForm
                     ->options(fn (): array => User::query()->where('role', UserRole::Admin->value)->orderBy('name')->pluck('name', 'id')->all())
                     ->searchable(),
                 Toggle::make('client_can_view_shortlist')->label('Client can view shortlist'),
+                Toggle::make('hide_team')->label('Hide the team from the client')->helperText('Clients see first name, role and headline of each contributor once the SOW is accepted. Switch on to hide them for this project.'),
                 TextInput::make('zoho_invoice_ref')->label('Zoho invoice reference')->maxLength(255),
             ]);
     }

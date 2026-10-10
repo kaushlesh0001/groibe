@@ -3,12 +3,15 @@
 namespace App\Livewire\Client\Projects;
 
 use App\Actions\Sows\AcceptSow;
+use App\Enums\MilestoneStatus;
 use App\Enums\SowStatus;
 use App\Exceptions\ActionBlocked;
 use App\Exceptions\IllegalTransition;
+use App\Models\Milestone;
 use App\Models\Project;
 use App\Models\Sow;
 use App\Services\Agreements\AgreementGate;
+use App\Services\Projects\ClientTeam;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
@@ -59,7 +62,23 @@ class ProjectShow extends Component
         $sows = $project->sows()->where('status', '!=', SowStatus::Draft->value)->orderByDesc('version')->get();
         $open = $sows->firstWhere('status', SowStatus::Sent);
 
+        $team = app(ClientTeam::class);
+
+        // Totals count every milestone, but only shared and later ones are listed (spec 6.9). Titles of
+        // work still in progress stay internal.
+        $totals = Milestone::query()
+            ->where('project_id', $project->getKey())
+            ->toBase()
+            ->selectRaw('count(*) as total, coalesce(sum(case when status = ? then 1 else 0 end), 0) as accepted', [MilestoneStatus::ClientAccepted->value])
+            ->first();
+
         return view('livewire.client.projects.project-show', [
+            'milestones' => $project->milestones()->clientVisible()->ordered()->get(['id', 'project_id', 'title', 'status', 'due_date', 'shared_at', 'client_accepted_at']),
+            'milestoneTotal' => (int) $totals->total,
+            'milestonesAccepted' => (int) $totals->accepted,
+            'teamHidden' => $team->isHidden($project),
+            'teamAvailable' => $team->sowAccepted($project),
+            'teamMembers' => $team->members($project),
             'project' => $project,
             'sows' => $sows,
             'openSow' => $open,

@@ -5,6 +5,7 @@ use App\Enums\BriefStatus;
 use App\Enums\MilestoneStatus;
 use App\Enums\OnboardingState;
 use App\Enums\ProjectStatus;
+use App\Enums\SowStatus;
 use App\Enums\SubmissionStatus;
 use App\Enums\TaskStatus;
 use App\Filament\Admin\Resources\Briefs\Pages\ListBriefs;
@@ -17,6 +18,7 @@ use App\Filament\Admin\Resources\Projects\RelationManagers\SowsRelationManager;
 use App\Filament\Admin\Resources\Projects\RelationManagers\TasksRelationManager;
 use App\Filament\Admin\Resources\Submissions\Pages\ListSubmissions;
 use App\Livewire\Client\Deliverables\DeliverableIndex;
+use App\Livewire\Client\Projects\ProjectShow;
 use App\Livewire\Contributor\Work\MyWork;
 use App\Livewire\Contributor\Work\ProjectBoard;
 use App\Livewire\Contributor\Work\TaskDetail;
@@ -181,6 +183,24 @@ it('does not query more per milestone on the client deliverables page', function
         }
     };
     $open = fn () => Livewire::actingAs($this->owner)->test(DeliverableIndex::class);
+
+    $addRows(2);
+    $open(); // warm caches
+    $small = queries($open);
+
+    $addRows(7);
+
+    expect(queries($open))->toBe($small);
+});
+
+it('does not query more per team member or milestone on the client project page', function () {
+    $project = Project::factory()->status(ProjectStatus::Active)->create(['organization_id' => $this->org->id]);
+    Sow::factory()->status(SowStatus::Accepted)->create(['project_id' => $project->id]);
+    $addRows = function (int $n) use ($project): void {
+        Assignment::factory()->active()->count($n)->create(['project_id' => $project->id]);
+        Milestone::factory()->status(MilestoneStatus::Shared)->count($n)->create(['project_id' => $project->id]);
+    };
+    $open = fn () => Livewire::actingAs($this->owner)->test(ProjectShow::class, ['project' => $project]);
 
     $addRows(2);
     $open(); // warm caches
