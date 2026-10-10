@@ -139,3 +139,11 @@ Decisions taken where the spec is silent. Each is a small guard, easy to relax:
 79. **Medium: clients cannot download deliverable files yet.** The page lists file names only. Step 8 adds the signed route and the `MediaPolicy` rule (client sees only files of shared deliverables of their organization).
 80. **Low: the client project page does not show milestone progress yet** (step 7). The client dashboard "awaiting your action" panel (spec 12) is Pass 9 with the other dashboards.
 81. **Low: the admin Deliverables list is read-only and has no actions.** Deliverables are built on the project's Deliverables tab, where the milestone and its approved work are in view.
+
+## Pass 4, step 7 (client project detail)
+
+82. **Decision: the progress line counts every milestone, but only shared and later milestones are listed by title.** "2 of 5 milestones accepted" reveals a count, not the work in flight. Planned, in-progress and in-QA titles stay internal (spec 6.9: `shared` means visible to the client). The SOW already lists planned milestones, so the count adds nothing sensitive. Say if the client should see all milestone titles with a status instead.
+83. **Decision: the team is the active and completed assignments only,** shown as first name, role and headline once an SOW is accepted and unless `hide_team` is on (SCR-012). Invited, declined and removed contributors never appear. The rules live in `ClientTeam`, so other client views can reuse them.
+84. **Decision: the team section is hidden entirely when `hide_team` is on,** with no hint that a team exists. Before the SOW is accepted, the client sees a short note that the team is introduced after acceptance.
+85. **Low: `projects.hide_team` is now editable** from the admin project form (it had no control since SCR-012).
+86. **Low: the project page shows no tasks, comments or submissions of any kind.** Clients see finished, approved work only through the Deliverables page. Per-task progress would need a decision on what the client may see of unshared work.
