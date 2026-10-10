@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\AdminRole;
+use App\Enums\OrgRole;
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use App\Models\Concerns\HasUuid;
@@ -83,6 +84,32 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
             ->using(OrganizationUser::class)
             ->withPivot(['org_role', 'designation'])
             ->withTimestamps();
+    }
+
+    /** @var array<int, OrgRole|null> */
+    private array $orgRoleCache = [];
+
+    /** This user's role in the organization, or null when not a member. Memoized per request. */
+    public function organizationRole(Organization $organization): ?OrgRole
+    {
+        if ($this->role !== UserRole::Client) {
+            return null;
+        }
+
+        return $this->orgRoleCache[$organization->getKey()] ??= OrganizationUser::query()
+            ->where('organization_id', $organization->getKey())
+            ->where('user_id', $this->getKey())
+            ->first()?->org_role;
+    }
+
+    /** Clients belong to one organization (spec 4). Returns it, or null for non-clients and unlinked clients. */
+    public function primaryOrganization(): ?Organization
+    {
+        if ($this->role !== UserRole::Client) {
+            return null;
+        }
+
+        return $this->organizations()->orderBy('organizations.id')->first();
     }
 
     /** @return BelongsToMany<Skill, $this> */
