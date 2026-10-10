@@ -30,10 +30,15 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->login()
             ->brandName('Groibe Admin')
+            // The supplied logo files, at their own ratio (spec 10.3): white on the dark theme, standard on light.
+            ->brandLogo(asset('brand/groibe-logo.svg'))
+            ->darkModeBrandLogo(asset('brand/groibe-logo-white.svg'))
+            ->brandLogoHeight('2rem')
+            ->favicon(asset('favicon.ico'))
             ->colors([
-                'primary' => Color::hex('#001844'),
-                'success' => Color::hex('#14C352'),
-                'info' => Color::hex('#137AE5'),
+                'primary' => Color::hex('#042B65'),
+                'success' => Color::hex('#0EAE44'),
+                'info' => Color::hex('#046CEA'),
             ])
             ->discoverResources(in: app_path('Filament/Admin/Resources'), for: 'App\\Filament\\Admin\\Resources')
             ->discoverPages(in: app_path('Filament/Admin/Pages'), for: 'App\\Filament\\Admin\\Pages')

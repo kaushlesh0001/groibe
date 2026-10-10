@@ -50,7 +50,7 @@
             <flux:heading id="progress-heading" size="lg" level="2">Progress</flux:heading>
             <p>{{ $milestonesAccepted }} of {{ $milestoneTotal }} {{ \Illuminate\Support\Str::plural('milestone', $milestoneTotal) }} accepted</p>
             <div class="h-2 w-full overflow-hidden rounded bg-zinc-100" role="progressbar" aria-label="Milestones accepted" aria-valuemin="0" aria-valuemax="{{ $milestoneTotal }}" aria-valuenow="{{ $milestonesAccepted }}">
-                <div class="h-2 bg-brand-green" style="width: {{ round($milestonesAccepted / $milestoneTotal * 100) }}%"></div>
+                <div class="h-2 bg-brand-green-alt" style="width: {{ round($milestonesAccepted / $milestoneTotal * 100) }}%"></div>
             </div>
 
             @if ($milestones->isNotEmpty())

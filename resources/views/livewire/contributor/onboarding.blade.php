@@ -3,7 +3,7 @@
         <flux:heading size="xl" level="1">Join as a contributor</flux:heading>
         <flux:text>Step {{ $step }} of {{ \App\Livewire\Contributor\Onboarding::STEPS }}</flux:text>
         <div class="h-1 w-full rounded bg-zinc-200" role="progressbar" aria-valuemin="1" aria-valuemax="{{ \App\Livewire\Contributor\Onboarding::STEPS }}" aria-valuenow="{{ $step }}">
-            <div class="h-1 rounded bg-brand-green" style="width: {{ ($step / \App\Livewire\Contributor\Onboarding::STEPS) * 100 }}%"></div>
+            <div class="h-1 rounded bg-brand-green-alt" style="width: {{ ($step / \App\Livewire\Contributor\Onboarding::STEPS) * 100 }}%"></div>
         </div>
     </div>
 

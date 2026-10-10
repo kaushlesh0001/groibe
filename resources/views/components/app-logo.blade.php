@@ -1,6 +1,10 @@
-<div class="flex aspect-square size-8 items-center justify-center rounded-md bg-navy text-white">
-    <x-app-logo-icon class="size-5 fill-current text-white" />
-</div>
-<div class="ml-1 grid flex-1 text-left text-sm">
-    <span class="mb-0.5 truncate leading-none font-semibold">{{ config('app.name') }}</span>
-</div>
+{{-- The GROIBE wordmark (spec 10.3). Files are used as supplied: never retyped, recolored or stretched, so only the height is set. --}}
+@props(['variant' => 'dark'])
+
+<img
+    src="{{ asset('brand/'.($variant === 'white' ? 'groibe-logo-white.svg' : 'groibe-logo.svg')) }}"
+    alt="Groibe"
+    width="127"
+    height="32"
+    {{ $attributes->merge(['class' => 'h-8 w-auto']) }}
+>
