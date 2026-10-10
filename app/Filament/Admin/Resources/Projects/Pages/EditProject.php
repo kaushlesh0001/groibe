@@ -2,6 +2,7 @@
 
 namespace App\Filament\Admin\Resources\Projects\Pages;
 
+use App\Actions\OpenRoles\PublishProjectAsOpenRole;
 use App\Actions\Projects\AcceptProject;
 use App\Actions\Projects\ActivateProject;
 use App\Actions\Projects\CancelProject;
@@ -12,9 +13,11 @@ use App\Actions\Projects\PutProjectOnHold;
 use App\Actions\Projects\ResumeProject;
 use App\Actions\Projects\StartStaffing;
 use App\Enums\ProjectStatus;
+use App\Filament\Admin\Resources\OpenRoles\OpenRoleResource;
 use App\Filament\Admin\Resources\Projects\ProjectResource;
 use App\Filament\Admin\Support\DomainActionRunner;
 use App\Models\Milestone;
+use App\Models\OpenRole;
 use App\Models\Project;
 use Closure;
 use Filament\Actions\Action;
@@ -34,6 +37,26 @@ class EditProject extends EditRecord
                 ->color('gray')
                 ->visible(fn (): bool => (bool) auth()->user()?->can('viewAny', Milestone::class))
                 ->url(fn (): string => ProjectResource::getUrl('workspace', ['record' => $this->currentProject()])),
+
+            Action::make('publishAsOpenRole')
+                ->label('Publish as Open Role')
+                ->icon('heroicon-o-megaphone')
+                ->color('gray')
+                ->visible(fn (): bool => in_array($this->currentProject()->status, [ProjectStatus::SowAccepted, ProjectStatus::Staffing, ProjectStatus::Active], true)
+                    && (bool) auth()->user()?->can('create', OpenRole::class))
+                ->requiresConfirmation()
+                ->modalDescription('Creates a draft role linked to this project, with its title, summary and skills. You edit and publish it on the next screen. The client name is not copied.')
+                ->action(function (): void {
+                    $role = null;
+
+                    DomainActionRunner::run(function () use (&$role): void {
+                        $role = app(PublishProjectAsOpenRole::class)($this->currentProject(), auth()->user());
+                    }, 'Draft role created');
+
+                    if ($role instanceof OpenRole) {
+                        $this->redirect(OpenRoleResource::getUrl('edit', ['record' => $role]));
+                    }
+                }),
 
             $this->stepAction('startStaffing', 'Start staffing', ProjectStatus::SowAccepted, StartStaffing::class),
             $this->stepAction('activate', 'Activate', ProjectStatus::Staffing, ActivateProject::class),
