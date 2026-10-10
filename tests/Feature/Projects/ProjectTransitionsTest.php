@@ -232,3 +232,26 @@ it('accepts a project at delivery when every milestone is already accepted', fun
 
     expect(app(MarkProjectDelivered::class)($project, $this->dm)->status)->toBe(ProjectStatus::Accepted);
 });
+
+it('does not let staffing, activation or a manual QA move stand in for resuming or for a client change request', function () {
+    fakeGuards(true, true);
+
+    $held = projectIn(ProjectStatus::OnHold);
+    $held->update(['status_before_hold' => ProjectStatus::Active]);
+
+    expect(fn () => app(StartStaffing::class)($held, $this->dm))->toThrow(IllegalTransition::class)
+        ->and(fn () => app(ActivateProject::class)($held, $this->dm))->toThrow(IllegalTransition::class)
+        ->and($held->refresh()->status)->toBe(ProjectStatus::OnHold)
+        ->and($held->status_before_hold)->toBe(ProjectStatus::Active);
+
+    expect(fn () => app(MoveProjectToQa::class)(projectIn(ProjectStatus::Delivered), $this->dm))->toThrow(IllegalTransition::class);
+});
+
+it('resumes only a project that is on hold, even with a stale stored state', function () {
+    fakeGuards(true, true);
+    $staffing = projectIn(ProjectStatus::Staffing);
+    $staffing->update(['status_before_hold' => ProjectStatus::Active]);
+
+    expect(fn () => app(ResumeProject::class)($staffing, $this->dm))->toThrow(IllegalTransition::class);
+    expect($staffing->refresh()->status)->toBe(ProjectStatus::Staffing);
+});

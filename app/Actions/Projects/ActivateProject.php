@@ -19,6 +19,9 @@ class ActivateProject
     public function __invoke(Project $project, User $actor): Project
     {
         return $this->moveProject($project, ProjectStatus::Active, $actor, guard: function (Project $locked): void {
+            // An on-hold project resumes through ResumeProject, not through activation.
+            ($this->mustBeIn(ProjectStatus::Staffing, ProjectStatus::Active))($locked);
+
             if (! $this->guards->hasActiveAssignment($locked)) {
                 throw ActionBlocked::guardFailed('A project needs at least one active assignment before it can go active.');
             }

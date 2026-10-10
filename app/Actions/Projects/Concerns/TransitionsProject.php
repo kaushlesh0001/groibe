@@ -14,6 +14,21 @@ use Illuminate\Support\Facades\Gate;
 trait TransitionsProject
 {
     /**
+     * Guard for an Action whose target status can also be reached from other states (`on_hold`, or `delivered`
+     * for `in_qa`): the project must be in exactly the state this Action is for.
+     *
+     * @return Closure(Project): void
+     */
+    protected function mustBeIn(ProjectStatus $from, ProjectStatus $to): Closure
+    {
+        return function (Project $locked) use ($from, $to): void {
+            if ($locked->status !== $from) {
+                throw IllegalTransition::for('project', $locked->status->value, $to->value);
+            }
+        };
+    }
+
+    /**
      * @param  string|null  $ability  policy ability to authorize; null when the calling Action already authorized (SOW actions)
      * @param  array<string, mixed>  $attributes  extra columns to write with the status change
      * @param  array<string, mixed>  $properties  extra data for the activity log entry
