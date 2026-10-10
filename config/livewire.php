@@ -130,7 +130,7 @@ return [
 
     'temporary_file_upload' => [
         'disk' => env('LIVEWIRE_TEMPORARY_FILE_UPLOAD_DISK'), // Example: 'local', 's3'             | Default: 'default'
-        'rules' => ['required', 'file', 'max:20480'],            // Spec 17.2: documents up to 20 MB. Per-field rules apply on top.
+        'rules' => ['required', 'file', 'max:25600'],            // Spec 17.2: the largest cap is 25 MB (submissions). Each field's own rules, and the Actions, enforce the smaller caps.
         'directory' => null,                                  // Example: 'tmp'                     | Default: 'livewire-tmp'
         'middleware' => null,                                 // Example: 'throttle:5,1'            | Default: 'throttle:60,1'
         'preview_mimes' => [                                  // Supported file types for temporary pre-signed file URLs...
