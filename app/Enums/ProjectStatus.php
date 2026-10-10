@@ -23,7 +23,7 @@ enum ProjectStatus: string implements HasLabel
     case Cancelled = 'cancelled';
 
     /**
-     * Resume from on_hold is not specified in spec 6.2, so it is not modelled yet (see SCR-008, proposed).
+     * on_hold resumes to the state it was held from (SCR-008); ResumeProject picks the target.
      *
      * @return list<self>
      */
@@ -38,7 +38,7 @@ enum ProjectStatus: string implements HasLabel
             self::InQa => [self::Delivered, self::Cancelled],
             self::Delivered => [self::Accepted, self::Cancelled],
             self::Accepted => [self::Closed, self::Cancelled],
-            self::OnHold => [self::Cancelled],
+            self::OnHold => [self::Staffing, self::Active, self::Cancelled],
             self::Closed, self::Cancelled => [],
         };
     }

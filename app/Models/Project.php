@@ -36,6 +36,7 @@ class Project extends Model implements HasMedia
         'scope_summary',
         'project_type_id',
         'status',
+        'status_before_hold',
         'contract_value',
         'currency',
         'start_date',
@@ -51,6 +52,7 @@ class Project extends Model implements HasMedia
     {
         return [
             'status' => ProjectStatus::class,
+            'status_before_hold' => ProjectStatus::class,
             'showcase_consent' => ShowcaseConsent::class,
             'contract_value' => 'decimal:2',
             'start_date' => 'date',
@@ -68,7 +70,7 @@ class Project extends Model implements HasMedia
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['code', 'title', 'status', 'contract_value', 'currency', 'start_date', 'due_date', 'delivery_manager_id', 'client_can_view_shortlist', 'showcase_consent'])
+            ->logOnly(['code', 'title', 'status', 'status_before_hold', 'contract_value', 'currency', 'start_date', 'due_date', 'delivery_manager_id', 'client_can_view_shortlist', 'showcase_consent'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs();
     }
