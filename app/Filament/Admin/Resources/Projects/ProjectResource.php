@@ -5,8 +5,11 @@ namespace App\Filament\Admin\Resources\Projects;
 use App\Filament\Admin\Resources\Projects\Pages\CreateProject;
 use App\Filament\Admin\Resources\Projects\Pages\EditProject;
 use App\Filament\Admin\Resources\Projects\Pages\ListProjects;
+use App\Filament\Admin\Resources\Projects\Pages\ProjectWorkspace;
 use App\Filament\Admin\Resources\Projects\RelationManagers\AssignmentsRelationManager;
+use App\Filament\Admin\Resources\Projects\RelationManagers\MilestonesRelationManager;
 use App\Filament\Admin\Resources\Projects\RelationManagers\SowsRelationManager;
+use App\Filament\Admin\Resources\Projects\RelationManagers\TasksRelationManager;
 use App\Filament\Admin\Resources\Projects\Schemas\ProjectForm;
 use App\Filament\Admin\Resources\Projects\Tables\ProjectsTable;
 use App\Models\Project;
@@ -46,6 +49,8 @@ class ProjectResource extends Resource
         return [
             SowsRelationManager::class,
             AssignmentsRelationManager::class,
+            MilestonesRelationManager::class,
+            TasksRelationManager::class,
         ];
     }
 
@@ -55,6 +60,7 @@ class ProjectResource extends Resource
             'index' => ListProjects::route('/'),
             'create' => CreateProject::route('/create'),
             'edit' => EditProject::route('/{record}/edit'),
+            'workspace' => ProjectWorkspace::route('/{record}/workspace'),
         ];
     }
 

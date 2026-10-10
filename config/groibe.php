@@ -54,7 +54,7 @@ return [
 
     // Per-category preferences are a placeholder until Pass 7. Locked categories can never be disabled.
     'notifications' => [
-        'categories' => ['brief', 'sow', 'project', 'assignment', 'onboarding', 'security'],
+        'categories' => ['brief', 'sow', 'project', 'assignment', 'task', 'onboarding', 'security'],
         'locked_categories' => ['security'],
     ],
 ];

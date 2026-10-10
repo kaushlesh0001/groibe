@@ -14,6 +14,7 @@ use App\Actions\Projects\StartStaffing;
 use App\Enums\ProjectStatus;
 use App\Filament\Admin\Resources\Projects\ProjectResource;
 use App\Filament\Admin\Support\DomainActionRunner;
+use App\Models\Milestone;
 use App\Models\Project;
 use Closure;
 use Filament\Actions\Action;
@@ -27,6 +28,13 @@ class EditProject extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('workspace')
+                ->label('Workspace')
+                ->icon('heroicon-o-squares-2x2')
+                ->color('gray')
+                ->visible(fn (): bool => (bool) auth()->user()?->can('viewAny', Milestone::class))
+                ->url(fn (): string => ProjectResource::getUrl('workspace', ['record' => $this->currentProject()])),
+
             $this->stepAction('startStaffing', 'Start staffing', ProjectStatus::SowAccepted, StartStaffing::class),
             $this->stepAction('activate', 'Activate', ProjectStatus::Staffing, ActivateProject::class),
             $this->stepAction('moveToQa', 'Move to QA', ProjectStatus::Active, MoveProjectToQa::class),

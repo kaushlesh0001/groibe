@@ -92,4 +92,18 @@ No critical or high findings. Checked: route and Filament authorization, N+1 on 
 
 47. **Low: staffing permissions reuse `projects.update`.** Spec 5 has no Assignment row, so invite and remove are gated by `projects.update` (delivery_manager and super_admin), and viewing by `projects.view`. If community managers should invite from open roles in Pass 5, add an `assignments` permission then.
 48. **Low: invite and removal notifications link contributors to the dashboard.** My Work does not exist until step 4. Point `AssignmentInvited` and `AssignmentRemoved` at the My Work assignment page then.
-49. **Low: removing a seat does not recompute milestone status.** Spec 6.9 moves a milestone to `in_qa` automatically when every task is `submitted` or `approved`. Tasks returned to `todo` by a removal can leave a milestone already at `in_qa`. Handle with the milestone automation in step 3.
+49. **Low: a milestone already in `in_qa` is not reopened when a task returns to `todo`.** Spec 6.9 has no `in_qa -> in_progress` edge, so removing a contributor, or an admin reopening work, can leave an `in_qa` milestone with an unfinished task. `SyncMilestoneStatus` never moves backwards. Needs a decision before step 5: add that edge, or block removal while the milestone is in QA.
+
+## Pass 4, step 3 (milestones and tasks)
+
+Decisions taken where the spec is silent. Each is a small guard, easy to relax:
+
+50. **Plans are frozen on `closed` and `cancelled` projects.** Milestone and task create, edit, delete, reorder and assign are refused there.
+51. **A milestone is deleted only while `planned` and empty.** Anything else is client-visible or holds work.
+52. **Tasks are added only to `planned` or `in_progress` milestones,** so a milestone already in QA or shared does not silently gain work.
+53. **Tasks are assigned, reassigned or unassigned only while `todo`, and only to an `active` seat of the same project.** In-flight work moves by removing the contributor (spec 6.2), which returns their tasks to `todo`. This also keeps submissions tied to the assignment that made them.
+54. **Approved tasks cannot be edited, reassigned or deleted.**
+55. **Tasks have no sort column,** so only milestones are ordered (by `sort`, reorder Action). Tasks list by id. Add a `sort` to tasks if admins need to order them.
+56. **Task change notifications go out only when title, description, estimate or due date change on an assigned task.** The previous assignee is also told when a task is reassigned (spec 14 "task assigned/changed").
+57. **Low: the workspace page is planning only.** It shows milestones, tasks, progress, quick assign and reorder. Editing happens in the Milestones and Tasks tabs. Task and milestone creation notifications link contributors to the dashboard until My Work exists (see item 48).
+58. **Low: `SyncMilestoneStatus` has no caller for task start or submit yet.** Task status changes arrive in step 4 (contributor) and step 5 (QA), which will call it. Today only `DeleteTask` calls it.
