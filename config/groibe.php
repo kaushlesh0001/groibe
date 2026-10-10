@@ -42,6 +42,8 @@ return [
     'uploads' => [
         'document_extensions' => ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'csv', 'txt', 'png', 'jpg', 'jpeg'],
         'document_max_kb' => 20 * 1024,
+        'submission_max_kb' => 25 * 1024,
+        'submission_max_files' => 10,
         'signed_url_minutes' => 10,
         'photo_max_kb' => 2 * 1024,
         'photo_extensions' => ['jpg', 'jpeg', 'png', 'webp'],
@@ -54,7 +56,7 @@ return [
 
     // Per-category preferences are a placeholder until Pass 7. Locked categories can never be disabled.
     'notifications' => [
-        'categories' => ['brief', 'sow', 'project', 'assignment', 'task', 'onboarding', 'security'],
+        'categories' => ['brief', 'sow', 'project', 'assignment', 'task', 'submission', 'onboarding', 'security'],
         'locked_categories' => ['security'],
     ],
 ];

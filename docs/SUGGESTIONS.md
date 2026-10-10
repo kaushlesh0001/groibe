@@ -107,3 +107,15 @@ Decisions taken where the spec is silent. Each is a small guard, easy to relax:
 56. **Task change notifications go out only when title, description, estimate or due date change on an assigned task.** The previous assignee is also told when a task is reassigned (spec 14 "task assigned/changed").
 57. **Low: the workspace page is planning only.** It shows milestones, tasks, progress, quick assign and reorder. Editing happens in the Milestones and Tasks tabs. Task and milestone creation notifications link contributors to the dashboard until My Work exists (see item 48).
 58. **Low: `SyncMilestoneStatus` has no caller for task start or submit yet.** Task status changes arrive in step 4 (contributor) and step 5 (QA), which will call it. Today only `DeleteTask` calls it.
+
+## Pass 4, step 4 (contributor My Work)
+
+59. **Decision: work happens only while the project is `active` or `in_qa`.** Start, resume and submit are refused on `staffing`, `on_hold`, `delivered`, `closed` and `cancelled`. `in_qa` stays open so a task sent back for changes can still be reworked.
+60. **Decision: a submission needs a note or at least one file, up to 10 files of 25 MB** (spec 17.2 submission cap). Allowed types are the existing document allowlist, so archives such as `.zip` are not accepted. Add them to `groibe.uploads.document_extensions` if contributors need to send bundles.
+61. **Decision: resuming after changes is its own step** ("Start revising", `changes_requested -> in_progress`), then a normal submit. This follows spec 6.7 literally.
+62. **Decision: assignment invites are answered from My Work,** with the project title and role shown. The invite is the only place a contributor sees a project before accepting, and rates are never shown.
+63. **Decision: a contributor who is not on a project gets 404, not 403,** for its board and tasks, so project and task ids cannot be probed.
+64. **Medium: submitted files have no download link yet.** The task page lists file names only. Step 8 adds the signed, authorized file routes and the `MediaPolicy` rule for submission files, then the links can be added.
+65. **Low: task pages use numeric ids in the URL** (tasks have no `uuid`, spec 7.3 gives one to public-facing models only). Access is policy-checked and a non-owner gets 404.
+66. **Low: the board paginates at 60 tasks,** and columns fill from the current page. Fine for realistic task counts per person per project.
+67. **Low: contributor comments do not notify anyone.** Spec 14 lists messages, not task comments. Add a notification to the delivery manager if comments need to be seen without opening the task.

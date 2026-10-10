@@ -4,11 +4,13 @@ namespace App\Actions\Files;
 
 use App\Models\Brief;
 use App\Models\Project;
+use App\Models\Submission;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 /**
@@ -21,13 +23,21 @@ class AttachPrivateFile
     {
         Gate::forUser($actor)->authorize('update', $model);
 
-        $extensions = config('groibe.uploads.document_extensions');
-
-        Validator::make(['file' => $file], [
-            'file' => ['required', 'file', 'max:'.config('groibe.uploads.document_max_kb'), 'extensions:'.implode(',', $extensions), 'mimes:'.implode(',', $extensions)],
-        ])->validate();
-
         $collection = $model instanceof Brief ? Brief::FILES : Project::FILES;
+
+        return $this->store($model, $file, $actor, $collection, (int) config('groibe.uploads.document_max_kb'));
+    }
+
+    /**
+     * Validates and stores one file with no authorization of its own: the calling Action has already
+     * decided that the actor may add to this record.
+     *
+     * @throws ValidationException
+     */
+    public function store(Brief|Project|Submission $model, UploadedFile $file, User $actor, string $collection, int $maxKb): Media
+    {
+        $this->validate($file, $maxKb);
+
         $extension = Str::lower($file->getClientOriginalExtension());
         $displayName = Str::limit(pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME), 120, '');
 
@@ -41,5 +51,15 @@ class AttachPrivateFile
             ->withProperties(['media_uuid' => $media->uuid, 'collection' => $collection])->log('File uploaded');
 
         return $media;
+    }
+
+    /** @throws ValidationException */
+    public function validate(UploadedFile $file, int $maxKb): void
+    {
+        $extensions = config('groibe.uploads.document_extensions');
+
+        Validator::make(['file' => $file], [
+            'file' => ['required', 'file', 'max:'.$maxKb, 'extensions:'.implode(',', $extensions), 'mimes:'.implode(',', $extensions)],
+        ])->validate();
     }
 }
