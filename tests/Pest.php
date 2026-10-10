@@ -1,9 +1,11 @@
 <?php
 
+use App\Actions\Agreements\AcceptClientMsa;
 use App\Enums\AdminRole;
 use App\Enums\OrgRole;
 use App\Models\Organization;
 use App\Models\User;
+use Database\Seeders\AgreementTemplateSeeder;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -24,6 +26,35 @@ function adminUser(AdminRole $role = AdminRole::SuperAdmin): User
 function contributorUser(): User
 {
     return User::factory()->contributor()->create();
+}
+
+/** Publish active Client MSA and SOW templates, as the AgreementTemplateSeeder does. */
+function publishAgreements(): void
+{
+    test()->seed(AgreementTemplateSeeder::class);
+}
+
+/** Make the organization satisfy the Client MSA gate: its owner accepts the current version. */
+function acceptClientMsa(Organization $organization): User
+{
+    $owner = $organization->users()->wherePivot('org_role', OrgRole::Owner->value)->first()
+        ?? clientUser($organization, OrgRole::Owner);
+
+    app(AcceptClientMsa::class)($owner, $organization);
+
+    return $owner;
+}
+
+/**
+ * Sign in as another user mid-test. The session is cleared first so Filament's AuthenticateSession
+ * middleware does not treat the previous user's password hash as a mismatch and log the new user out.
+ */
+function asUser(User $user): TestCase
+{
+    test()->flushSession();
+    auth()->forgetGuards();
+
+    return test()->actingAs($user);
 }
 
 /** Create a client user attached to a (new or given) organization with the given org role. */
