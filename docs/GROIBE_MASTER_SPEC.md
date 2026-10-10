@@ -170,7 +170,8 @@ Milestone: `planned -> in_progress -> in_qa -> shared -> client_accepted | clien
 - `client_changes_requested` returns the milestone to `in_progress` with a change note; tasks are reopened by Admin.
 
 ### 6.10 Contributor onboarding
-`registered -> profile_complete -> pending_review -> active | rejected` ; `active -> suspended`
+`registered -> profile_complete -> pending_review -> active | rejected` ; `active -> suspended` ; `suspended -> active` (reinstate)
+- `rejected` is terminal in v1.
 - Admin reviews and activates. Email verification required before `pending_review`.
 - Member Agreement acceptance required before `active`.
 
@@ -550,3 +551,4 @@ Stored in `feature_flags`, cached, toggled in Admin. Defaults:
 | 2026-10-10 | 6.2, 7.3 | SCR-008: added `projects.status_before_hold` and a resume transition from `on_hold` | Founder |
 | 2026-10-10 | 5, 22 | SCR-009: clients do not see draft projects or draft SOWs until the SOW is sent | Founder |
 | 2026-10-10 | 12 | SCR-010: Client MSA is accepted by the owner on its own page, not in registration | Founder |
+| 2026-10-10 | 6.10 | SCR-011: added `suspended -> active` (reinstate); `rejected` is terminal in v1 | Founder |
