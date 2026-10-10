@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnsureActiveContributor;
 use App\Http\Middleware\EnsureFeatureEnabled;
 use App\Http\Middleware\EnsureUserRole;
 use Illuminate\Foundation\Application;
@@ -24,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => EnsureUserRole::class,
             'feature' => EnsureFeatureEnabled::class,
+            'active.contributor' => EnsureActiveContributor::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

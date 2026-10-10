@@ -17,6 +17,22 @@ class ActionBlocked extends DomainException
         return new self('The organization owner must accept the current Client MSA first.');
     }
 
+    public static function emailNotVerified(): self
+    {
+        return new self('Please verify your email address before submitting your profile for review.');
+    }
+
+    /** @param  list<string>  $missing */
+    public static function profileIncomplete(array $missing): self
+    {
+        return new self('Your profile is not complete yet. Still needed: '.implode(', ', $missing).'.');
+    }
+
+    public static function memberAgreementNotAccepted(): self
+    {
+        return new self('The current Member Agreement must be accepted first.');
+    }
+
     public static function guardFailed(string $message): self
     {
         return new self($message);

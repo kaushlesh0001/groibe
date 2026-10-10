@@ -112,10 +112,11 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
         return $this->organizations()->orderBy('organizations.id')->first();
     }
 
-    /** @return BelongsToMany<Skill, $this> */
+    /** @return BelongsToMany<Skill, $this, SkillUser, 'pivot'> */
     public function skills(): BelongsToMany
     {
         return $this->belongsToMany(Skill::class)
+            ->using(SkillUser::class)
             ->withPivot(['level', 'years', 'is_verified', 'verified_by', 'verified_at'])
             ->withTimestamps();
     }

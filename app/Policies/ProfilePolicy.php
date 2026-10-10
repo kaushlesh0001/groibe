@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\OnboardingState;
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use App\Models\Profile;
@@ -29,8 +30,46 @@ class ProfilePolicy
         }
 
         return $profile->is_public
+            && $profile->onboarding_state === OnboardingState::Active
             && $profile->user?->role === UserRole::Contributor
             && $profile->user->status === UserStatus::Active;
+    }
+
+    /** Onboarding steps belong to the contributor who owns the profile (spec 6.10). */
+    public function completeProfile(User $actor, Profile $profile): bool
+    {
+        return $this->ownsContributorProfile($actor, $profile);
+    }
+
+    public function submitForReview(User $actor, Profile $profile): bool
+    {
+        return $this->ownsContributorProfile($actor, $profile);
+    }
+
+    /** Review decisions need the approve ability, held by community_manager and super_admin (spec 5). */
+    public function approve(User $actor, Profile $profile): bool
+    {
+        return $this->mayReview($actor, $profile);
+    }
+
+    public function reject(User $actor, Profile $profile): bool
+    {
+        return $this->mayReview($actor, $profile);
+    }
+
+    public function suspend(User $actor, Profile $profile): bool
+    {
+        return $this->mayReview($actor, $profile);
+    }
+
+    public function reinstate(User $actor, Profile $profile): bool
+    {
+        return $this->mayReview($actor, $profile);
+    }
+
+    public function verifySkills(User $actor, Profile $profile): bool
+    {
+        return $this->mayReview($actor, $profile);
     }
 
     public function create(User $actor): bool
@@ -46,6 +85,22 @@ class ProfilePolicy
     public function delete(User $actor, Profile $profile): bool
     {
         return $this->adminCan($actor, $profile, 'delete');
+    }
+
+    private function ownsContributorProfile(User $actor, Profile $profile): bool
+    {
+        return $actor->isContributor() && $actor->id === $profile->user_id;
+    }
+
+    private function mayReview(User $actor, Profile $profile): bool
+    {
+        if (! $actor->isAdmin() || ! $actor->can('contributors.approve')) {
+            return false;
+        }
+
+        $profile->loadMissing('user');
+
+        return $profile->user?->role === UserRole::Contributor;
     }
 
     private function adminCan(User $actor, Profile $profile, string $ability): bool
