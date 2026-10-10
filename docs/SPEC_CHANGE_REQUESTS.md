@@ -76,3 +76,14 @@ Proposed changes only. The spec is edited by the founder, between passes, and lo
 - **Decision:** The organization owner accepts the Client MSA on its own page before the first brief or SOW acceptance. Registration stays accounts only.
 - **Code status:** Implemented in Pass 2 (`/app/client/agreements/client-msa`, `AcceptClientMsa`, `AgreementGate`) and covered by tests.
 
+
+## SCR-011: Contributor reinstate and rejected terminal state (spec section 6.10)
+
+- **Status:** ACCEPTED 2026-10-10. Option (a). Spec sections 6.10 and 23 updated.
+- **Gap:** 6.10 lists `active -> suspended` but no way out of `suspended`, and none out of `rejected`. Section 13 requires "activate/suspend" bulk actions, which implies reinstating.
+- **Options:**
+  - (a) Add `suspended -> active` (reinstate). `rejected` stays terminal in v1.
+  - (b) Neither exit, so a suspension is permanent.
+  - (c) Also allow `rejected -> profile_complete` so a contributor can reapply.
+- **Decision:** (a). Reinstate returns a suspended contributor to `active`. `rejected` is terminal in v1. Reasons for reject and suspend stay in the activity log, with no new column.
+- **Code status:** Pass 3.
