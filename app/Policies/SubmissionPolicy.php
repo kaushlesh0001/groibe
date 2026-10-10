@@ -24,4 +24,10 @@ class SubmissionPolicy
         return $this->adminCan($actor, 'submissions.view')
             || ($actor->isContributor() && $submission->user_id === $actor->getKey());
     }
+
+    /** Internal QA: approve or request changes (spec 5 "Submission": delivery_manager RUA). */
+    public function review(User $actor, Submission $submission): bool
+    {
+        return $this->adminCan($actor, 'submissions.approve');
+    }
 }

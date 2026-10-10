@@ -12,6 +12,7 @@ use App\Filament\Admin\Resources\Projects\RelationManagers\AssignmentsRelationMa
 use App\Filament\Admin\Resources\Projects\RelationManagers\MilestonesRelationManager;
 use App\Filament\Admin\Resources\Projects\RelationManagers\SowsRelationManager;
 use App\Filament\Admin\Resources\Projects\RelationManagers\TasksRelationManager;
+use App\Filament\Admin\Resources\Submissions\Pages\ListSubmissions;
 use App\Livewire\Contributor\Work\MyWork;
 use App\Livewire\Contributor\Work\ProjectBoard;
 use App\Livewire\Contributor\Work\TaskDetail;
@@ -139,6 +140,25 @@ it('does not query more per row on the contributor work pages', function () {
     foreach ($screens as $name => $open) {
         expect(queries($open))->toBe($small[$name], $name);
     }
+});
+
+it('does not query more per submission row in the QA queue', function () {
+    $project = Project::factory()->status(ProjectStatus::Active)->create(['organization_id' => $this->org->id]);
+    $milestone = Milestone::factory()->create(['project_id' => $project->id]);
+    $seat = Assignment::factory()->active()->create(['project_id' => $project->id]);
+    $addRows = fn (int $n) => Submission::factory()->count($n)->create([
+        'task_id' => fn () => Task::factory()->create(['milestone_id' => $milestone->id, 'assignment_id' => $seat->id])->id,
+        'assignment_id' => $seat->id,
+    ]);
+    $open = fn () => Livewire::actingAs($this->dm)->test(ListSubmissions::class);
+
+    $addRows(2);
+    $open(); // warm caches
+    $small = queries($open);
+
+    $addRows(7);
+
+    expect(queries($open))->toBe($small);
 });
 
 it('does not query more per assignment row in the project team panel', function () {

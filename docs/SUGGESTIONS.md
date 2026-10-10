@@ -119,3 +119,11 @@ Decisions taken where the spec is silent. Each is a small guard, easy to relax:
 65. **Low: task pages use numeric ids in the URL** (tasks have no `uuid`, spec 7.3 gives one to public-facing models only). Access is policy-checked and a non-owner gets 404.
 66. **Low: the board paginates at 60 tasks,** and columns fill from the current page. Fine for realistic task counts per person per project.
 67. **Low: contributor comments do not notify anyone.** Spec 14 lists messages, not task comments. Add a notification to the delivery manager if comments need to be seen without opening the task.
+
+## Pass 4, step 5 (admin QA queue)
+
+68. **Decision: any admin holding `submissions.approve` can review** (`delivery_manager`, `super_admin`), not only the project's own delivery manager. This matches SCR-013 for files and spec 5 for roles. The submission-received notification still goes to the project's delivery manager first.
+69. **Decision: reviews are allowed only while the project is `active` or `in_qa`,** the same window as contributor work (item 59). A project on hold, delivered or closed refuses them.
+70. **Decision: the approval note is optional, the change-request note is required.** Both are stored in `submissions.qa_note` and shown to the contributor. The note is internal and must stay out of every client view (step 7).
+71. **Medium: reviewers cannot open submitted files yet.** The QA modal lists file names only, so a real review needs the signed file route and `MediaPolicy` rule that step 8 adds (SCR-013 gives `submissions.view` admins access). Do step 8 before relying on the queue.
+72. **Low: the review modal is plain escaped text.** A richer inline preview can wait for step 8.
