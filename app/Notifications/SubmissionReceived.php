@@ -2,7 +2,7 @@
 
 namespace App\Notifications;
 
-use App\Filament\Admin\Resources\Projects\ProjectResource;
+use App\Filament\Admin\Resources\Submissions\SubmissionResource;
 use App\Models\Project;
 use App\Models\Submission;
 use App\Models\Task;
@@ -30,7 +30,7 @@ class SubmissionReceived extends GroibeNotification
 
     public function url(): string
     {
-        return ProjectResource::getUrl('edit', ['record' => $this->project]);
+        return SubmissionResource::getUrl('index');
     }
 
     /** @return array<string, mixed> */
