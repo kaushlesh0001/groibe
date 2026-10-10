@@ -72,6 +72,6 @@ class OpenRoleFactory extends Factory
 
     public function forProject(?Project $project = null): static
     {
-        return $this->state(fn () => ['project_id' => $project?->id ?? Project::factory()]);
+        return $this->state(fn () => ['project_id' => $project->id ?? Project::factory()]);
     }
 }
