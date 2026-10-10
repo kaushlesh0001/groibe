@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\AdminRole;
+use App\Enums\OnboardingState;
 use App\Enums\OrgRole;
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
@@ -134,6 +135,14 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
     public function isClient(): bool
     {
         return $this->role === UserRole::Client;
+    }
+
+    /** Approved and not suspended: the only contributors who may be assigned or apply (spec 4). */
+    public function isActiveContributor(): bool
+    {
+        return $this->isContributor()
+            && $this->status === UserStatus::Active
+            && $this->profile?->onboarding_state === OnboardingState::Active;
     }
 
     public function isSuperAdmin(): bool

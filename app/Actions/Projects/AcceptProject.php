@@ -2,6 +2,7 @@
 
 namespace App\Actions\Projects;
 
+use App\Actions\Assignments\CompleteProjectAssignments;
 use App\Actions\Projects\Concerns\TransitionsProject;
 use App\Enums\ProjectStatus;
 use App\Exceptions\ActionBlocked;
@@ -14,14 +15,22 @@ class AcceptProject
 {
     use TransitionsProject;
 
-    public function __construct(private ProjectTransitionGuards $guards) {}
+    public function __construct(private ProjectTransitionGuards $guards, private CompleteProjectAssignments $completeAssignments) {}
 
     public function __invoke(Project $project, User $actor): Project
     {
-        return $this->moveProject($project, ProjectStatus::Accepted, $actor, guard: function (Project $locked): void {
-            if (! $this->guards->allMilestonesAccepted($locked)) {
-                throw ActionBlocked::guardFailed('All milestones must be accepted by the client first.');
-            }
-        });
+        return $this->moveProject(
+            $project,
+            ProjectStatus::Accepted,
+            $actor,
+            guard: function (Project $locked): void {
+                if (! $this->guards->allMilestonesAccepted($locked)) {
+                    throw ActionBlocked::guardFailed('All milestones must be accepted by the client first.');
+                }
+            },
+            after: function (Project $locked) use ($actor): void {
+                ($this->completeAssignments)($locked, $actor);
+            },
+        );
     }
 }

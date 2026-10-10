@@ -27,7 +27,7 @@ None of these are built. Each needs a spec decision or a later pass.
 5. **Resolved (SCR-009).** Clients do not see draft projects or draft SOWs until the SOW is sent.
 6. **Brief and SOW notifications only.** Project transitions after `sow_accepted` write activity log entries but send no notification. Spec 14 lists none for project status, so they arrive with the work engine in Pass 4.
 7. **Contributors cannot read projects yet.** `ProjectPolicy` denies contributors until assignments exist (spec 5 "R if assigned"). Pass 4 adds that rule.
-8. **`PendingPassFourGuards` blocks two transitions in production.** `staffing -> active` and `delivered -> accepted` refuse until Pass 4 binds real checks for assignments and milestones. Tests use a fake. Replace the binding in Pass 4 and add the real tests there.
+8. **Resolved in Pass 4 step 2.** `PendingPassFourGuards` is replaced by `EloquentProjectTransitionGuards` (an active assignment for `staffing -> active`, and at least one milestone with every milestone client-accepted for `delivered -> accepted`).
 9. **Project code concurrency is tested by forcing a collision, not by parallel requests.** SQLite cannot run parallel writers. The generator uses `lockForUpdate` and the unique index with a retry. Run a parallel create check on MySQL staging.
 10. **Local PHP is 8.4, the host target is 8.3.** Herd runs PHP 8.4.26 here. Run the suite on 8.3 before deploy.
 11. **Filament file list uses signed links valid for 10 minutes.** `config('groibe.uploads.signed_url_minutes')`. Admins reloading an old page see an expired link. Fine for now.
@@ -87,3 +87,9 @@ No critical or high findings. Checked: route and Filament authorization, N+1 on 
 45. **Low: a duplicate Member Agreement acceptance is possible under a double submit.** `AcceptMemberAgreement` checks first, but there is no unique index (same gap as item 24). The gate only needs one row, so the effect is a duplicate row.
 46. **Low: `EnsureActiveContributor` returns 403 to guests when used without `auth`.** Every current use sits behind `auth`, so nothing is exposed. Keep `auth` ahead of it.
 
+
+## Pass 4, step 2 (assignments)
+
+47. **Low: staffing permissions reuse `projects.update`.** Spec 5 has no Assignment row, so invite and remove are gated by `projects.update` (delivery_manager and super_admin), and viewing by `projects.view`. If community managers should invite from open roles in Pass 5, add an `assignments` permission then.
+48. **Low: invite and removal notifications link contributors to the dashboard.** My Work does not exist until step 4. Point `AssignmentInvited` and `AssignmentRemoved` at the My Work assignment page then.
+49. **Low: removing a seat does not recompute milestone status.** Spec 6.9 moves a milestone to `in_qa` automatically when every task is `submitted` or `approved`. Tasks returned to `todo` by a removal can leave a milestone already at `in_qa`. Handle with the milestone automation in step 3.

@@ -5,8 +5,8 @@ namespace App\Services\Projects;
 use App\Models\Project;
 
 /**
- * Cross-domain guards for the project state machine (spec 6.2). The real implementation arrives with
- * assignments and milestones in Pass 4; until then the bound default refuses both.
+ * Cross-domain guards for the project state machine (spec 6.2). Bound to EloquentProjectTransitionGuards;
+ * tests swap in a fake to isolate the project state machine.
  */
 interface ProjectTransitionGuards
 {
