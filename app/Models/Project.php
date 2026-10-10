@@ -43,6 +43,7 @@ class Project extends Model implements HasMedia
         'due_date',
         'delivery_manager_id',
         'client_can_view_shortlist',
+        'hide_team',
         'showcase_consent',
         'zoho_invoice_ref',
         'closed_at',
@@ -58,6 +59,7 @@ class Project extends Model implements HasMedia
             'start_date' => 'date',
             'due_date' => 'date',
             'client_can_view_shortlist' => 'boolean',
+            'hide_team' => 'boolean',
             'closed_at' => 'datetime',
         ];
     }
@@ -70,7 +72,7 @@ class Project extends Model implements HasMedia
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['code', 'title', 'status', 'status_before_hold', 'contract_value', 'currency', 'start_date', 'due_date', 'delivery_manager_id', 'client_can_view_shortlist', 'showcase_consent'])
+            ->logOnly(['code', 'title', 'status', 'status_before_hold', 'contract_value', 'currency', 'start_date', 'due_date', 'delivery_manager_id', 'client_can_view_shortlist', 'hide_team', 'showcase_consent'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs();
     }
@@ -115,6 +117,24 @@ class Project extends Model implements HasMedia
     public function sows(): HasMany
     {
         return $this->hasMany(Sow::class);
+    }
+
+    /** @return HasMany<Assignment, $this> */
+    public function assignments(): HasMany
+    {
+        return $this->hasMany(Assignment::class);
+    }
+
+    /** @return HasMany<Milestone, $this> */
+    public function milestones(): HasMany
+    {
+        return $this->hasMany(Milestone::class);
+    }
+
+    /** @return HasMany<Task, $this> */
+    public function tasks(): HasMany
+    {
+        return $this->hasMany(Task::class);
     }
 
     /** @param Builder<Project> $query */
