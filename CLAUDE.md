@@ -63,8 +63,9 @@ docs/{GROIBE_MASTER_SPEC.md,PROMPT_PACK.md,SUGGESTIONS.md,SPEC_CHANGE_REQUESTS.m
 ```
 
 ## Design rules
-- Brand tokens in Tailwind config: navy `#001844`, green `#14C352`, blue `#137AE5`.
-- Modern, calm, lots of whitespace, one self-hosted sans font, no third-party font or script requests.
+- Brand tokens in Tailwind config: `brand-navy` `#042B65`, `brand-green` `#0EAE44`, `brand-green-alt` `#25A446`, `brand-blue` `#046CEA`, `brand-teal` `#06A2A7`. Green buttons use navy text. Green is never text on white. Blue links stay on light surfaces.
+- Logo from `public/brand` only (SVG on the web, PNG in emails and PDFs). Never retype, recolor or stretch it. White logo on navy surfaces.
+- Modern, calm, lots of whitespace, rounded corners, white or deep-navy surfaces. Inter only, self-hosted, no third-party font or script requests.
 - Mobile first. WCAG AA contrast. Labels on every input. Keyboard accessible.
 - Public copy: no em dashes, no AI-related wording.
 
