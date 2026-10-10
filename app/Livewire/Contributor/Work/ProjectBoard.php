@@ -9,6 +9,7 @@ use App\Models\Project;
 use App\Models\Task;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -19,6 +20,7 @@ class ProjectBoard extends Component
 {
     use WithPagination;
 
+    #[Locked]
     public Project $project;
 
     public function mount(Project $project): void
@@ -31,6 +33,9 @@ class ProjectBoard extends Component
 
     public function render()
     {
+        // Re-checked on every refresh: the seat can end while the page is open.
+        abort_unless($this->seats()->exists(), 404);
+
         $tasks = Task::query()
             ->where('project_id', $this->project->getKey())
             ->whereIn('assignment_id', $this->seats()->pluck('id'))

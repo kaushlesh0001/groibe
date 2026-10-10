@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use App\Actions\Admin\StartImpersonation;
+use App\Http\Middleware\EnsureActiveContributor;
+use App\Http\Middleware\EnsureUserRole;
 use App\Models\AgreementAcceptance;
 use App\Models\AgreementTemplate;
 use App\Models\Assignment;
@@ -20,6 +22,7 @@ use App\Models\Skill;
 use App\Models\Sow;
 use App\Models\Submission;
 use App\Models\Task;
+use App\Models\TaskComment;
 use App\Models\User;
 use App\Policies\ActivityPolicy;
 use App\Policies\AgreementAcceptancePolicy;
@@ -37,6 +40,7 @@ use App\Policies\ProjectTypePolicy;
 use App\Policies\SettingPolicy;
 use App\Policies\SowPolicy;
 use App\Policies\SubmissionPolicy;
+use App\Policies\TaskCommentPolicy;
 use App\Policies\TaskPolicy;
 use App\Policies\TaxonomyPolicy;
 use App\Policies\UserPolicy;
@@ -53,6 +57,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use Livewire\Livewire;
 use Spatie\Activitylog\Models\Activity;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
@@ -70,6 +75,11 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Model::preventLazyLoading(! $this->app->isProduction());
+
+        // Livewire sends later actions and refreshes to its own endpoint and re-applies only a short list of the
+        // page's middleware there. Role and active-contributor checks must be on that list (spec 4, 16), or a
+        // contributor suspended while a page is open could keep using it.
+        Livewire::addPersistentMiddleware([EnsureUserRole::class, EnsureActiveContributor::class]);
 
         // Spec 17.2: throttle invite redemption.
         RateLimiter::for('invite', fn (Request $request) => Limit::perMinute(10)->by($request->ip()));
@@ -97,6 +107,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Milestone::class, MilestonePolicy::class);
         Gate::policy(Deliverable::class, DeliverablePolicy::class);
         Gate::policy(Task::class, TaskPolicy::class);
+        Gate::policy(TaskComment::class, TaskCommentPolicy::class);
         Gate::policy(Submission::class, SubmissionPolicy::class);
         Gate::policy(Sow::class, SowPolicy::class);
         Gate::policy(Media::class, MediaPolicy::class);

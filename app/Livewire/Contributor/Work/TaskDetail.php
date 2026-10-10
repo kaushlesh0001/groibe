@@ -16,6 +16,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -26,6 +27,7 @@ class TaskDetail extends Component
 {
     use WithFileUploads;
 
+    #[Locked]
     public Task $task;
 
     public string $note = '';
@@ -79,6 +81,9 @@ class TaskDetail extends Component
 
     public function render()
     {
+        // Access can be withdrawn while the page is open (for example the contributor is taken off the task).
+        abort_unless(Gate::forUser(Auth::user())->allows('view', $this->task), 404);
+
         $this->task->load('milestone:id,title,project_id', 'milestone.project:id,uuid,title');
 
         $submissions = $this->task->submissions()->with('media')->orderByDesc('version')->get();

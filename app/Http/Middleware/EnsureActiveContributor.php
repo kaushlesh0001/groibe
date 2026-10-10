@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Enums\OnboardingState;
 use App\Enums\UserStatus;
 use Closure;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -28,9 +29,11 @@ class EnsureActiveContributor
             return $next($request);
         }
 
-        return response()->view('contributor.status', [
+        // Thrown, not returned: Livewire re-applies this middleware on its update requests and only honours
+        // middleware that aborts by exception. Laravel renders the same response for a normal page request.
+        throw new HttpResponseException(response()->view('contributor.status', [
             'state' => $state,
             'suspended' => $user->status === UserStatus::Suspended,
-        ], 403);
+        ], 403));
     }
 }
