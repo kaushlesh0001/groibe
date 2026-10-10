@@ -26,7 +26,7 @@ enum MilestoneStatus: string implements HasLabel
         return match ($this) {
             self::Planned => [self::InProgress],
             self::InProgress => [self::InQa],
-            self::InQa => [self::Shared],
+            self::InQa => [self::Shared, self::InProgress],
             self::Shared => [self::ClientAccepted, self::ClientChangesRequested],
             self::ClientChangesRequested => [self::InProgress],
             self::ClientAccepted => [],

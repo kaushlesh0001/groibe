@@ -3,10 +3,12 @@
 namespace App\Actions\Assignments;
 
 use App\Actions\Assignments\Concerns\MovesAssignment;
+use App\Actions\Milestones\SyncMilestoneStatus;
 use App\Enums\AssignmentStatus;
 use App\Enums\TaskStatus;
 use App\Exceptions\ActionBlocked;
 use App\Models\Assignment;
+use App\Models\Milestone;
 use App\Models\Task;
 use App\Models\User;
 use App\Notifications\AssignmentRemoved;
@@ -58,6 +60,10 @@ class RemoveAssignment
                 }
 
                 $returned = $tasks->count();
+
+                // Tasks leaving submitted or approved may pull a milestone back out of QA (spec 6.9, SCR-015).
+                Milestone::query()->whereIn('id', $tasks->pluck('milestone_id')->unique())->get()
+                    ->each(fn (Milestone $milestone) => app(SyncMilestoneStatus::class)($milestone));
             },
         );
 

@@ -108,3 +108,13 @@ Proposed changes only. The spec is edited by the founder, between passes, and lo
 - **Gap:** 6.6 has `active -> completed` with no trigger, and does not say what happens to a contributor's open tasks when an assignment is `removed`. It also does not say in which project states a contributor may be invited.
 - **Decision:** Invites are allowed only while the project is `staffing` or `active`. Active assignments become `completed` automatically when the project reaches `accepted`. On removal, the contributor's unfinished tasks return to unassigned (`assignment_id` null, status `todo`) and the delivery manager is notified.
 - **Code status:** Pass 4.
+
+## SCR-015: Milestone returns to in progress from QA (spec section 6.9)
+
+- **Status:** ACCEPTED 2026-10-10. Option (a). Spec sections 6.9 and 23 updated.
+- **Gap:** 6.9 moves a milestone to `in_qa` automatically once every task is `submitted` or `approved`, but has no way back. When QA requests changes on a task, or an assignment removal returns a task to `todo` (6.2), the milestone would sit in `in_qa` with unfinished work.
+- **Options:**
+  - (a) Add `in_qa -> in_progress`, automatic when any task leaves `submitted` or `approved`.
+  - (b) Block removal and QA change requests while the milestone is in `in_qa`.
+- **Decision:** (a). The milestone returns to `in_progress` and moves to `in_qa` again by the existing rule once every task is `submitted` or `approved`. A milestone that is `shared` or later is not affected.
+- **Code status:** Pass 4.

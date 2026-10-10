@@ -342,22 +342,49 @@ describe('automatic milestone status', function () {
         expect(Activity::query()->where('log_name', 'milestone')->pluck('event')->all())->toBe(['in_progress', 'in_qa']);
     });
 
-    it('does not wait on tasks needing changes and never moves backwards or past QA', function () {
+    it('does not wait on tasks needing changes', function () {
         taskOf($this->milestone, ['status' => TaskStatus::Submitted]);
         taskOf($this->milestone, ['status' => TaskStatus::ChangesRequested]);
 
         expect(($this->sync)())->toBe(MilestoneStatus::InProgress);
+    });
 
-        $this->milestone->refresh()->forceFill(['status' => MilestoneStatus::InQa])->save();
-        taskOf($this->milestone);
+    it('returns from QA to in progress when QA requests changes on a task (SCR-015)', function () {
+        $this->milestone->forceFill(['status' => MilestoneStatus::InQa])->save();
+        $approved = taskOf($this->milestone, ['status' => TaskStatus::Approved]);
+        $reviewed = taskOf($this->milestone, ['status' => TaskStatus::Submitted]);
 
         expect(($this->sync)())->toBe(MilestoneStatus::InQa);
 
-        $this->milestone->forceFill(['status' => MilestoneStatus::Shared])->save();
-        Task::query()->update(['status' => TaskStatus::Approved]);
+        $reviewed->forceFill(['status' => TaskStatus::ChangesRequested])->save();
 
-        expect(($this->sync)())->toBe(MilestoneStatus::Shared);
+        expect(($this->sync)())->toBe(MilestoneStatus::InProgress)
+            ->and($approved->refresh()->status)->toBe(TaskStatus::Approved);
+
+        $event = Activity::query()->where('log_name', 'milestone')->sole();
+        expect($event->event)->toBe('in_progress')
+            ->and($event->properties['from'])->toBe('in_qa')
+            ->and($event->properties['automatic'])->toBeTrue();
     });
+
+    it('goes back to QA by the normal rule once the task is submitted again', function () {
+        $this->milestone->forceFill(['status' => MilestoneStatus::InQa])->save();
+        taskOf($this->milestone, ['status' => TaskStatus::Approved]);
+        $reviewed = taskOf($this->milestone, ['status' => TaskStatus::ChangesRequested]);
+
+        expect(($this->sync)())->toBe(MilestoneStatus::InProgress);
+
+        $reviewed->forceFill(['status' => TaskStatus::Submitted])->save();
+
+        expect(($this->sync)())->toBe(MilestoneStatus::InQa);
+    });
+
+    it('leaves a milestone that is shared or later alone', function (MilestoneStatus $status) {
+        $this->milestone->forceFill(['status' => $status])->save();
+        taskOf($this->milestone, ['status' => TaskStatus::Todo]);
+
+        expect(($this->sync)())->toBe($status);
+    })->with([MilestoneStatus::Shared, MilestoneStatus::ClientAccepted, MilestoneStatus::ClientChangesRequested]);
 });
 
 describe('read access', function () {
