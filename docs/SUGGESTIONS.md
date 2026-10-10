@@ -34,3 +34,14 @@ None of these are built. Each needs a spec decision or a later pass.
 12. **Brief draft cleanup.** Abandoned drafts and their uploaded files stay forever. Add a scheduled cleanup in Pass 9 housekeeping.
 13. **`organization_users` is read per check.** `User::organizationRole()` memoizes per request, but lists of policy checks across many organizations would still query once per organization. Not an issue for clients (one organization).
 14. **PHPStan cache files are tracked in git.** `storage/framework/phpstan/` was committed in Pass 1, so every Larastan run dirties the tree. Untrack it and add `/storage/framework/phpstan` to `.gitignore`. Pass 2 commits leave those files out.
+
+## Pass 2 review (audit against spec and Done-when)
+
+No critical or high findings. Medium and low items, none fixed:
+
+15. **Medium: `briefs.submitted_at` has no index.** The admin queue sorts and filters on it. Spec 7.10 does not require it. Add when the table grows.
+16. **Medium: an admin with `briefs.view` can open a client's draft brief by direct URL.** The list hides drafts, and the spec gives admins RUA on briefs, so access is allowed, but drafts are the client's unfinished work. Decide whether drafts should be admin-hidden entirely.
+17. **Low: activity log writes two entries per transition.** The model's own change log and the Action's explicit entry both fire. Harmless, noisy. Drop `status` from the models' logged attributes or the explicit entry.
+18. **Low: Livewire's temporary upload endpoint accepts any file type up to 20 MB.** The brief form validates type and size before the file is attached, and unattached temp files are purged, so nothing unsafe is stored permanently. Tighten `livewire.temporary_file_upload.rules` to the same extension allowlist.
+19. **Low: no rate limit on MSA and SOW acceptance or brief submit.** Actions are idempotent or state-guarded. Consider a throttle in Pass 9 hardening.
+20. **Low: `OrganizationPolicy` duplicates the org-role lookup now in `ChecksOrganizationAccess`.** Refactor it onto the trait. Left alone to avoid touching tested Pass 1 code.

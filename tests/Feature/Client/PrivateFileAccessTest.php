@@ -89,3 +89,19 @@ it('denies file collections the policy does not know', function () {
     $url = URL::temporarySignedRoute('files.show', now()->addMinutes(5), ['media' => $media->uuid]);
     $this->actingAs($this->owner)->get($url)->assertForbidden();
 });
+
+it('serves project files only to the owning organization once the project is visible, and to project admins', function () {
+    $project = Project::factory()->create(['organization_id' => $this->org->id, 'status' => ProjectStatus::Draft]);
+    $project->addMedia(UploadedFile::fake()->create('plan.pdf', 5, 'application/pdf'))->toMediaCollection(Project::FILES, 'local');
+    $url = URL::temporarySignedRoute('files.show', now()->addMinutes(5), ['media' => $project->getFirstMedia(Project::FILES)->uuid]);
+
+    // Draft projects are internal, so the client is denied; admins with project access are not.
+    asUser($this->owner)->get($url)->assertForbidden();
+    asUser(adminUser(AdminRole::DeliveryManager))->get($url)->assertOk();
+    asUser(adminUser(AdminRole::CommunityManager))->get($url)->assertOk();
+
+    $project->update(['status' => ProjectStatus::SowSent]);
+    asUser($this->owner)->get($url)->assertOk();
+    asUser(clientUser(Organization::factory()->verified()->create(), OrgRole::Owner))->get($url)->assertForbidden();
+    asUser(contributorUser())->get($url)->assertForbidden();
+});
