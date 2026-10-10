@@ -55,6 +55,9 @@ class ProjectShow extends Component
 
     public function render()
     {
+        // Re-checked on every refresh: membership or the project's visibility can change while the page is open.
+        Gate::authorize('view', $this->project);
+
         $user = Auth::user();
         $project = $this->project->load(['organization', 'projectType:id,name', 'skills:id,name']);
 

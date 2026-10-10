@@ -203,7 +203,7 @@ class WorkPlanActions
     {
         return [
             TextInput::make('title')->required()->maxLength(255),
-            Textarea::make('description')->rows(3),
+            Textarea::make('description')->rows(3)->helperText('Shown to the client once the milestone is shared with them. Keep internal notes out of it.'),
             DatePicker::make('due_date'),
             TextInput::make('value')->numeric()->minValue(0)->prefix('INR'),
         ];

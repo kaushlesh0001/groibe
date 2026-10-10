@@ -9,10 +9,12 @@ use App\Enums\SowStatus;
 use App\Enums\SubmissionStatus;
 use App\Enums\TaskStatus;
 use App\Filament\Admin\Resources\Briefs\Pages\ListBriefs;
+use App\Filament\Admin\Resources\Deliverables\Pages\ListDeliverables;
 use App\Filament\Admin\Resources\Projects\Pages\EditProject;
 use App\Filament\Admin\Resources\Projects\Pages\ListProjects;
 use App\Filament\Admin\Resources\Projects\Pages\ProjectWorkspace;
 use App\Filament\Admin\Resources\Projects\RelationManagers\AssignmentsRelationManager;
+use App\Filament\Admin\Resources\Projects\RelationManagers\DeliverablesRelationManager;
 use App\Filament\Admin\Resources\Projects\RelationManagers\MilestonesRelationManager;
 use App\Filament\Admin\Resources\Projects\RelationManagers\SowsRelationManager;
 use App\Filament\Admin\Resources\Projects\RelationManagers\TasksRelationManager;
@@ -209,6 +211,39 @@ it('does not query more per team member or milestone on the client project page'
     $addRows(7);
 
     expect(queries($open))->toBe($small);
+});
+
+it('does not query more per deliverable on the deliverables tab and the deliverables list', function () {
+    $project = Project::factory()->status(ProjectStatus::Active)->create(['organization_id' => $this->org->id]);
+    $seat = Assignment::factory()->active()->create(['project_id' => $project->id]);
+    $addRows = function (int $n) use ($project, $seat): void {
+        foreach (range(1, $n) as $i) {
+            $milestone = Milestone::factory()->status(MilestoneStatus::InQa)->create(['project_id' => $project->id]);
+            $submission = Submission::factory()->create([
+                'task_id' => Task::factory()->status(TaskStatus::Approved)->create(['milestone_id' => $milestone->id, 'assignment_id' => $seat->id])->id,
+                'assignment_id' => $seat->id,
+                'status' => SubmissionStatus::QaApproved,
+            ]);
+            Deliverable::factory()->create(['milestone_id' => $milestone->id])->submissions()->attach($submission);
+        }
+    };
+    $screens = [
+        'deliverables tab' => fn () => Livewire::actingAs($this->dm)->test(DeliverablesRelationManager::class, ['ownerRecord' => $project, 'pageClass' => EditProject::class]),
+        'deliverables list' => fn () => Livewire::actingAs($this->dm)->test(ListDeliverables::class),
+    ];
+
+    $addRows(2);
+    $small = [];
+    foreach ($screens as $name => $open) {
+        $open(); // warm caches
+        $small[$name] = queries($open);
+    }
+
+    $addRows(7);
+
+    foreach ($screens as $name => $open) {
+        expect(queries($open))->toBe($small[$name], $name);
+    }
 });
 
 it('does not query more per assignment row in the project team panel', function () {
