@@ -132,6 +132,21 @@ class BriefForm extends Component
         ]);
     }
 
+    /**
+     * Check the size as soon as files are chosen. The shared Livewire upload cap is the largest in the app
+     * (25 MB for submissions), so the brief's own 20 MB cap is enforced here. Type is checked on the step.
+     */
+    public function updatedUploads(): void
+    {
+        try {
+            $this->validate(['uploads.*' => ['file', 'max:'.config('groibe.uploads.document_max_kb')]]);
+        } catch (ValidationException $e) {
+            $this->uploads = [];
+
+            throw $e;
+        }
+    }
+
     private function validateStep(): void
     {
         $this->form->validate($this->form->rulesForStep($this->step));
