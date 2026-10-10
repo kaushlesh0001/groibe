@@ -130,6 +130,7 @@ Implement each as a PHP backed Enum plus an Action class per transition (`app/Ac
 ### 6.2 Project
 `draft -> sow_sent -> sow_accepted -> staffing -> active -> in_qa -> delivered -> accepted -> closed`
 - Side states: `on_hold` (from staffing/active), `cancelled` (from any pre-closed state, admin only, reason required).
+- Resume: `on_hold -> <the state it was held from>` (staffing or active), recorded in `projects.status_before_hold` and cleared on resume. Hold and cancel reasons are kept in the activity log.
 - `staffing -> active` requires at least one active assignment.
 - `delivered -> accepted` happens when all milestones are client-accepted.
 - `closed` triggers: review prompts, proof-of-work drafts, reputation recompute.
@@ -210,7 +211,7 @@ Conventions:
 **brief_skills**: brief_id, skill_id.
 **brief_files**: use media library (collection `brief_files`, private).
 
-**projects**: id, uuid, brief_id (nullable), organization_id, code (unique, e.g. `GRB-2026-0001`), title, slug, summary, scope_summary, project_type_id, status, contract_value, currency, start_date, due_date, delivery_manager_id, client_can_view_shortlist, showcase_consent (`none|anonymous|named`), zoho_invoice_ref (nullable), closed_at, deleted_at.
+**projects**: id, uuid, brief_id (nullable), organization_id, code (unique, e.g. `GRB-2026-0001`), title, slug, summary, scope_summary, project_type_id, status, contract_value, currency, start_date, due_date, delivery_manager_id, client_can_view_shortlist, showcase_consent (`none|anonymous|named`), zoho_invoice_ref (nullable), status_before_hold (nullable), closed_at, deleted_at.
 **project_skills**: project_id, skill_id.
 **sows**: id, project_id, version (int), status, title, body_html, body_variables (json), total_value, currency, payment_terms, sent_at, accepted_at, accepted_by, accepted_ip, accepted_user_agent, superseded_by. Unique (project_id, version).
 **milestones**: id, project_id, title, description, sort, due_date, value (nullable), status, shared_at, client_accepted_at, client_accepted_by, client_note.
@@ -545,3 +546,4 @@ Stored in `feature_flags`, cached, toggled in Admin. Defaults:
 | 2026-10-10 | 6.1 | SCR-005: added explicit "mark scoped" action; Convert requires `scoped` | Founder |
 | 2026-10-10 | 6.3 | SCR-006: no client reject action in v1; `rejected` state kept, unused | Founder |
 | 2026-10-10 | 6.3, 8 | SCR-007: accepted SOW immutable; editing a sent SOW keeps project at `sow_sent`; `{{milestones_table}}` empty-state until milestones exist | Founder |
+| 2026-10-10 | 6.2, 7.3 | SCR-008: added `projects.status_before_hold` and a resume transition from `on_hold` | Founder |
