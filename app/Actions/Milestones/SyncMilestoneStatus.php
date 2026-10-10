@@ -6,6 +6,8 @@ use App\Enums\MilestoneStatus;
 use App\Enums\TaskStatus;
 use App\Models\Milestone;
 use App\Models\Task;
+use App\Notifications\MilestoneReadyToShare;
+use App\Services\Notifications\NotificationDispatcher;
 
 /**
  * The automatic milestone moves of spec 6.9, run after task changes (no authorization of its own):
@@ -48,5 +50,16 @@ class SyncMilestoneStatus
             ->event($to->value)
             ->withProperties(['from' => $from->value, 'to' => $to->value, 'project_id' => $milestone->project_id, 'automatic' => true])
             ->log("Milestone moved from {$from->value} to {$to->value}");
+
+        // The delivery side has something to do once a milestone reaches QA (spec 6.9).
+        if ($to === MilestoneStatus::InQa) {
+            $milestone->loadMissing('project.deliveryManager');
+
+            app(NotificationDispatcher::class)->toAdmins(
+                'milestones.update',
+                new MilestoneReadyToShare($milestone, $milestone->project),
+                $milestone->project->deliveryManager,
+            );
+        }
     }
 }

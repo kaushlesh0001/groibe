@@ -7,6 +7,8 @@ use App\Enums\ProjectStatus;
 use App\Exceptions\ActionBlocked;
 use App\Models\Project;
 use App\Models\User;
+use App\Notifications\ProjectDelivered;
+use App\Services\Notifications\NotificationDispatcher;
 use App\Services\Projects\ProjectTransitionGuards;
 
 /**
@@ -17,7 +19,7 @@ class MarkProjectDelivered
 {
     use TransitionsProject;
 
-    public function __construct(private ProjectTransitionGuards $guards, private AcceptProject $acceptProject) {}
+    public function __construct(private ProjectTransitionGuards $guards, private AcceptProject $acceptProject, private NotificationDispatcher $dispatcher) {}
 
     public function __invoke(Project $project, User $actor): Project
     {
@@ -26,6 +28,9 @@ class MarkProjectDelivered
                 throw ActionBlocked::guardFailed('Every milestone must be shared with the client before the project is delivered.');
             }
         });
+
+        $project->loadMissing('organization');
+        $this->dispatcher->toOrganization($project->organization, new ProjectDelivered($project));
 
         if ($this->guards->allMilestonesAccepted($project)) {
             return ($this->acceptProject)($project, $actor, automatic: true);
