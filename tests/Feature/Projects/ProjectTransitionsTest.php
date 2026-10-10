@@ -7,6 +7,7 @@ use App\Actions\Projects\CloseProject;
 use App\Actions\Projects\MarkProjectDelivered;
 use App\Actions\Projects\MoveProjectToQa;
 use App\Actions\Projects\PutProjectOnHold;
+use App\Actions\Projects\ReopenProjectForChanges;
 use App\Actions\Projects\ResumeProject;
 use App\Actions\Projects\StartStaffing;
 use App\Enums\AdminRole;
@@ -180,4 +181,32 @@ it('covers every status in the transition map', function () {
 
     expect(ProjectStatus::Closed->allowedTransitions())->toBe([])
         ->and(ProjectStatus::Cancelled->allowedTransitions())->toBe([]);
+});
+
+it('returns a delivered project to QA when the client asks for changes (SCR-016)', function () {
+    $project = projectIn(ProjectStatus::Delivered);
+    $client = clientUser($project->organization);
+
+    expect(app(ReopenProjectForChanges::class)($project, $client)->status)->toBe(ProjectStatus::InQa);
+
+    $event = Activity::query()->where('log_name', 'project')->where('event', 'in_qa')->sole();
+    expect($event->properties['from'])->toBe('delivered')
+        ->and($event->properties['reason'])->toBe('client_requested_changes')
+        ->and($event->causer_id)->toBe($client->id);
+});
+
+it('only reopens a delivered project', function (ProjectStatus $from) {
+    $project = projectIn($from);
+
+    expect(fn () => app(ReopenProjectForChanges::class)($project, null))->toThrow(IllegalTransition::class);
+    expect($project->refresh()->status)->toBe($from);
+})->with([ProjectStatus::Draft, ProjectStatus::Staffing, ProjectStatus::Active, ProjectStatus::InQa, ProjectStatus::Accepted, ProjectStatus::Closed, ProjectStatus::OnHold, ProjectStatus::Cancelled]);
+
+it('lets an admin mark a reopened project delivered again', function () {
+    fakeGuards(true, true);
+    $project = projectIn(ProjectStatus::Delivered);
+
+    app(ReopenProjectForChanges::class)($project, clientUser($project->organization));
+
+    expect(app(MarkProjectDelivered::class)($project, $this->dm)->status)->toBe(ProjectStatus::Delivered);
 });

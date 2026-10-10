@@ -134,6 +134,7 @@ Implement each as a PHP backed Enum plus an Action class per transition (`app/Ac
 - `staffing -> active` requires at least one active assignment.
 - `delivered -> accepted` happens when all milestones are client-accepted.
 - `active -> in_qa` is an admin action. `in_qa -> delivered` is an admin action, allowed once every milestone is `shared` or later.
+- `delivered -> in_qa` happens automatically when the client requests changes on a milestone, so rework and QA run again before the project is delivered a second time.
 - Assignments: invites are allowed only while the project is `staffing` or `active`. Active assignments become `completed` automatically when the project reaches `accepted`. When an assignment is `removed`, the contributor's unfinished tasks return to unassigned (`assignment_id` null, status `todo`) and the delivery manager is notified.
 - `closed` triggers: review prompts, proof-of-work drafts, reputation recompute.
 
@@ -562,3 +563,4 @@ Stored in `feature_flags`, cached, toggled in Admin. Defaults:
 | 2026-10-10 | 6.2 | SCR-014: invites only in `staffing`/`active`; assignments auto-complete on `accepted`; removal unassigns open tasks | Founder |
 | 2026-10-10 | 6.2, 6.9, 12 | Pass 4 decisions, no SCR: admin-triggered project `in_qa` and `delivered`; automatic milestone `in_progress` and `in_qa`; task and submission QA linkage; only client `owner` and `manager` accept deliverables | Founder |
 | 2026-10-10 | 6.9 | SCR-015: added `in_qa -> in_progress`, automatic when a task leaves `submitted` or `approved` (QA changes requested, or removal returns a task to `todo`) | Founder |
+| 2026-10-10 | 6.2 | SCR-016: added `delivered -> in_qa`, automatic when the client requests changes on a milestone | Founder |
