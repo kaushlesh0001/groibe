@@ -5,6 +5,7 @@ namespace App\Filament\Admin\Resources\Projects;
 use App\Filament\Admin\Resources\Projects\Pages\CreateProject;
 use App\Filament\Admin\Resources\Projects\Pages\EditProject;
 use App\Filament\Admin\Resources\Projects\Pages\ListProjects;
+use App\Filament\Admin\Resources\Projects\RelationManagers\AssignmentsRelationManager;
 use App\Filament\Admin\Resources\Projects\RelationManagers\SowsRelationManager;
 use App\Filament\Admin\Resources\Projects\Schemas\ProjectForm;
 use App\Filament\Admin\Resources\Projects\Tables\ProjectsTable;
@@ -44,6 +45,7 @@ class ProjectResource extends Resource
     {
         return [
             SowsRelationManager::class,
+            AssignmentsRelationManager::class,
         ];
     }
 

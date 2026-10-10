@@ -18,6 +18,7 @@ trait TransitionsProject
      * @param  array<string, mixed>  $attributes  extra columns to write with the status change
      * @param  array<string, mixed>  $properties  extra data for the activity log entry
      * @param  Closure(Project): void|null  $guard  runs inside the transaction after the state check
+     * @param  Closure(Project): void|null  $after  runs inside the transaction once the new status is saved
      */
     protected function moveProject(
         Project $project,
@@ -27,12 +28,13 @@ trait TransitionsProject
         array $attributes = [],
         array $properties = [],
         ?Closure $guard = null,
+        ?Closure $after = null,
     ): Project {
         if ($ability !== null && $actor !== null) {
             Gate::forUser($actor)->authorize($ability, $project);
         }
 
-        DB::transaction(function () use ($project, $to, $actor, $attributes, $properties, $guard): void {
+        DB::transaction(function () use ($project, $to, $actor, $attributes, $properties, $guard, $after): void {
             $locked = Project::query()->lockForUpdate()->findOrFail($project->getKey());
             $from = $locked->status;
 
@@ -52,6 +54,10 @@ trait TransitionsProject
                 ->event($to->value)
                 ->withProperties(['from' => $from->value, 'to' => $to->value, ...$properties])
                 ->log("Project moved from {$from->value} to {$to->value}");
+
+            if ($after !== null) {
+                $after($locked);
+            }
         });
 
         return $project->refresh();

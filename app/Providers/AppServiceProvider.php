@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Actions\Admin\StartImpersonation;
 use App\Models\AgreementAcceptance;
 use App\Models\AgreementTemplate;
+use App\Models\Assignment;
 use App\Models\Brief;
 use App\Models\Category;
 use App\Models\FeatureFlag;
@@ -19,6 +20,7 @@ use App\Models\User;
 use App\Policies\ActivityPolicy;
 use App\Policies\AgreementAcceptancePolicy;
 use App\Policies\AgreementTemplatePolicy;
+use App\Policies\AssignmentPolicy;
 use App\Policies\BriefPolicy;
 use App\Policies\FeatureFlagPolicy;
 use App\Policies\MediaPolicy;
@@ -31,7 +33,7 @@ use App\Policies\SowPolicy;
 use App\Policies\TaxonomyPolicy;
 use App\Policies\UserPolicy;
 use App\Services\FeatureFlags\FeatureFlags;
-use App\Services\Projects\PendingPassFourGuards;
+use App\Services\Projects\EloquentProjectTransitionGuards;
 use App\Services\Projects\ProjectTransitionGuards;
 use App\Services\Settings\Settings;
 use Illuminate\Auth\Events\Login;
@@ -53,8 +55,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(FeatureFlags::class);
         $this->app->singleton(Settings::class);
 
-        // Pass 4 rebinds this to the real assignment and milestone checks.
-        $this->app->bind(ProjectTransitionGuards::class, PendingPassFourGuards::class);
+        // Cross-domain guards for the project state machine (spec 6.2).
+        $this->app->bind(ProjectTransitionGuards::class, EloquentProjectTransitionGuards::class);
     }
 
     public function boot(): void
@@ -83,6 +85,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(AgreementAcceptance::class, AgreementAcceptancePolicy::class);
         Gate::policy(Brief::class, BriefPolicy::class);
         Gate::policy(Project::class, ProjectPolicy::class);
+        Gate::policy(Assignment::class, AssignmentPolicy::class);
         Gate::policy(Sow::class, SowPolicy::class);
         Gate::policy(Media::class, MediaPolicy::class);
 

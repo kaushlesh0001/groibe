@@ -6,7 +6,9 @@ use App\Enums\ProjectStatus;
 use App\Filament\Admin\Resources\Briefs\Pages\ListBriefs;
 use App\Filament\Admin\Resources\Projects\Pages\EditProject;
 use App\Filament\Admin\Resources\Projects\Pages\ListProjects;
+use App\Filament\Admin\Resources\Projects\RelationManagers\AssignmentsRelationManager;
 use App\Filament\Admin\Resources\Projects\RelationManagers\SowsRelationManager;
+use App\Models\Assignment;
 use App\Models\Brief;
 use App\Models\Organization;
 use App\Models\Project;
@@ -65,6 +67,19 @@ it('issues the same number of queries for 3 rows as for 10 on every new list pag
     $large = collect($pages)->map(fn ($page) => queries($page))->all();
 
     expect($large)->toBe($small);
+});
+
+it('does not query more per assignment row in the project team panel', function () {
+    $project = Project::factory()->create(['organization_id' => $this->org->id]);
+    $open = fn () => Livewire::actingAs($this->dm)->test(AssignmentsRelationManager::class, ['ownerRecord' => $project, 'pageClass' => EditProject::class]);
+
+    Assignment::factory()->count(2)->create(['project_id' => $project->id]);
+    $open(); // warm caches
+    $small = queries($open);
+
+    Assignment::factory()->count(7)->create(['project_id' => $project->id]);
+
+    expect(queries($open))->toBe($small);
 });
 
 it('does not query more per SOW row in the project relation manager', function () {

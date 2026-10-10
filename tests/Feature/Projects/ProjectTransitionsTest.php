@@ -27,7 +27,7 @@ function projectIn(ProjectStatus $status): Project
     return Project::factory()->status($status)->create();
 }
 
-/** A stand-in for the Pass 4 implementation. */
+/** A stand-in for the guards, to test the project state machine in isolation. */
 function fakeGuards(bool $assignment, bool $milestones): void
 {
     app()->instance(ProjectTransitionGuards::class, new class($assignment, $milestones) implements ProjectTransitionGuards
@@ -72,7 +72,7 @@ it('requires an active assignment to go from staffing to active', function () {
     expect(app(ActivateProject::class)($project, $this->dm)->status)->toBe(ProjectStatus::Active);
 });
 
-it('refuses to go active in production until Pass 4 supplies real guards', function () {
+it('refuses to go active with the real guards when the project has no active assignment', function () {
     $project = projectIn(ProjectStatus::Staffing);
 
     expect(fn () => app(ActivateProject::class)($project, $this->dm))->toThrow(ActionBlocked::class);
