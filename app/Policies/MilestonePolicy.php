@@ -3,6 +3,7 @@
 namespace App\Policies;
 
 use App\Enums\AssignmentStatus;
+use App\Enums\MilestoneStatus;
 use App\Models\Assignment;
 use App\Models\Milestone;
 use App\Models\User;
@@ -54,6 +55,27 @@ class MilestonePolicy
     public function reorder(User $actor): bool
     {
         return $this->adminCan($actor, 'milestones.update');
+    }
+
+    /** Share with the client, and reopen after the client asked for changes (spec 6.9: only an admin shares). */
+    public function share(User $actor, Milestone $milestone): bool
+    {
+        return $this->adminCan($actor, 'milestones.update');
+    }
+
+    public function reopen(User $actor, Milestone $milestone): bool
+    {
+        return $this->adminCan($actor, 'milestones.update');
+    }
+
+    /** Accept or request changes: client owners and managers, while the milestone is shared (spec 6.9, 12). */
+    public function respond(User $actor, Milestone $milestone): bool
+    {
+        $milestone->loadMissing('project');
+
+        return $actor->isClient()
+            && $milestone->status === MilestoneStatus::Shared
+            && $this->isOwnerOrManager($actor, $milestone->project->organization_id);
     }
 
     public function delete(User $actor, Milestone $milestone): bool

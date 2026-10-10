@@ -7,6 +7,7 @@ use App\Filament\Admin\Resources\Projects\Pages\EditProject;
 use App\Filament\Admin\Resources\Projects\Pages\ListProjects;
 use App\Filament\Admin\Resources\Projects\Pages\ProjectWorkspace;
 use App\Filament\Admin\Resources\Projects\RelationManagers\AssignmentsRelationManager;
+use App\Filament\Admin\Resources\Projects\RelationManagers\DeliverablesRelationManager;
 use App\Filament\Admin\Resources\Projects\RelationManagers\MilestonesRelationManager;
 use App\Filament\Admin\Resources\Projects\RelationManagers\SowsRelationManager;
 use App\Filament\Admin\Resources\Projects\RelationManagers\TasksRelationManager;
@@ -51,6 +52,7 @@ class ProjectResource extends Resource
             AssignmentsRelationManager::class,
             MilestonesRelationManager::class,
             TasksRelationManager::class,
+            DeliverablesRelationManager::class,
         ];
     }
 

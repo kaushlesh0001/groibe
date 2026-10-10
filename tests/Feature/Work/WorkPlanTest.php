@@ -165,11 +165,11 @@ describe('tasks', function () {
         Notification::assertSentTo($this->seat->user, TaskAssigned::class);
     });
 
-    it('only takes tasks while the milestone is planned or in progress', function (MilestoneStatus $status) {
+    it('only takes tasks until the milestone is shared with the client', function (MilestoneStatus $status) {
         $milestone = milestoneOf($this->project, ['status' => $status]);
 
-        expect(fn () => app(CreateTask::class)($milestone, $this->dm, ['title' => 'x']))->toThrow(ActionBlocked::class, 'planned or in progress');
-    })->with([MilestoneStatus::InQa, MilestoneStatus::Shared, MilestoneStatus::ClientAccepted, MilestoneStatus::ClientChangesRequested]);
+        expect(fn () => app(CreateTask::class)($milestone, $this->dm, ['title' => 'x']))->toThrow(ActionBlocked::class, 'not been shared');
+    })->with([MilestoneStatus::Shared, MilestoneStatus::ClientAccepted, MilestoneStatus::ClientChangesRequested]);
 
     it('only assigns to an active seat of the same project', function (string $case) {
         $seat = match ($case) {

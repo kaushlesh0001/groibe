@@ -4,6 +4,8 @@ namespace App\Filament\Admin\Resources\Projects\Support;
 
 use App\Actions\Milestones\CreateMilestone;
 use App\Actions\Milestones\DeleteMilestone;
+use App\Actions\Milestones\ReopenMilestone;
+use App\Actions\Milestones\ShareMilestone;
 use App\Actions\Milestones\UpdateMilestone;
 use App\Actions\Tasks\AssignTask;
 use App\Actions\Tasks\CreateTask;
@@ -54,6 +56,36 @@ class WorkPlanActions
             ));
     }
 
+    public static function shareMilestone(): Action
+    {
+        return Action::make('shareMilestone')
+            ->label('Share with client')
+            ->icon('heroicon-o-paper-airplane')
+            ->color('success')
+            ->requiresConfirmation()
+            ->modalDescription('The client owner and managers are notified and can accept it or ask for changes. Every task must be approved and the milestone needs a deliverable.')
+            ->visible(fn (Milestone $record): bool => $record->status === MilestoneStatus::InQa && auth()->user()?->can('share', $record))
+            ->action(fn (Milestone $record) => DomainActionRunner::run(
+                fn () => app(ShareMilestone::class)($record, auth()->user()),
+                'Milestone shared with the client',
+            ));
+    }
+
+    public static function reopenMilestone(): Action
+    {
+        return Action::make('reopenMilestone')
+            ->label('Reopen')
+            ->icon('heroicon-o-arrow-uturn-left')
+            ->color('warning')
+            ->requiresConfirmation()
+            ->modalDescription('Read the client note first. Add tasks for the follow-up work, then share the milestone again.')
+            ->visible(fn (Milestone $record): bool => $record->status === MilestoneStatus::ClientChangesRequested && auth()->user()?->can('reopen', $record))
+            ->action(fn (Milestone $record) => DomainActionRunner::run(
+                fn () => app(ReopenMilestone::class)($record, auth()->user()),
+                'Milestone reopened',
+            ));
+    }
+
     public static function deleteMilestone(): Action
     {
         return Action::make('deleteMilestone')
@@ -81,7 +113,7 @@ class WorkPlanActions
                     ->required()
                     ->options(fn (): array => Milestone::query()
                         ->where('project_id', $project()->getKey())
-                        ->whereIn('status', [MilestoneStatus::Planned->value, MilestoneStatus::InProgress->value])
+                        ->whereIn('status', [MilestoneStatus::Planned->value, MilestoneStatus::InProgress->value, MilestoneStatus::InQa->value])
                         ->ordered()
                         ->pluck('title', 'id')
                         ->all()),

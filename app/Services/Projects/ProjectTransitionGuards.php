@@ -13,6 +13,9 @@ interface ProjectTransitionGuards
     /** staffing -> active requires at least one active assignment. */
     public function hasActiveAssignment(Project $project): bool;
 
+    /** in_qa -> delivered is allowed once every milestone is shared or later (and there is at least one). */
+    public function allMilestonesShared(Project $project): bool;
+
     /** delivered -> accepted happens when all milestones are client-accepted. */
     public function allMilestonesAccepted(Project $project): bool;
 }

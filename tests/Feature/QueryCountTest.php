@@ -2,8 +2,11 @@
 
 use App\Enums\AdminRole;
 use App\Enums\BriefStatus;
+use App\Enums\MilestoneStatus;
 use App\Enums\OnboardingState;
 use App\Enums\ProjectStatus;
+use App\Enums\SubmissionStatus;
+use App\Enums\TaskStatus;
 use App\Filament\Admin\Resources\Briefs\Pages\ListBriefs;
 use App\Filament\Admin\Resources\Projects\Pages\EditProject;
 use App\Filament\Admin\Resources\Projects\Pages\ListProjects;
@@ -13,11 +16,13 @@ use App\Filament\Admin\Resources\Projects\RelationManagers\MilestonesRelationMan
 use App\Filament\Admin\Resources\Projects\RelationManagers\SowsRelationManager;
 use App\Filament\Admin\Resources\Projects\RelationManagers\TasksRelationManager;
 use App\Filament\Admin\Resources\Submissions\Pages\ListSubmissions;
+use App\Livewire\Client\Deliverables\DeliverableIndex;
 use App\Livewire\Contributor\Work\MyWork;
 use App\Livewire\Contributor\Work\ProjectBoard;
 use App\Livewire\Contributor\Work\TaskDetail;
 use App\Models\Assignment;
 use App\Models\Brief;
+use App\Models\Deliverable;
 use App\Models\Milestone;
 use App\Models\Organization;
 use App\Models\Project;
@@ -151,6 +156,31 @@ it('does not query more per submission row in the QA queue', function () {
         'assignment_id' => $seat->id,
     ]);
     $open = fn () => Livewire::actingAs($this->dm)->test(ListSubmissions::class);
+
+    $addRows(2);
+    $open(); // warm caches
+    $small = queries($open);
+
+    $addRows(7);
+
+    expect(queries($open))->toBe($small);
+});
+
+it('does not query more per milestone on the client deliverables page', function () {
+    $project = Project::factory()->status(ProjectStatus::Active)->create(['organization_id' => $this->org->id]);
+    $seat = Assignment::factory()->active()->create(['project_id' => $project->id]);
+    $addRows = function (int $n) use ($project, $seat): void {
+        foreach (range(1, $n) as $i) {
+            $milestone = Milestone::factory()->status(MilestoneStatus::Shared)->create(['project_id' => $project->id]);
+            $submission = Submission::factory()->create([
+                'task_id' => Task::factory()->status(TaskStatus::Approved)->create(['milestone_id' => $milestone->id, 'assignment_id' => $seat->id])->id,
+                'assignment_id' => $seat->id,
+                'status' => SubmissionStatus::QaApproved,
+            ]);
+            Deliverable::factory()->shared()->create(['milestone_id' => $milestone->id])->submissions()->attach($submission);
+        }
+    };
+    $open = fn () => Livewire::actingAs($this->owner)->test(DeliverableIndex::class);
 
     $addRows(2);
     $open(); // warm caches
