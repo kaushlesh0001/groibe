@@ -1,0 +1,13 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    level: 5
+    paths:
+        - app
+        - database/factories
+        - database/seeders
+        - routes
+    tmpDir: storage/framework/phpstan
+    # Read the array literal returned by casts() so Enum casts are typed correctly.
+    parseModelCastsMethod: true
