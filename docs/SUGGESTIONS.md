@@ -54,3 +54,21 @@ No critical or high findings. New evidence added: `tests/Feature/QueryCountTest.
 22. **Medium: commercial fields stay editable after a SOW is accepted.** An admin can change `contract_value` and dates on the project edit form after `sow_accepted`, so the project can drift from the accepted SOW. Lock those fields once the SOW is accepted, or require a new SOW version.
 23. **Medium (likely, not reproduced): client text in notification emails is rendered as Markdown.** Brief titles and the admin question go into markdown mail templates. HTML is escaped, but Markdown link syntax in a title may become a clickable link in an email to staff or the client. Escape Markdown characters in those values.
 24. **Low: acceptance rows have no uniqueness.** A double submit could store two identical MSA acceptances by the same owner. `AcceptClientMsa` is idempotent in code, but a unique index on user, template and organization would make it airtight.
+
+## Pass 3: Contributor onboarding and profiles
+
+None of these are built. Each needs a spec decision or a later pass.
+
+25. **Resolved (SCR-011).** `suspended -> active` (reinstate) exists, `rejected` is terminal in v1.
+26. **Medium: two fields say "active".** `users.status` and `profiles.onboarding_state` can disagree, because the Users resource lets an admin edit `users.status` by hand. Pass 3 makes `onboarding_state` the source of truth and the public scope checks both, with tests for the inconsistent cases. A cleaner fix is to make `users.status` read-only for contributors in the Users resource, or derive it.
+27. **Low: suspended contributors get no email.** `NotificationDispatcher::send` skips suspended users (Pass 2), and the suspend Action sets the status before notifying. The suspension is shown on their status page only. Decide whether security-style notices should bypass that skip.
+28. **Low: the `verified` middleware hides the onboarding "verify your email" step.** An unverified contributor is redirected to the verification page before they can open onboarding, so the email check on step 1 and the Action guard are a second line of defence. Fine for now.
+29. **Low: no admin view of the profile photo.** Photos live on the private disk and are served only to the owner and to the public for visible profiles. The admin review page shows no photo. Add a signed admin route if reviewers want it.
+30. **Low: no `slug_redirects` table.** Spec 16 mentions it, spec 7 does not list it. Slugs never change after the first publish, so nothing needs redirecting yet. Build it with the first feature that can rename a slug.
+31. **Low: rejection is final and silent on reasons.** The reason is kept in the activity log and not sent to the contributor (a spec 22 style default). Decide whether contributors should see a reason, and whether they may ever reapply.
+32. **Low: no JSON-LD or Open Graph image on contributor pages.** Title, description, canonical and basic Open Graph tags are set. Add `Person` and `BreadcrumbList` JSON-LD with the SEO pass.
+33. **Low: `/sitemap.xml` is built per request.** That keeps privacy changes instant, and it is fine at v1 volume. The spec schedules a sitemap refresh job. If it becomes a cache, it must be busted on every visibility, state and status change.
+34. **Low: FULLTEXT search is untested on MySQL.** The suite runs on SQLite, where search falls back to `LIKE`. Natural-language FULLTEXT also ignores words shorter than `ft_min_word_len` and stop words. Run the directory search on MySQL staging.
+35. **Low: public photo responses are `private, max-age=60`.** Short and private so a profile made private is not served from a shared cache for long. Cloudflare will not cache them. Revisit if photo load matters.
+36. **Low: bulk contributor actions skip silently per record.** The notification reports the counts, not which records were skipped.
+37. **Low: the starter-kit settings page still has name and email edit.** A contributor can change their display name there, and it flows to their public profile at once, with no review. Decide whether public name changes need approval.
