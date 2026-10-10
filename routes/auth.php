@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\StopImpersonationController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\DashboardRedirectController;
+use App\Http\Controllers\MediaDownloadController;
 use App\Livewire\Actions\Logout;
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
@@ -49,6 +50,11 @@ Route::middleware('auth')->group(function () {
     Volt::route('settings/appearance', 'settings.appearance')->name('settings.appearance');
 
     Route::post('impersonate/stop', StopImpersonationController::class)->name('impersonate.stop');
+
+    // Private files: signed link, signed-in user, and the owning record's policy (spec 17.2).
+    Route::get('files/{media:uuid}', MediaDownloadController::class)
+        ->middleware(['verified', 'signed', 'throttle:60,1'])
+        ->name('files.show');
 });
 
 Route::post('logout', Logout::class)->name('logout');
