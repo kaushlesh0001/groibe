@@ -1,0 +1,123 @@
+<?php
+
+namespace App\Filament\Admin\Resources\Contributors\Tables;
+
+use App\Actions\Contributors\ReinstateContributor;
+use App\Actions\Contributors\SuspendContributor;
+use App\Enums\OnboardingState;
+use App\Exceptions\ActionBlocked;
+use App\Exceptions\IllegalTransition;
+use App\Filament\Admin\Resources\Contributors\Actions\ContributorActions;
+use App\Models\Profile;
+use Filament\Actions\BulkAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\ViewAction;
+use Filament\Forms\Components\Textarea;
+use Filament\Notifications\Notification;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Table;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\Eloquent\Collection;
+
+class ContributorsTable
+{
+    /** @var list<OnboardingState> spec 6.10 states, without the client-only ones */
+    public const CONTRIBUTOR_STATES = [
+        OnboardingState::Registered,
+        OnboardingState::ProfileComplete,
+        OnboardingState::PendingReview,
+        OnboardingState::Active,
+        OnboardingState::Rejected,
+        OnboardingState::Suspended,
+    ];
+
+    public static function configure(Table $table): Table
+    {
+        return $table
+            ->columns([
+                TextColumn::make('user.name')->label('Name')->searchable()->sortable(),
+                TextColumn::make('user.email')->label('Email')->searchable()->toggleable(),
+                TextColumn::make('headline')->limit(40)->searchable()->toggleable(),
+                TextColumn::make('onboarding_state')
+                    ->label('State')
+                    ->badge()
+                    ->color(fn (OnboardingState $state): string => $state->color())
+                    ->sortable(),
+                IconColumn::make('is_public')->label('Public')->boolean()->toggleable(),
+                TextColumn::make('city')->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('created_at')->label('Registered')->dateTime()->sortable(),
+            ])
+            ->defaultSort('created_at', 'desc')
+            ->filters([
+                SelectFilter::make('onboarding_state')
+                    ->label('State')
+                    ->options(collect(self::CONTRIBUTOR_STATES)
+                        ->mapWithKeys(fn (OnboardingState $state) => [$state->value => $state->getLabel()])
+                        ->all()),
+            ])
+            ->recordActions([
+                ViewAction::make()->label('Open'),
+                ContributorActions::approve(),
+                ContributorActions::reject(),
+                ContributorActions::suspend(),
+                ContributorActions::reinstate(),
+            ])
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    self::bulkSuspend(),
+                    self::bulkReinstate(),
+                ]),
+            ]);
+    }
+
+    private static function bulkSuspend(): BulkAction
+    {
+        return BulkAction::make('suspendSelected')
+            ->label('Suspend selected')
+            ->color('danger')
+            ->requiresConfirmation()
+            ->schema([Textarea::make('reason')->label('Reason (internal)')->required()->rows(3)->maxLength(1000)])
+            ->deselectRecordsAfterCompletion()
+            ->action(fn (Collection $records, array $data) => self::runBulk($records, 'suspended', fn (Profile $profile) => app(SuspendContributor::class)($profile, auth()->user(), $data['reason'])));
+    }
+
+    private static function bulkReinstate(): BulkAction
+    {
+        return BulkAction::make('reinstateSelected')
+            ->label('Reinstate selected')
+            ->color('success')
+            ->requiresConfirmation()
+            ->deselectRecordsAfterCompletion()
+            ->action(fn (Collection $records) => self::runBulk($records, 'reinstated', fn (Profile $profile) => app(ReinstateContributor::class)($profile, auth()->user())));
+    }
+
+    /**
+     * Applies one transition Action per record. Records the state machine or policy refuses are
+     * skipped and counted, so a mixed selection never fails halfway with no report.
+     *
+     * @param  Collection<int, Profile>  $records
+     * @param  callable(Profile): mixed  $callback
+     */
+    private static function runBulk(Collection $records, string $verb, callable $callback): void
+    {
+        $done = 0;
+        $skipped = 0;
+
+        foreach ($records as $profile) {
+            try {
+                $callback($profile);
+                $done++;
+            } catch (IllegalTransition|ActionBlocked|AuthorizationException) {
+                $skipped++;
+            }
+        }
+
+        Notification::make()
+            ->title("{$done} {$verb}".($skipped > 0 ? ", {$skipped} skipped" : ''))
+            ->body($skipped > 0 ? 'Skipped contributors were in the wrong state or you are not allowed to change them.' : null)
+            ->color($skipped > 0 ? 'warning' : 'success')
+            ->send();
+    }
+}
