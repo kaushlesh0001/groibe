@@ -87,3 +87,24 @@ Proposed changes only. The spec is edited by the founder, between passes, and lo
   - (c) Also allow `rejected -> profile_complete` so a contributor can reapply.
 - **Decision:** (a). Reinstate returns a suspended contributor to `active`. `rejected` is terminal in v1. Reasons for reject and suspend stay in the activity log, with no new column.
 - **Code status:** Pass 3.
+
+## SCR-012: Per-project team hiding (spec sections 7.3, 12, 22)
+
+- **Status:** ACCEPTED 2026-10-10. Recommended option. Spec sections 7.3, 12 and 23 updated.
+- **Gap:** Sections 12 and 22 say admin can hide the team from the client per project, but `projects` had no column for it.
+- **Decision:** Add `projects.hide_team` (bool, default false). Clients see the team (first name, role, headline) only once the SOW is accepted and only when `hide_team` is false.
+- **Code status:** Pass 4.
+
+## SCR-013: Admin access to submission files (spec sections 5, 7.3)
+
+- **Status:** ACCEPTED 2026-10-10. Recommended option. Spec sections 7.3 and 23 updated.
+- **Gap:** The prompt pack says "assigned admin sees all", but the permission matrix gives admin roles global scope, not per-project assignment.
+- **Decision:** Any admin holding `submissions.view` (`delivery_manager`, `super_admin`) can read all submission files. Access is not limited to the project's `delivery_manager_id`.
+- **Code status:** Pass 4.
+
+## SCR-014: Assignment completion and removal side effects (spec sections 6.2, 6.6)
+
+- **Status:** ACCEPTED 2026-10-10. Recommended option. Spec sections 6.2 and 23 updated. Section 6.6 is unchanged; the rules are stated at project level in 6.2.
+- **Gap:** 6.6 has `active -> completed` with no trigger, and does not say what happens to a contributor's open tasks when an assignment is `removed`. It also does not say in which project states a contributor may be invited.
+- **Decision:** Invites are allowed only while the project is `staffing` or `active`. Active assignments become `completed` automatically when the project reaches `accepted`. On removal, the contributor's unfinished tasks return to unassigned (`assignment_id` null, status `todo`) and the delivery manager is notified.
+- **Code status:** Pass 4.
