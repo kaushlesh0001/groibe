@@ -9,8 +9,9 @@ use App\Models\Task;
 
 /**
  * The automatic milestone moves of spec 6.9, run after task changes (no authorization of its own):
- * `planned -> in_progress` once any task has started, and `in_progress -> in_qa` once every task is
- * `submitted` or `approved`. Sharing and everything after it stay explicit actions.
+ * `planned -> in_progress` once any task has started, `in_progress -> in_qa` once every task is
+ * `submitted` or `approved`, and `in_qa -> in_progress` when a task leaves those states (SCR-015).
+ * Sharing and everything after it stay explicit actions.
  */
 class SyncMilestoneStatus
 {
@@ -19,11 +20,15 @@ class SyncMilestoneStatus
         $milestone = Milestone::query()->lockForUpdate()->findOrFail($milestone->getKey());
         $statuses = Task::query()->where('milestone_id', $milestone->getKey())->pluck('status');
 
-        if ($milestone->status === MilestoneStatus::Planned && $statuses->contains(fn (TaskStatus $s) => $s !== TaskStatus::Todo)) {
+        $finished = [TaskStatus::Submitted, TaskStatus::Approved];
+
+        if ($milestone->status === MilestoneStatus::InQa && ! $statuses->every(fn (TaskStatus $s) => in_array($s, $finished, true))) {
             $this->move($milestone, MilestoneStatus::InProgress);
         }
 
-        $finished = [TaskStatus::Submitted, TaskStatus::Approved];
+        if ($milestone->status === MilestoneStatus::Planned && $statuses->contains(fn (TaskStatus $s) => $s !== TaskStatus::Todo)) {
+            $this->move($milestone, MilestoneStatus::InProgress);
+        }
 
         if ($milestone->status === MilestoneStatus::InProgress && $statuses->isNotEmpty() && $statuses->every(fn (TaskStatus $s) => in_array($s, $finished, true))) {
             $this->move($milestone, MilestoneStatus::InQa);

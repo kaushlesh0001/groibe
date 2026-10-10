@@ -171,6 +171,7 @@ Milestone: `planned -> in_progress -> in_qa -> shared -> client_accepted | clien
 - `shared` means visible to client. Only Admin can share.
 - `client_changes_requested` returns the milestone to `in_progress` with a change note; tasks are reopened by Admin.
 - `planned -> in_progress` happens automatically when the first task on the milestone starts. `in_progress -> in_qa` happens automatically when every task on the milestone is `submitted` or `approved`. Sharing (`in_qa -> shared`) is an explicit admin action.
+- `in_qa -> in_progress` happens automatically when any task on the milestone leaves `submitted` or `approved`: QA requests changes on a task, or an assignment removal returns a task to `todo`.
 - Task and submission linkage: QA approve sets the submission to `qa_approved` and the task to `approved`. QA request changes sets the submission to `qa_changes_requested` and the task to `changes_requested`. A resubmission creates a new `submissions` row with `version` + 1.
 
 ### 6.10 Contributor onboarding
@@ -560,3 +561,4 @@ Stored in `feature_flags`, cached, toggled in Admin. Defaults:
 | 2026-10-10 | 7.3 | SCR-013: any admin with `submissions.view` reads all submission files | Founder |
 | 2026-10-10 | 6.2 | SCR-014: invites only in `staffing`/`active`; assignments auto-complete on `accepted`; removal unassigns open tasks | Founder |
 | 2026-10-10 | 6.2, 6.9, 12 | Pass 4 decisions, no SCR: admin-triggered project `in_qa` and `delivered`; automatic milestone `in_progress` and `in_qa`; task and submission QA linkage; only client `owner` and `manager` accept deliverables | Founder |
+| 2026-10-10 | 6.9 | SCR-015: added `in_qa -> in_progress`, automatic when a task leaves `submitted` or `approved` (QA changes requested, or removal returns a task to `todo`) | Founder |

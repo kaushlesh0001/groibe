@@ -26,7 +26,7 @@ dataset('state machines', [
         ['submitted', 'qa_changes_requested'], ['submitted', 'qa_approved'],
     ]],
     'milestone 6.9' => [MilestoneStatus::class, [
-        ['planned', 'in_progress'], ['in_progress', 'in_qa'], ['in_qa', 'shared'],
+        ['planned', 'in_progress'], ['in_progress', 'in_qa'], ['in_qa', 'shared'], ['in_qa', 'in_progress'],
         ['shared', 'client_accepted'], ['shared', 'client_changes_requested'], ['client_changes_requested', 'in_progress'],
     ]],
 ]);

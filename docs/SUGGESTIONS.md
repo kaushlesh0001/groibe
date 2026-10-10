@@ -92,7 +92,7 @@ No critical or high findings. Checked: route and Filament authorization, N+1 on 
 
 47. **Low: staffing permissions reuse `projects.update`.** Spec 5 has no Assignment row, so invite and remove are gated by `projects.update` (delivery_manager and super_admin), and viewing by `projects.view`. If community managers should invite from open roles in Pass 5, add an `assignments` permission then.
 48. **Low: invite and removal notifications link contributors to the dashboard.** My Work does not exist until step 4. Point `AssignmentInvited` and `AssignmentRemoved` at the My Work assignment page then.
-49. **Low: a milestone already in `in_qa` is not reopened when a task returns to `todo`.** Spec 6.9 has no `in_qa -> in_progress` edge, so removing a contributor, or an admin reopening work, can leave an `in_qa` milestone with an unfinished task. `SyncMilestoneStatus` never moves backwards. Needs a decision before step 5: add that edge, or block removal while the milestone is in QA.
+49. **Resolved by SCR-015.** A milestone in `in_qa` returns to `in_progress` automatically when a task leaves `submitted` or `approved`, whether QA requests changes or an assignment removal returns the task to `todo`.
 
 ## Pass 4, step 3 (milestones and tasks)
 

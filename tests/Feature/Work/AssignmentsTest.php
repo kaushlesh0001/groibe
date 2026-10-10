@@ -211,6 +211,23 @@ describe('remove', function () {
         Notification::assertSentTo($this->contributor, AssignmentRemoved::class);
     });
 
+    it('pulls a milestone back out of QA when a submitted task returns to todo (SCR-015)', function () {
+        $inQa = Milestone::factory()->status(MilestoneStatus::InQa)->create(['project_id' => $this->project->id]);
+        Task::factory()->status(TaskStatus::Approved)->create(['milestone_id' => $inQa->id, 'assignment_id' => $this->assignment->id]);
+        Task::factory()->status(TaskStatus::Submitted)->create(['milestone_id' => $inQa->id, 'assignment_id' => $this->assignment->id]);
+        $keepsQa = Milestone::factory()->status(MilestoneStatus::InQa)->create(['project_id' => $this->project->id]);
+        $other = Assignment::factory()->active()->create(['project_id' => $this->project->id]);
+        Task::factory()->status(TaskStatus::Submitted)->create(['milestone_id' => $keepsQa->id, 'assignment_id' => $other->id]);
+        $shared = Milestone::factory()->status(MilestoneStatus::Shared)->create(['project_id' => $this->project->id]);
+        Task::factory()->status(TaskStatus::Submitted)->create(['milestone_id' => $shared->id, 'assignment_id' => $this->assignment->id]);
+
+        app(RemoveAssignment::class)($this->assignment, $this->dm, 'Left the team');
+
+        expect($inQa->refresh()->status)->toBe(MilestoneStatus::InProgress)
+            ->and($keepsQa->refresh()->status)->toBe(MilestoneStatus::InQa)
+            ->and($shared->refresh()->status)->toBe(MilestoneStatus::Shared);
+    });
+
     it('keeps the internal reason out of the contributor notification', function () {
         $assignment = app(RemoveAssignment::class)($this->assignment, $this->dm, 'Quality issues on task 3');
         $notification = new AssignmentRemoved($assignment->refresh(), $this->project, $this->contributor->name, 4);
