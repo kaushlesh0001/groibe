@@ -3,23 +3,36 @@
 namespace App\Providers;
 
 use App\Actions\Admin\StartImpersonation;
+use App\Models\AgreementAcceptance;
+use App\Models\AgreementTemplate;
+use App\Models\Brief;
 use App\Models\Category;
 use App\Models\FeatureFlag;
 use App\Models\Organization;
 use App\Models\Profile;
+use App\Models\Project;
 use App\Models\ProjectType;
 use App\Models\Setting;
 use App\Models\Skill;
+use App\Models\Sow;
 use App\Models\User;
 use App\Policies\ActivityPolicy;
+use App\Policies\AgreementAcceptancePolicy;
+use App\Policies\AgreementTemplatePolicy;
+use App\Policies\BriefPolicy;
 use App\Policies\FeatureFlagPolicy;
+use App\Policies\MediaPolicy;
 use App\Policies\OrganizationPolicy;
 use App\Policies\ProfilePolicy;
+use App\Policies\ProjectPolicy;
 use App\Policies\ProjectTypePolicy;
 use App\Policies\SettingPolicy;
+use App\Policies\SowPolicy;
 use App\Policies\TaxonomyPolicy;
 use App\Policies\UserPolicy;
 use App\Services\FeatureFlags\FeatureFlags;
+use App\Services\Projects\PendingPassFourGuards;
+use App\Services\Projects\ProjectTransitionGuards;
 use App\Services\Settings\Settings;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -31,6 +44,7 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Spatie\Activitylog\Models\Activity;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -38,6 +52,9 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->singleton(FeatureFlags::class);
         $this->app->singleton(Settings::class);
+
+        // Pass 4 rebinds this to the real assignment and milestone checks.
+        $this->app->bind(ProjectTransitionGuards::class, PendingPassFourGuards::class);
     }
 
     public function boot(): void
@@ -62,6 +79,12 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(FeatureFlag::class, FeatureFlagPolicy::class);
         Gate::policy(Setting::class, SettingPolicy::class);
         Gate::policy(Activity::class, ActivityPolicy::class);
+        Gate::policy(AgreementTemplate::class, AgreementTemplatePolicy::class);
+        Gate::policy(AgreementAcceptance::class, AgreementAcceptancePolicy::class);
+        Gate::policy(Brief::class, BriefPolicy::class);
+        Gate::policy(Project::class, ProjectPolicy::class);
+        Gate::policy(Sow::class, SowPolicy::class);
+        Gate::policy(Media::class, MediaPolicy::class);
 
         // Spec 17.2: minimum 10 characters, compromised-password check where available.
         Password::defaults(fn () => $this->app->isProduction()
