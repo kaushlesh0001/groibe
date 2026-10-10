@@ -29,10 +29,11 @@
                     <li wire:key="deliverable-{{ $deliverable->id }}" class="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
                         <p class="font-medium">{{ $deliverable->title }}</p>
                         @if ($deliverable->summary) <p class="whitespace-pre-line text-sm">{{ $deliverable->summary }}</p> @endif
-                        @php($files = $deliverable->submissions->flatMap->media)
-                        @if ($files->isNotEmpty())
+                        @if ($files[$deliverable->id] !== [])
                             <ul class="mt-2 list-disc pl-5 text-sm">
-                                @foreach ($files as $file) <li>{{ $file->name }}.{{ $file->extension }}</li> @endforeach
+                                @foreach ($files[$deliverable->id] as $file)
+                                    <li><a class="text-brand-blue underline" href="{{ $file['url'] }}">{{ $file['name'] }}</a> <span class="text-zinc-600">({{ $file['size'] }})</span></li>
+                                @endforeach
                             </ul>
                         @endif
                     </li>

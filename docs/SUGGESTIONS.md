@@ -147,3 +147,11 @@ Decisions taken where the spec is silent. Each is a small guard, easy to relax:
 84. **Decision: the team section is hidden entirely when `hide_team` is on,** with no hint that a team exists. Before the SOW is accepted, the client sees a short note that the team is introduced after acceptance.
 85. **Low: `projects.hide_team` is now editable** from the admin project form (it had no control since SCR-012).
 86. **Low: the project page shows no tasks, comments or submissions of any kind.** Clients see finished, approved work only through the Deliverables page. Per-task progress would need a decision on what the client may see of unshared work.
+
+## Pass 4, step 8 (private file serving)
+
+87. **Resolved items:** #64 (contributor links), #71 (QA reviewers can open files) and #79 (clients can open shared deliverable files) are done.
+88. **Decision: a client can read a submission file only when** the submission is `qa_approved`, belongs to a deliverable that has `shared_at` set, whose milestone is shared or later, on a non-draft project of an organization the client belongs to. Viewers can read (spec 12 makes them read-only, not blind). Work that is approved but left out of the deliverable, earlier versions with changes requested, and anything in a milestone still in QA stay closed.
+89. **Decision: a contributor reads only the files of their own submissions,** even after their seat ends. Teammates cannot read each other's files. Admin access follows SCR-013 (`submissions.view`).
+90. **Low: signed links live 10 minutes** (`groibe.uploads.signed_url_minutes`), issued each time a page renders. A page left open longer shows a link that fails; reloading fixes it. Brief file links use the same lifetime.
+91. **Low: three older call sites still build signed links by hand** (the brief forms). `SignedFileUrl` is the one place to use going forward, and they can switch to it when those pages are next touched.

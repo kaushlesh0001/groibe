@@ -58,9 +58,11 @@
                     <x-status-badge :status="$submission->status" />
                 </div>
                 @if ($submission->note) <p class="whitespace-pre-line">{{ $submission->note }}</p> @endif
-                @if ($submission->media->isNotEmpty())
+                @if ($files[$submission->id] !== [])
                     <ul class="list-disc pl-5 text-sm">
-                        @foreach ($submission->media as $file) <li>{{ $file->name }}.{{ $file->extension }}</li> @endforeach
+                        @foreach ($files[$submission->id] as $file)
+                            <li><a class="text-brand-blue underline" href="{{ $file['url'] }}">{{ $file['name'] }}</a> <span class="text-zinc-600">({{ $file['size'] }})</span></li>
+                        @endforeach
                     </ul>
                 @endif
                 @if ($submission->qa_note)

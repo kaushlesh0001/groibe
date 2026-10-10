@@ -9,6 +9,7 @@ use App\Enums\ProjectStatus;
 use App\Exceptions\ActionBlocked;
 use App\Exceptions\IllegalTransition;
 use App\Models\Milestone;
+use App\Services\Files\SignedFileUrl;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
@@ -84,8 +85,13 @@ class DeliverableIndex extends Component
             ->latest('shared_at')
             ->paginate(10);
 
+        $links = app(SignedFileUrl::class);
+
         return view('livewire.client.deliverables.deliverable-index', [
             'milestones' => $milestones,
+            'files' => $milestones->getCollection()
+                ->flatMap(fn (Milestone $milestone) => $milestone->deliverables)
+                ->mapWithKeys(fn ($deliverable) => [$deliverable->id => $links->describe($deliverable->submissions->flatMap->media)]),
             // One lookup for the whole page. The Actions still authorize each answer through the policy.
             'mayRespond' => $organization !== null && in_array(Auth::user()->organizationRole($organization), [OrgRole::Owner, OrgRole::Manager], true),
         ]);
