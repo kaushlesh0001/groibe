@@ -24,12 +24,16 @@
     --color-zinc-900: #171717;
     --color-zinc-950: #0a0a0a;
 
-    --color-navy: #001844;
-    --color-brand-green: #14C352;
-    --color-brand-blue: #137AE5;
+    /* Brand (spec 10.3, SCR-017). Pairings and their measured contrast are fixed in the spec: green buttons carry
+       navy text, green is never text on white, blue links stay on light surfaces, teal is decorative only. */
+    --color-brand-navy: #042B65;
+    --color-brand-green: #0EAE44;
+    --color-brand-green-alt: #25A446;
+    --color-brand-blue: #046CEA;
+    --color-brand-teal: #06A2A7;
 
-    --color-accent: var(--color-navy);
-    --color-accent-content: var(--color-navy);
+    --color-accent: var(--color-brand-navy);
+    --color-accent-content: var(--color-brand-navy);
     --color-accent-foreground: var(--color-white);
 }
 

@@ -24,7 +24,7 @@
                     @endforeach
                 </select>
             </div>
-            <button type="submit" class="rounded-md bg-brand-green px-4 py-2 font-medium text-navy hover:opacity-90">Search</button>
+            <button type="submit" class="rounded-md bg-brand-green px-4 py-2 font-medium text-brand-navy hover:opacity-90">Search</button>
         </form>
 
         @if ($profiles->isEmpty())

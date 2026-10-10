@@ -5,14 +5,14 @@
     <head>
         @include('partials.head', ['title' => $title ? $title.' | '.config('app.name') : config('app.name')])
     </head>
-    <body class="min-h-screen bg-white text-navy">
+    <body class="min-h-screen bg-white text-brand-navy">
         <x-impersonation-banner />
 
         <flux:sidebar sticky stashable class="border-r border-zinc-200 bg-zinc-50">
             <flux:sidebar.toggle class="lg:hidden" icon="x-mark" />
 
             <a href="{{ route('dashboard') }}" class="mr-5 flex items-center space-x-2" wire:navigate>
-                <x-app-logo class="size-8" />
+                <x-app-logo />
             </a>
 
             <flux:navlist variant="outline">
@@ -46,7 +46,7 @@
                         <div class="p-0 text-sm font-normal">
                             <div class="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                                 <span class="relative flex h-8 w-8 shrink-0 overflow-hidden rounded-lg">
-                                    <span class="flex h-full w-full items-center justify-center rounded-lg bg-zinc-200 text-navy">
+                                    <span class="flex h-full w-full items-center justify-center rounded-lg bg-zinc-200 text-brand-navy">
                                         {{ auth()->user()->initials() }}
                                     </span>
                                 </span>

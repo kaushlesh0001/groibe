@@ -42,7 +42,7 @@ it('makes no third-party font or script requests on public and auth pages', func
 it('defines the brand colour tokens', function () {
     $css = file_get_contents(resource_path('css/app.css'));
 
-    expect($css)->toContain('#001844')->toContain('#14C352')->toContain('#137AE5')
+    expect($css)->toContain('#042B65')->toContain('#0EAE44')->toContain('#25A446')->toContain('#046CEA')->toContain('#06A2A7')
         ->and($css)->toContain('@fontsource-variable/inter');
 });
 

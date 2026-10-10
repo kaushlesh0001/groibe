@@ -3,6 +3,10 @@
 
 <title>{{ $title ?? config('app.name') }}</title>
 
+<link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
+<link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}">
+<meta name="theme-color" content="#042B65">
+
 @vite(['resources/css/app.css', 'resources/js/app.js'])
 @fluxAppearance
 @stack('meta')

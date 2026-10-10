@@ -3,7 +3,7 @@
         <flux:heading size="xl" level="1">{{ $brief ? 'Edit brief' : 'New brief' }}</flux:heading>
         <flux:text>Step {{ $step }} of {{ \App\Livewire\Forms\BriefDetailsForm::STEPS }}</flux:text>
         <div class="h-1 w-full rounded bg-zinc-200" role="progressbar" aria-valuemin="1" aria-valuemax="{{ \App\Livewire\Forms\BriefDetailsForm::STEPS }}" aria-valuenow="{{ $step }}">
-            <div class="h-1 rounded bg-brand-green" style="width: {{ ($step / \App\Livewire\Forms\BriefDetailsForm::STEPS) * 100 }}%"></div>
+            <div class="h-1 rounded bg-brand-green-alt" style="width: {{ ($step / \App\Livewire\Forms\BriefDetailsForm::STEPS) * 100 }}%"></div>
         </div>
     </div>
 
