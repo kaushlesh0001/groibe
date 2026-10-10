@@ -168,3 +168,46 @@ Decisions taken where the spec is silent. Each is a small guard, easy to relax:
 
 97. **Found and fixed: three project Actions accepted a second source state.** `StartStaffing` and `ActivateProject` also worked from `on_hold`, bypassing Resume and its recorded state. `MoveProjectToQa` also worked from `delivered` after SCR-016, turning the automatic return into a manual one, which the founder did not choose. `ResumeProject` would also resume a project that was not on hold if a stale `status_before_hold` was left. Each Action now requires exactly its own source state (`mustBeIn`). The first two were Pass 2 code.
 98. **Test coverage added:** `TransitionMatrixTest` tries every Pass 4 state-changing Action from every state of its subject and requires success from exactly the spec states. `ProjectLifecycleEndToEndTest` runs a project from `sow_accepted` to `closed` through the real admin, contributor and client pages, and a second run through a client change request after delivery.
+
+## Pass 4 audit (against the spec and the Done-when list)
+
+Done-when: a project runs from `sow_accepted` through staffing, task work, QA, client acceptance and `accepted`. Met, and proven by `ProjectLifecycleEndToEndTest` through the real admin, contributor and client pages. The ten prompt pack items are all built.
+
+### Critical
+None found.
+
+### High (fixed in the audit)
+99. **Livewire update requests skipped the role and active-contributor middleware.** Livewire re-applies only a short list of the page's middleware on its own update endpoint, and `role:*` and `active.contributor` were not on it. A contributor suspended while a page was open kept getting data on every refresh, and a client page kept refreshing after the account's role changed. Fixed: both middleware are registered as persistent, and `EnsureActiveContributor` now aborts by exception, which Livewire honours. Proven over real HTTP in `LivewireUpdateMiddlewareTest`. This also covers the Pass 3 pages.
+100. **A refresh did not re-check access to the record.** A contributor taken off a task kept seeing it, and a client removed from an organization kept seeing its project, until the page was reloaded. Fixed: the task page, the project board and the client project page re-check on every render (404 or 403), and their model properties are `#[Locked]`.
+101. **The 25 MB submission cap could not be reached.** Livewire's temporary upload rule capped every file at 20 MB, so a 24 MB submission was refused before the submission rules ran. Fixed: the shared cap is 25 MB, and the brief form enforces its own 20 MB cap on selection. Proven by a failing test first.
+
+### Medium
+102. **Fixed: `TaskComment` had no policy** (CLAUDE.md: a policy for every model). Added `TaskCommentPolicy`: delivery managers read all, a contributor reads the public comments on tasks they hold, clients none, nobody edits or deletes.
+103. **Open, operational: the host must allow big uploads.** The local PHP here has `upload_max_filesize` 2M and `post_max_size` 8M, so even 25 MB submissions fail before Laravel sees them. Production cPanel needs both raised to at least 26M (and the Livewire temporary upload time is 5 minutes). `docs/DEPLOY.md` does not exist yet; it must also list the cron entry for `schedule:run`, which now runs the daily overdue digest. I did not change any PHP setting.
+104. **Open, unverified: Filament pages authorize on load.** `ProjectWorkspace` checks permission in `mount`. If an admin's permission is withdrawn while the page is open, later refreshes may still answer. Confirm how Filament re-evaluates `canAccess` on update requests, and re-check in `getViewData` if needed.
+105. **Open: the admin QA review modal and file links are plain HTML built in PHP.** Everything is escaped, but a Blade view would be easier to audit. Low risk, medium effort.
+
+### Low
+106. **`ProjectPolicy` does not give assigned contributors "R if assigned (limited)" from spec 5,** and its docblock still says Pass 4 will add it. Contributors reach a project only through the task board, which shows the title. Update the docblock, or add a limited `view` for active seats when a contributor project page is built.
+107. **Starter-kit leftovers in `resources/views/components/layouts/app/header.blade.php`** link to the Laravel starter kit repo and docs. Pre-existing (Pass 0), in a layout the app does not use for the dashboards. Remove the file or those links before launch.
+108. **No index for the overdue job's date filter.** `tasks` is indexed on `(project_id, status)`, and the job filters a few rows per project, so it is fine at v1 scale. Add `(project_id, due_date)` if projects grow into thousands of tasks. `whereDate` also stops index use; compare on the raw date column if it matters.
+109. **The overdue command runs two queries per project** (count and list), chunked by 50. Acceptable for a daily batch; revisit with very many active projects.
+110. **Some Actions have no authorization of their own, by design:** `SyncMilestoneStatus`, `CompleteProjectAssignments`, `ReopenProjectForChanges` and `AcceptProject(automatic: true)`. They run only inside an Action that has already authorized. Never call them from a controller, Livewire method or Filament action directly.
+111. **Markdown mail:** text typed by clients and contributors (client notes, task titles) goes into markdown mail templates. HTML is escaped, but markdown syntax is not neutralized, so a note could render a link in an admin's email. Strip markdown from user text if mails ever go to outside parties.
+112. **`User::organizationRole` is memoized per user object.** Correct per request on shared hosting. A long-lived process (queue worker, Octane) would hold a stale role. Clear the memo if the app ever moves to long-lived workers.
+113. **No rate limit on Livewire actions** such as comments and submissions beyond the 60 per minute default on temporary uploads. Spec 17.2 lists rate limits only for login, register, contact, reset and invites.
+114. **Hard-coded schedule time:** the overdue digest is set to 08:00 in `routes/console.php`. Move it to config if admins need to change it.
+115. **The demo dataset does not exist yet** (spec 19 `DemoSeeder`, CLAUDE.md fresh demo DB command), so Pass 4 data (assignments, milestones, tasks, submissions) is not in any demo.
+
+### Built beyond what the spec lists
+All of it traces to a pass item or an accepted decision, and none adds a screen or a route the spec does not name:
+- Three notifications not named in spec 14: a milestone reaching QA, a project delivered, a project accepted. Pass item 9 asks for a notification on every transition. Each is one dispatcher call and easy to remove.
+- The overdue digest falls back to every admin who can edit tasks when a project has no delivery manager. The pass item says "delivery manager" only.
+- Delivery goes straight on to `accepted` when every milestone is already client-accepted (follows 6.2 literally).
+- Guards chosen where the spec is silent are logged as decisions in items 50 to 56, 59 to 63, 68 to 70, 73 to 77, 82 to 84, 88 to 89 and 92 to 94, each a small rule that is easy to relax.
+- Spec changes SCR-015 and SCR-016 were founder-approved before they were edited into the spec.
+
+### Coverage
+- Every state-changing Action is exercised from every state of its subject (`TransitionMatrixTest`), and the enum edges are asserted exactly (`WorkDataLayerTest`, `ProjectTransitionsTest`).
+- Denied paths: route protection is asserted for every `app/*` route, the work routes, the file route and the three new admin pages over HTTP; policy gaps (`DeliverablePolicy`, `TaskCommentPolicy`) and suspended or changed sessions are tested.
+- Not covered, by choice: concurrent requests racing the row locks (double share, double accept), browser-level tests, and the Filament mid-session permission case (item 104).
