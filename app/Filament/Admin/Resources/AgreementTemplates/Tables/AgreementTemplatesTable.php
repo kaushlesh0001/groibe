@@ -21,6 +21,11 @@ class AgreementTemplatesTable
                 TextColumn::make('title')->searchable(),
                 IconColumn::make('is_active')->label('Current')->boolean(),
                 TextColumn::make('effective_from')->dateTime()->sortable(),
+                TextColumn::make('type_usage')
+                    ->label('Where this is used')
+                    ->state(fn ($record): string => $record->type->usedAt())
+                    ->wrap()
+                    ->toggleable(),
                 TextColumn::make('acceptances_count')->counts('acceptances')->label('Acceptances'),
             ])
             ->defaultSort('type')

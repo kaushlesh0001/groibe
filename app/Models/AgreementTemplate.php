@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use LogicException;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
@@ -28,6 +29,16 @@ class AgreementTemplate extends Model
             'is_active' => 'boolean',
             'effective_from' => 'datetime',
         ];
+    }
+
+    /** Wording is immutable once saved: acceptances point at it. Changes go through a new version. */
+    protected static function booted(): void
+    {
+        static::updating(function (self $template): void {
+            if ($template->isDirty(['type', 'version', 'title', 'body_html', 'effective_from'])) {
+                throw new LogicException('A saved agreement version cannot be edited. Publish a new version instead.');
+            }
+        });
     }
 
     public function getActivitylogOptions(): LogOptions

@@ -12,6 +12,14 @@ class EditAgreementTemplate extends EditRecord
 {
     protected static string $resource = AgreementTemplateResource::class;
 
+    /** The revision starts today, whatever date the version being revised carried. */
+    protected function mutateFormDataBeforeFill(array $data): array
+    {
+        $data['effective_from'] = now();
+
+        return $data;
+    }
+
     /** Saving never rewrites accepted text: it publishes the next version and moves this page to it. */
     protected function handleRecordUpdate(Model $record, array $data): Model
     {
@@ -22,6 +30,7 @@ class EditAgreementTemplate extends EditRecord
         $new = app(CreateAgreementTemplateVersion::class)($record, auth()->user(), [
             'title' => $data['title'],
             'body_html' => $data['body_html'],
+            'effective_from' => $data['effective_from'],
         ]);
 
         $this->record = $new;
