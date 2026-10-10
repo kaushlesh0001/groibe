@@ -36,7 +36,7 @@ enum ProjectStatus: string implements HasLabel
             self::Staffing => [self::Active, self::OnHold, self::Cancelled],
             self::Active => [self::InQa, self::OnHold, self::Cancelled],
             self::InQa => [self::Delivered, self::Cancelled],
-            self::Delivered => [self::Accepted, self::Cancelled],
+            self::Delivered => [self::Accepted, self::InQa, self::Cancelled],
             self::Accepted => [self::Closed, self::Cancelled],
             self::OnHold => [self::Staffing, self::Active, self::Cancelled],
             self::Closed, self::Cancelled => [],

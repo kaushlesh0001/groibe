@@ -118,3 +118,14 @@ Proposed changes only. The spec is edited by the founder, between passes, and lo
   - (b) Block removal and QA change requests while the milestone is in `in_qa`.
 - **Decision:** (a). The milestone returns to `in_progress` and moves to `in_qa` again by the existing rule once every task is `submitted` or `approved`. A milestone that is `shared` or later is not affected.
 - **Code status:** Pass 4.
+
+## SCR-016: Delivered project returns to QA on client changes (spec section 6.2)
+
+- **Status:** ACCEPTED 2026-10-10. Option (a). Spec sections 6.2 and 23 updated.
+- **Gap:** 6.2 has no way out of `delivered` except `accepted` or `cancelled`. If the client requests changes on a milestone (6.9) after the project is delivered, contributor work and QA (which run while the project is `active` or `in_qa`) cannot happen, and the project can never reach `accepted`.
+- **Options:**
+  - (a) Add `delivered -> in_qa`, automatic when the client requests changes on a milestone.
+  - (b) Allow work, QA and task creation while the project is `delivered`, with no state change.
+  - (c) Add `delivered -> in_qa` as a manual admin action.
+- **Decision:** (a). The project returns to `in_qa` when the client requests changes. An admin marks it `delivered` again once every milestone is `shared` or later, by the existing rule.
+- **Code status:** Pass 4.
