@@ -4,10 +4,14 @@ namespace App\Actions\Projects;
 
 use App\Actions\Assignments\CompleteProjectAssignments;
 use App\Actions\Projects\Concerns\TransitionsProject;
+use App\Enums\AssignmentStatus;
 use App\Enums\ProjectStatus;
 use App\Exceptions\ActionBlocked;
+use App\Models\Assignment;
 use App\Models\Project;
 use App\Models\User;
+use App\Notifications\ProjectAccepted;
+use App\Services\Notifications\NotificationDispatcher;
 use App\Services\Projects\ProjectTransitionGuards;
 
 /**
@@ -19,11 +23,15 @@ class AcceptProject
 {
     use TransitionsProject;
 
-    public function __construct(private ProjectTransitionGuards $guards, private CompleteProjectAssignments $completeAssignments) {}
+    public function __construct(
+        private ProjectTransitionGuards $guards,
+        private CompleteProjectAssignments $completeAssignments,
+        private NotificationDispatcher $dispatcher,
+    ) {}
 
     public function __invoke(Project $project, User $actor, bool $automatic = false): Project
     {
-        return $this->moveProject(
+        $project = $this->moveProject(
             $project,
             ProjectStatus::Accepted,
             $actor,
@@ -38,5 +46,16 @@ class AcceptProject
                 ($this->completeAssignments)($locked, $actor);
             },
         );
+
+        $project->loadMissing('deliveryManager');
+        $notification = new ProjectAccepted($project);
+
+        $this->dispatcher->toAdmins('projects.update', $notification, $project->deliveryManager);
+        $this->dispatcher->send(
+            User::query()->whereIn('id', Assignment::query()->where('project_id', $project->getKey())->where('status', AssignmentStatus::Completed->value)->select('user_id'))->get(),
+            $notification,
+        );
+
+        return $project;
     }
 }
