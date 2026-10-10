@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Enums\Availability;
+use App\Enums\OnboardingState;
 use App\Models\Profile;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -26,6 +27,11 @@ class ProfileFactory extends Factory
             'work_modes' => ['remote'],
             'is_public' => false,
         ];
+    }
+
+    public function inState(OnboardingState $state): static
+    {
+        return $this->state(fn () => ['onboarding_state' => $state]);
     }
 
     public function public(): static

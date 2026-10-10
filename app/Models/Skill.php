@@ -35,10 +35,10 @@ class Skill extends Model
         return $this->belongsTo(Category::class);
     }
 
-    /** @return BelongsToMany<User, $this> */
+    /** @return BelongsToMany<User, $this, SkillUser, 'pivot'> */
     public function users(): BelongsToMany
     {
-        return $this->belongsToMany(User::class)->withPivot(['level', 'years', 'is_verified'])->withTimestamps();
+        return $this->belongsToMany(User::class)->using(SkillUser::class)->withPivot(['level', 'years', 'is_verified', 'verified_by', 'verified_at'])->withTimestamps();
     }
 
     /** @param Builder<Skill> $query */
