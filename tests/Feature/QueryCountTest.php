@@ -6,14 +6,19 @@ use App\Enums\ProjectStatus;
 use App\Filament\Admin\Resources\Briefs\Pages\ListBriefs;
 use App\Filament\Admin\Resources\Projects\Pages\EditProject;
 use App\Filament\Admin\Resources\Projects\Pages\ListProjects;
+use App\Filament\Admin\Resources\Projects\Pages\ProjectWorkspace;
 use App\Filament\Admin\Resources\Projects\RelationManagers\AssignmentsRelationManager;
+use App\Filament\Admin\Resources\Projects\RelationManagers\MilestonesRelationManager;
 use App\Filament\Admin\Resources\Projects\RelationManagers\SowsRelationManager;
+use App\Filament\Admin\Resources\Projects\RelationManagers\TasksRelationManager;
 use App\Models\Assignment;
 use App\Models\Brief;
+use App\Models\Milestone;
 use App\Models\Organization;
 use App\Models\Project;
 use App\Models\ProjectType;
 use App\Models\Sow;
+use App\Models\Task;
 use Filament\Actions\Testing\TestAction;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
@@ -67,6 +72,33 @@ it('issues the same number of queries for 3 rows as for 10 on every new list pag
     $large = collect($pages)->map(fn ($page) => queries($page))->all();
 
     expect($large)->toBe($small);
+});
+
+it('does not query more per task or milestone in the project work plan screens', function () {
+    $project = Project::factory()->create(['organization_id' => $this->org->id]);
+    $seat = Assignment::factory()->active()->create(['project_id' => $project->id]);
+    $addRows = function (int $milestones) use ($project, $seat): void {
+        Milestone::factory()->count($milestones)->create(['project_id' => $project->id])
+            ->each(fn (Milestone $m) => Task::factory()->count(2)->create(['milestone_id' => $m->id, 'assignment_id' => $seat->id]));
+    };
+    $screens = [
+        'tasks panel' => fn () => Livewire::actingAs($this->dm)->test(TasksRelationManager::class, ['ownerRecord' => $project, 'pageClass' => EditProject::class]),
+        'milestones panel' => fn () => Livewire::actingAs($this->dm)->test(MilestonesRelationManager::class, ['ownerRecord' => $project, 'pageClass' => EditProject::class]),
+        'workspace' => fn () => Livewire::actingAs($this->dm)->test(ProjectWorkspace::class, ['record' => $project->getRouteKey()]),
+    ];
+
+    $addRows(2);
+    $small = [];
+    foreach ($screens as $name => $open) {
+        $open(); // warm caches
+        $small[$name] = queries($open);
+    }
+
+    $addRows(5);
+
+    foreach ($screens as $name => $open) {
+        expect(queries($open))->toBe($small[$name], $name);
+    }
 });
 
 it('does not query more per assignment row in the project team panel', function () {
