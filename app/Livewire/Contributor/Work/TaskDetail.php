@@ -10,6 +10,7 @@ use App\Enums\TaskStatus;
 use App\Exceptions\ActionBlocked;
 use App\Exceptions\IllegalTransition;
 use App\Models\Task;
+use App\Services\Files\SignedFileUrl;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
@@ -80,10 +81,14 @@ class TaskDetail extends Component
     {
         $this->task->load('milestone:id,title,project_id', 'milestone.project:id,uuid,title');
 
+        $submissions = $this->task->submissions()->with('media')->orderByDesc('version')->get();
+        $links = app(SignedFileUrl::class);
+
         return view('livewire.contributor.work.task-detail', [
             'project' => $this->task->milestone->project,
             'comments' => $this->task->comments()->where('is_internal', false)->with('user:id,name')->oldest()->limit(200)->get(),
-            'submissions' => $this->task->submissions()->with('media')->orderByDesc('version')->get(),
+            'submissions' => $submissions,
+            'files' => $submissions->mapWithKeys(fn ($submission) => [$submission->id => $links->describe($submission->media)]),
             'canWork' => Gate::forUser(Auth::user())->allows('work', $this->task),
             'canComment' => Gate::forUser(Auth::user())->allows('comment', $this->task),
             'maxFiles' => (int) config('groibe.uploads.submission_max_files'),

@@ -7,6 +7,7 @@ use App\Actions\Submissions\RequestSubmissionChanges;
 use App\Enums\SubmissionStatus;
 use App\Filament\Admin\Support\DomainActionRunner;
 use App\Models\Submission;
+use App\Services\Files\SignedFileUrl;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Textarea;
 use Filament\Tables\Columns\TextColumn;
@@ -69,7 +70,9 @@ class SubmissionsTable
     /** The review modal body. Contributor text is escaped; it is shown to admins as plain text. */
     public static function summary(Submission $record): string
     {
-        $files = $record->media->map(fn ($media): string => '<li>'.e($media->name.'.'.$media->extension).'</li>')->implode('');
+        $files = collect(app(SignedFileUrl::class)->describe($record->media))
+            ->map(fn (array $file): string => '<li><a class="underline" href="'.e($file['url']).'">'.e($file['name']).'</a> ('.e($file['size']).')</li>')
+            ->implode('');
 
         return '<div class="space-y-3 text-sm">'
             .'<p><strong>Task:</strong> '.e($record->task->description ?? 'No description').'</p>'
