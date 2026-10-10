@@ -9,6 +9,7 @@ use App\Actions\Projects\CloseProject;
 use App\Actions\Projects\MarkProjectDelivered;
 use App\Actions\Projects\MoveProjectToQa;
 use App\Actions\Projects\PutProjectOnHold;
+use App\Actions\Projects\ResumeProject;
 use App\Actions\Projects\StartStaffing;
 use App\Enums\ProjectStatus;
 use App\Filament\Admin\Resources\Projects\ProjectResource;
@@ -39,6 +40,8 @@ class EditProject extends EditRecord
                 ->visible(fn (): bool => $this->mayMove([ProjectStatus::Staffing, ProjectStatus::Active]))
                 ->schema([Textarea::make('reason')->rows(2)])
                 ->action(fn (array $data) => $this->runAction(fn () => app(PutProjectOnHold::class)($this->currentProject(), auth()->user(), $data['reason'] ?? null), 'Project put on hold')),
+
+            $this->stepAction('resume', 'Resume project', ProjectStatus::OnHold, ResumeProject::class),
 
             Action::make('cancel')
                 ->label('Cancel project')

@@ -7,6 +7,7 @@ use App\Actions\Projects\CloseProject;
 use App\Actions\Projects\MarkProjectDelivered;
 use App\Actions\Projects\MoveProjectToQa;
 use App\Actions\Projects\PutProjectOnHold;
+use App\Actions\Projects\ResumeProject;
 use App\Actions\Projects\StartStaffing;
 use App\Enums\AdminRole;
 use App\Enums\ProjectStatus;
@@ -127,8 +128,40 @@ it('rejects every illegal project transition', function (string $action, Project
     'cancel a cancelled project' => [CancelProject::class, ProjectStatus::Cancelled, ['why']],
 ]);
 
-it('has no way out of on_hold except cancel until SCR-008 is decided', function () {
-    expect(ProjectStatus::OnHold->allowedTransitions())->toBe([ProjectStatus::Cancelled]);
+it('resumes a held project to the state it was held from and clears the stored state (SCR-008)', function (ProjectStatus $from) {
+    $project = projectIn($from);
+
+    app(PutProjectOnHold::class)($project, $this->dm, 'Client paused');
+    expect($project->refresh()->status)->toBe(ProjectStatus::OnHold)->and($project->status_before_hold)->toBe($from);
+
+    app(ResumeProject::class)($project, $this->dm);
+    expect($project->refresh()->status)->toBe($from)->and($project->status_before_hold)->toBeNull();
+
+    $events = Activity::query()->where('log_name', 'project')->pluck('event')->all();
+    expect($events)->toContain('on_hold')->toContain($from->value);
+})->with([ProjectStatus::Staffing, ProjectStatus::Active]);
+
+it('cannot resume a project that is not on hold', function () {
+    expect(fn () => app(ResumeProject::class)(projectIn(ProjectStatus::Active), $this->dm))->toThrow(IllegalTransition::class);
+});
+
+it('refuses to resume an on-hold project with no recorded state', function () {
+    $project = projectIn(ProjectStatus::OnHold);
+
+    expect(fn () => app(ResumeProject::class)($project, $this->dm))->toThrow(ActionBlocked::class, 'no recorded state');
+    expect($project->refresh()->status)->toBe(ProjectStatus::OnHold);
+});
+
+it('only lets admins with project write access resume', function () {
+    $project = projectIn(ProjectStatus::OnHold);
+    $project->update(['status_before_hold' => ProjectStatus::Active]);
+
+    expect(fn () => app(ResumeProject::class)($project, clientUser($project->organization)))->toThrow(AuthorizationException::class)
+        ->and(fn () => app(ResumeProject::class)($project, adminUser(AdminRole::FinanceOps)))->toThrow(AuthorizationException::class);
+});
+
+it('allows only resume and cancel out of on_hold', function () {
+    expect(ProjectStatus::OnHold->allowedTransitions())->toBe([ProjectStatus::Staffing, ProjectStatus::Active, ProjectStatus::Cancelled]);
 });
 
 it('only lets admins with project write access transition projects', function () {

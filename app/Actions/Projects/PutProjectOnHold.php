@@ -7,13 +7,15 @@ use App\Enums\ProjectStatus;
 use App\Models\Project;
 use App\Models\User;
 
-/** staffing|active -> on_hold. Resume is not specified in spec 6.2 yet (SCR-008, proposed). */
+/** staffing|active -> on_hold. Remembers the state it was held from so ResumeProject can return there (SCR-008). */
 class PutProjectOnHold
 {
     use TransitionsProject;
 
     public function __invoke(Project $project, User $actor, ?string $reason = null): Project
     {
-        return $this->moveProject($project, ProjectStatus::OnHold, $actor, properties: ['reason' => $reason]);
+        return $this->moveProject($project, ProjectStatus::OnHold, $actor, properties: ['reason' => $reason], guard: function (Project $locked): void {
+            $locked->status_before_hold = $locked->status;
+        });
     }
 }

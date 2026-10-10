@@ -192,11 +192,17 @@ it('cancels a project only with a reason', function () {
     $page->assertActionHidden('cancel');
 });
 
-it('offers no resume action for an on-hold project until SCR-008 is decided', function () {
-    $project = Project::factory()->status(ProjectStatus::OnHold)->create(['organization_id' => $this->org->id]);
+it('offers a resume action on a held project that returns it to where it was', function () {
+    $project = Project::factory()->status(ProjectStatus::Active)->create(['organization_id' => $this->org->id]);
 
-    Livewire::actingAs($this->dm)->test(EditProject::class, ['record' => $project->getRouteKey()])
-        ->assertActionHidden('startStaffing')->assertActionHidden('activate')->assertActionHidden('hold')->assertActionVisible('cancel');
+    $page = Livewire::actingAs($this->dm)->test(EditProject::class, ['record' => $project->getRouteKey()]);
+    $page->assertActionHidden('resume')->callAction('hold', ['reason' => 'Waiting on client']);
+    expect($project->refresh()->status)->toBe(ProjectStatus::OnHold);
+
+    $held = Livewire::actingAs($this->dm)->test(EditProject::class, ['record' => $project->getRouteKey()]);
+    $held->assertActionVisible('resume')->assertActionHidden('hold')->assertActionHidden('activate')->assertActionVisible('cancel')
+        ->callAction('resume');
+    expect($project->refresh()->status)->toBe(ProjectStatus::Active)->and($project->status_before_hold)->toBeNull();
 });
 
 it('creates, edits, sends and supersedes SOWs from the project relation manager', function () {
