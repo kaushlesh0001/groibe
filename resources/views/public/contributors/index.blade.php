@@ -52,7 +52,7 @@
                 @endforeach
             </ul>
 
-            {{ $profiles->links() }}
+            {{ $profiles->links('pagination::tailwind') }}
         @endif
     </div>
 </x-layouts.public>

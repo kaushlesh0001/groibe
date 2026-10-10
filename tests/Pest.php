@@ -2,8 +2,12 @@
 
 use App\Actions\Agreements\AcceptClientMsa;
 use App\Enums\AdminRole;
+use App\Enums\OnboardingState;
 use App\Enums\OrgRole;
+use App\Enums\UserStatus;
 use App\Models\Organization;
+use App\Models\Profile;
+use App\Models\Skill;
 use App\Models\User;
 use Database\Seeders\AgreementTemplateSeeder;
 use Database\Seeders\RolesAndPermissionsSeeder;
@@ -65,4 +69,46 @@ function clientUser(?Organization $organization = null, OrgRole $orgRole = OrgRo
     $organization->users()->attach($user->id, ['org_role' => $orgRole->value]);
 
     return $user;
+}
+
+/**
+ * A contributor whose users.status matches the onboarding state, as the transition Actions leave it.
+ *
+ * @param  array<string, mixed>  $profile
+ * @param  array<string, mixed>  $user
+ */
+function contributorIn(OnboardingState $state, array $profile = [], array $user = []): User
+{
+    $status = match ($state) {
+        OnboardingState::Active => UserStatus::Active,
+        OnboardingState::Suspended => UserStatus::Suspended,
+        default => UserStatus::Pending,
+    };
+
+    $contributor = User::factory()->contributor()->create(['status' => $status, ...$user]);
+    Profile::factory()->inState($state)->create(['user_id' => $contributor->id, ...$profile]);
+
+    return $contributor->load('profile');
+}
+
+/** A contributor in profile_complete with a skill, ready for the review submission gates. */
+function completedContributor(): User
+{
+    $contributor = contributorIn(OnboardingState::ProfileComplete);
+    $contributor->skills()->attach(Skill::factory()->create()->id, ['level' => 'advanced']);
+
+    return $contributor;
+}
+
+/**
+ * A publicly visible contributor: active, public, with a slug and one skill.
+ *
+ * @param  array<string, mixed>  $profile
+ */
+function publicContributor(string $name = 'Asha Rao', array $profile = []): User
+{
+    $contributor = contributorIn(OnboardingState::Active, ['is_public' => true, 'slug' => str($name)->slug()->toString().'-abc123', ...$profile], ['name' => $name]);
+    $contributor->skills()->attach(Skill::factory()->create()->id, ['level' => 'expert']);
+
+    return $contributor;
 }

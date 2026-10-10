@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\AdminRole;
+use App\Enums\OnboardingState;
 use App\Models\Profile;
 use App\Models\User;
 
@@ -56,13 +57,16 @@ it('lets only super admin impersonate, and never themselves or another super adm
 });
 
 it('exposes public profiles of active contributors to guests only', function () {
-    $public = Profile::factory()->public()->for(contributorUser())->create();
-    $private = Profile::factory()->for(contributorUser())->create();
-    $suspended = Profile::factory()->public()->for(User::factory()->contributor()->suspended()->create())->create();
+    $public = Profile::factory()->public()->inState(OnboardingState::Active)->for(contributorUser())->create();
+    $private = Profile::factory()->inState(OnboardingState::Active)->for(contributorUser())->create();
+    $suspended = Profile::factory()->public()->inState(OnboardingState::Suspended)->for(User::factory()->contributor()->suspended()->create())->create();
+    // Public toggle on but never approved (Pass 3): not visible until the onboarding state is active.
+    $unapproved = Profile::factory()->public()->inState(OnboardingState::PendingReview)->for(contributorUser())->create();
 
     expect(Gate::forUser(null)->allows('view', $public))->toBeTrue()
         ->and(Gate::forUser(null)->allows('view', $private))->toBeFalse()
-        ->and(Gate::forUser(null)->allows('view', $suspended))->toBeFalse();
+        ->and(Gate::forUser(null)->allows('view', $suspended))->toBeFalse()
+        ->and(Gate::forUser(null)->allows('view', $unapproved))->toBeFalse();
 });
 
 it('lets owners and permitted admins edit a profile, nobody else', function () {
