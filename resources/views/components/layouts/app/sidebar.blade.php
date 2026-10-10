@@ -18,6 +18,10 @@
             <flux:navlist variant="outline">
                 <flux:navlist.group heading="Workspace" class="grid">
                     <flux:navlist.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard', 'contributor.dashboard', 'client.dashboard')" wire:navigate>Dashboard</flux:navlist.item>
+                    @if (auth()->user()->isContributor())
+                        <flux:navlist.item icon="clipboard-document-check" :href="route('contributor.onboarding')" :current="request()->routeIs('contributor.onboarding')" wire:navigate>Onboarding</flux:navlist.item>
+                        <flux:navlist.item icon="user-circle" :href="route('contributor.profile')" :current="request()->routeIs('contributor.profile')" wire:navigate>Profile</flux:navlist.item>
+                    @endif
                     @if (auth()->user()->isClient())
                         <flux:navlist.item icon="document-text" :href="route('client.briefs.index')" :current="request()->routeIs('client.briefs.*')" wire:navigate>Briefs</flux:navlist.item>
                         <flux:navlist.item icon="briefcase" :href="route('client.projects.index')" :current="request()->routeIs('client.projects.*')" wire:navigate>Projects</flux:navlist.item>
