@@ -45,3 +45,12 @@ No critical or high findings. Medium and low items, none fixed:
 18. **Low: Livewire's temporary upload endpoint accepts any file type up to 20 MB.** The brief form validates type and size before the file is attached, and unattached temp files are purged, so nothing unsafe is stored permanently. Tighten `livewire.temporary_file_upload.rules` to the same extension allowlist.
 19. **Low: no rate limit on MSA and SOW acceptance or brief submit.** Actions are idempotent or state-guarded. Consider a throttle in Pass 9 hardening.
 20. **Low: `OrganizationPolicy` duplicates the org-role lookup now in `ChecksOrganizationAccess`.** Refactor it onto the trait. Left alone to avoid touching tested Pass 1 code.
+
+## Pass 2 re-audit
+
+No critical or high findings. New evidence added: `tests/Feature/QueryCountTest.php` proves every new list page (client briefs, projects, dashboard; admin briefs, projects, SOW relation manager) issues the same number of queries at 3 rows and at 10, and that finance cannot change SOWs.
+
+21. **Medium, must be done at deploy (Pass 10): recorded IPs will be wrong behind Cloudflare.** `bootstrap/app.php` configures no trusted proxies, so `request()->ip()` returns the proxy address. MSA and SOW acceptances store that IP (spec 8). Configure trusted proxies for the Cloudflare ranges only. Trusting every proxy would let a client forge the stored IP.
+22. **Medium: commercial fields stay editable after a SOW is accepted.** An admin can change `contract_value` and dates on the project edit form after `sow_accepted`, so the project can drift from the accepted SOW. Lock those fields once the SOW is accepted, or require a new SOW version.
+23. **Medium (likely, not reproduced): client text in notification emails is rendered as Markdown.** Brief titles and the admin question go into markdown mail templates. HTML is escaped, but Markdown link syntax in a title may become a clickable link in an email to staff or the client. Escape Markdown characters in those values.
+24. **Low: acceptance rows have no uniqueness.** A double submit could store two identical MSA acceptances by the same owner. `AcceptClientMsa` is idempotent in code, but a unique index on user, template and organization would make it airtight.
