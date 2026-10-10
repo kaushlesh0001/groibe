@@ -367,7 +367,7 @@ Navigation: Dashboard, Discover (open roles), My Applications, My Work (assignme
 
 Navigation: Dashboard, Briefs, Projects, Deliverables, Messages, Notifications, Organization, Settings.
 
-- **Registration**: account, organization details, accept Client MSA.
+- **Registration**: account, organization details. The organization owner accepts the Client MSA on its own page (`/app/client/agreements/client-msa`) before the first brief or SOW acceptance (spec 8).
 - **Dashboard**: active projects with progress, awaiting-your-action items (SOW to accept, deliverables to review), briefs status.
 - **Briefs**: create (guided steps: problem, desired outcome, type, skills, budget band, timeline, confidentiality, files), list, view status and admin questions (`needs_info`).
 - **Projects**: list, detail (milestones, progress, team shown by first name + role + headline unless confidentiality blocks), SOW view/accept, change requests.
@@ -530,6 +530,7 @@ Stored in `feature_flags`, cached, toggled in Admin. Defaults:
 - Clients see contributors by first name, role, and headline. Admin can hide per project.
 - Contributor identity is not shown to clients before SOW acceptance.
 - Projects are INR-only.
+- Clients do not see a project, or any SOW draft, until the SOW is sent (project status `draft` is internal).
 - Contributors may hold multiple active assignments.
 - Applications cannot be edited after submission (withdraw and reapply).
 - Reviews are moderated before publishing.
@@ -547,3 +548,5 @@ Stored in `feature_flags`, cached, toggled in Admin. Defaults:
 | 2026-10-10 | 6.3 | SCR-006: no client reject action in v1; `rejected` state kept, unused | Founder |
 | 2026-10-10 | 6.3, 8 | SCR-007: accepted SOW immutable; editing a sent SOW keeps project at `sow_sent`; `{{milestones_table}}` empty-state until milestones exist | Founder |
 | 2026-10-10 | 6.2, 7.3 | SCR-008: added `projects.status_before_hold` and a resume transition from `on_hold` | Founder |
+| 2026-10-10 | 5, 22 | SCR-009: clients do not see draft projects or draft SOWs until the SOW is sent | Founder |
+| 2026-10-10 | 12 | SCR-010: Client MSA is accepted by the owner on its own page, not in registration | Founder |

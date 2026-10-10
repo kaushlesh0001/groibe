@@ -61,3 +61,18 @@ Proposed changes only. The spec is edited by the founder, between passes, and lo
 - **Recommendation:** (a). Keep hold and cancel reasons in the activity log for v1, which is where they live now.
 - **Decision:** add `projects.status_before_hold`. Hold records the state it came from, and a resume Action returns the project there and clears the column. Reasons stay in the activity log.
 - **Code status:** Implemented (`PutProjectOnHold`, `ResumeProject`, migration, admin Resume action, tests).
+
+## SCR-009: Draft projects hidden from clients (spec sections 5, 22)
+
+- **Status:** ACCEPTED 2026-10-10. Spec sections 5 (via the section 22 default) and 23 updated.
+- **Gap:** Section 5 gives clients "R org" on projects without saying whether that includes projects still being set up.
+- **Decision:** Clients do not see a project, or any SOW draft, until the SOW is sent. A `draft` project is internal.
+- **Code status:** Implemented in Pass 2 (`ProjectPolicy::view`, `SowPolicy::view`, client project list and dashboard) and covered by tests.
+
+## SCR-010: Client MSA acceptance page (spec section 12)
+
+- **Status:** ACCEPTED 2026-10-10. Spec sections 12 and 23 updated.
+- **Gap:** Section 12 put "accept Client MSA" in client registration, but self-registered clients have no organization yet (Pass 1 item 4), and the owner must be the one to accept (spec 8).
+- **Decision:** The organization owner accepts the Client MSA on its own page before the first brief or SOW acceptance. Registration stays accounts only.
+- **Code status:** Implemented in Pass 2 (`/app/client/agreements/client-msa`, `AcceptClientMsa`, `AgreementGate`) and covered by tests.
+
