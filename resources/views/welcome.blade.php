@@ -44,6 +44,11 @@
         </x-slot:hero>
     @endif
 
+    @unless ($hero)
+        {{-- The page always has one h1, even when Admin has switched the hero off. --}}
+        <h1 class="sr-only">Where Ideas Find People</h1>
+    @endunless
+
     <div class="flex flex-col gap-20">
         @foreach ($body as $section)
             @include('public.home.'.str_replace('_', '-', $section['key']), ['c' => $section['content'], 'd' => $section['data']])

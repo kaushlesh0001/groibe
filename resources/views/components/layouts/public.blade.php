@@ -6,6 +6,9 @@
         @include('partials.head', ['title' => $title ? $title.' | '.config('app.name') : config('app.name')])
     </head>
     <body class="flex min-h-screen flex-col bg-white text-brand-navy antialiased">
+        {{-- Lets keyboard and screen reader users jump past the menu. It shows only while it has focus. --}}
+        <a href="{{ isset($hero) ? '#hero' : '#main' }}" class="sr-only rounded-lg bg-white px-4 py-2 font-semibold text-brand-navy focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy">Skip to content</a>
+
         <x-impersonation-banner />
 
         {{-- Navy surfaces carry the white logo; green is the action color, with navy text for contrast (spec 10.3). --}}
@@ -29,14 +32,14 @@
         </header>
 
         @isset($hero)
-            <section class="bg-brand-navy text-white">
+            <section id="hero" tabindex="-1" class="bg-brand-navy text-white focus:outline-none">
                 <div class="mx-auto max-w-6xl px-6 pb-20 pt-12 sm:pt-20">
                     {{ $hero }}
                 </div>
             </section>
         @endisset
 
-        <main class="mx-auto w-full max-w-6xl flex-1 px-6 py-16">
+        <main id="main" tabindex="-1" class="mx-auto w-full max-w-6xl flex-1 px-6 py-16 focus:outline-none">
             {{ $slot }}
         </main>
 

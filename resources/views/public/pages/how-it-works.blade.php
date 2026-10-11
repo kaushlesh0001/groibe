@@ -8,5 +8,6 @@
         <meta property="og:url" content="{{ route('how-it-works') }}">
     @endpush
 
-    @include('public.home.how-it-works', ['c' => $c])
+    {{-- The section heading becomes the page's one h1 here. --}}
+    @include('public.home.how-it-works', ['c' => $c, 'headingTag' => 'h1'])
 </x-layouts.public>

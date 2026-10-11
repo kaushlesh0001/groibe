@@ -1,7 +1,8 @@
 {{-- Two views of the same five steps, switched with radio inputs so it works without scripts. The inputs must stay before the labels and panels, because the styles follow the checked input. --}}
+@php($headingTag = $headingTag ?? 'h2')
 <section aria-labelledby="how-heading" class="flex flex-col gap-8">
     <div class="flex flex-col gap-3">
-        <h2 id="how-heading" class="text-2xl font-bold tracking-tight sm:text-3xl">{{ $c['heading'] }}</h2>
+        <{{ $headingTag }} id="how-heading" class="text-2xl font-bold tracking-tight sm:text-3xl">{{ $c['heading'] }}</{{ $headingTag }}>
         <p class="max-w-2xl text-zinc-700">{{ $c['subheading'] }}</p>
     </div>
 
