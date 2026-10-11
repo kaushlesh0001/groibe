@@ -10,6 +10,7 @@ use App\Enums\BriefStatus;
 use App\Enums\ClientDisplay;
 use App\Enums\CompensationType;
 use App\Enums\Confidentiality;
+use App\Enums\FeaturedItemType;
 use App\Enums\MilestoneStatus;
 use App\Enums\OnboardingState;
 use App\Enums\OpenRoleStatus;
@@ -30,6 +31,7 @@ use App\Enums\WorkMode;
 use App\Models\Application;
 use App\Models\Assignment;
 use App\Models\Brief;
+use App\Models\FeaturedItem;
 use App\Models\Milestone;
 use App\Models\OpenRole;
 use App\Models\Organization;
@@ -43,6 +45,7 @@ use App\Models\Review;
 use App\Models\Skill;
 use App\Models\Sow;
 use App\Models\Task;
+use App\Models\Testimonial;
 use App\Models\User;
 use App\Services\Projects\ProjectCodeGenerator;
 use App\Services\Reputation\ReputationCalculator;
@@ -114,6 +117,7 @@ class DemoSeeder extends Seeder
             TaxonomySeeder::class,
             FeatureFlagSeeder::class,
             AgreementTemplateSeeder::class,
+            WebsiteContentSeeder::class,
         ]);
 
         activity()->withoutLogs(fn () => Model::unguarded(function (): void {
@@ -122,6 +126,8 @@ class DemoSeeder extends Seeder
             $this->deliveryWork($organizations);
             $this->showcaseWork($organizations);
             $this->openRoles($organizations);
+            // Last, because it picks the roles, people and work the steps above create.
+            $this->homepage($organizations);
         }));
     }
 
@@ -419,6 +425,43 @@ class DemoSeeder extends Seeder
             'status' => $status,
             'published_at' => $status === ReviewStatus::Published ? now()->subDays(4) : null,
         ]);
+    }
+
+    /**
+     * What an admin would pick for the homepage: a public role, public contributors, a public organization, a published
+     * proof-of-work item, and two clearly fake testimonials (a testimonial must otherwise be a real quote, so none are
+     * seeded outside the demo). Keyed on type and item, or on the author, so a second run changes nothing.
+     *
+     * @param  array<string, Organization>  $organizations
+     */
+    private function homepage(array $organizations): void
+    {
+        $picks = [
+            [FeaturedItemType::OpenRole, OpenRole::query()->where('slug', 'demo-survey-analyst')->value('id')],
+            [FeaturedItemType::Organization, $organizations['kestrel-foods-demo']->id],
+            [FeaturedItemType::ProofOfWork, ProofOfWork::query()->where('slug', 'demo-distributor-pricing-model-vikram')->value('id')],
+        ];
+
+        foreach (['Aditi Sharma', 'Rohan Mehta', 'Sneha Iyer', 'Vikram Singh'] as $name) {
+            $picks[] = [FeaturedItemType::Contributor, $this->contributor($name)->id];
+        }
+
+        foreach ($picks as $position => [$type, $id]) {
+            if ($id !== null) {
+                FeaturedItem::query()->firstOrCreate(['type' => $type, 'item_id' => $id], ['sort' => ($position + 1) * 10, 'is_active' => true]);
+            }
+        }
+
+        foreach (['Demo Client One', 'Demo Client Two'] as $position => $author) {
+            Testimonial::query()->firstOrCreate(['author_name' => $author], [
+                'author_title' => 'Founder',
+                'organization_name' => 'Kestrel Foods (Demo)',
+                'quote' => 'Demo quote for testing the homepage. This is not a real testimonial.',
+                'sort' => ($position + 1) * 10,
+                'is_active' => true,
+                'needs_review' => false,
+            ]);
+        }
     }
 
     /** @param  array<string, Organization>  $organizations */
