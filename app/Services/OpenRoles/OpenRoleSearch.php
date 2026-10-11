@@ -10,6 +10,7 @@ use App\Models\Skill;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 /**
  * Filters and search shared by the public /opportunities page and the contributor Discover page (spec 10.2, 11).
@@ -28,6 +29,21 @@ class OpenRoleSearch
             'compensation' => ['nullable', 'in:'.implode(',', array_column(CompensationType::cases(), 'value'))],
             'duration' => ['nullable', 'string', 'max:60'],
         ];
+    }
+
+    /**
+     * Keeps only the filter values that pass the rules. For pages that must never fail on a stale or edited link,
+     * such as a bookmarked filter whose option no longer exists: the bad value is dropped and the rest still apply.
+     *
+     * @param  array<string, mixed>  $input
+     * @return array<string, mixed>
+     */
+    public static function sanitize(array $input): array
+    {
+        $input = array_intersect_key($input, self::rules());
+        $invalid = array_keys(Validator::make($input, self::rules())->errors()->messages());
+
+        return array_diff_key($input, array_flip($invalid));
     }
 
     /**

@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Actions\Admin\StartImpersonation;
 use App\Http\Middleware\EnsureActiveContributor;
+use App\Http\Middleware\EnsureFeatureEnabled;
 use App\Http\Middleware\EnsureUserRole;
 use App\Models\AgreementAcceptance;
 use App\Models\AgreementTemplate;
@@ -79,7 +80,7 @@ class AppServiceProvider extends ServiceProvider
         // Livewire sends later actions and refreshes to its own endpoint and re-applies only a short list of the
         // page's middleware there. Role and active-contributor checks must be on that list (spec 4, 16), or a
         // contributor suspended while a page is open could keep using it.
-        Livewire::addPersistentMiddleware([EnsureUserRole::class, EnsureActiveContributor::class]);
+        Livewire::addPersistentMiddleware([EnsureUserRole::class, EnsureActiveContributor::class, EnsureFeatureEnabled::class]);
 
         // Spec 17.2: throttle invite redemption.
         RateLimiter::for('invite', fn (Request $request) => Limit::perMinute(10)->by($request->ip()));
