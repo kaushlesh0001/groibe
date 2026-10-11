@@ -27,7 +27,7 @@ class AgreementTemplateSeeder extends Seeder
                             .'<h2>Commercials</h2><p>Total value: {{total_value}}</p><p>Payment terms: {{payment_terms}}</p>'
                             .'<h2>Timeline</h2><p>Start: {{start_date}}. Due: {{due_date}}.</p>'
                             .'<p>Placeholder template. Replace with the approved SOW wording.</p>'
-                        : '<p>Placeholder text for '.$type->getLabel().'. Replace with the approved legal text.</p>',
+                        : '<p>Placeholder text for '.$type->getLabel().'. '.AgreementTemplate::PLACEHOLDER_NOTE.'</p>',
                     'is_active' => true,
                     'effective_from' => now(),
                 ],

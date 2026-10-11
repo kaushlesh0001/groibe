@@ -18,6 +18,9 @@ class AgreementTemplate extends Model
     /** @use HasFactory<AgreementTemplateFactory> */
     use HasFactory, LogsActivity;
 
+    /** The sentence that ends every seeded placeholder body. A template that still contains it is not real wording. */
+    public const PLACEHOLDER_NOTE = 'Replace with the approved legal text.';
+
     /** @var list<string> */
     protected $fillable = ['type', 'version', 'title', 'body_html', 'is_active', 'effective_from'];
 
@@ -59,6 +62,15 @@ class AgreementTemplate extends Model
     public function scopeActive(Builder $query): void
     {
         $query->where('is_active', true);
+    }
+
+    /**
+     * True while the body is still the seeded placeholder (spec 8). The public Terms and Privacy pages only show a
+     * template whose wording is real, so placeholder text can never reach a visitor.
+     */
+    public function isPlaceholder(): bool
+    {
+        return str_contains((string) $this->body_html, self::PLACEHOLDER_NOTE);
     }
 
     /** The single active template of a type, or null when none has been published. */
