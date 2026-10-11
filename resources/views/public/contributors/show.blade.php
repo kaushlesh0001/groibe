@@ -62,6 +62,35 @@
             @endif
         </dl>
 
+        @if ($facts && ($facts->projects_completed > 0 || $facts->reviews_count > 0 || $facts->tasks_total > 0))
+            <section aria-labelledby="facts-heading" class="flex flex-col gap-2">
+                <h2 id="facts-heading" class="text-xl font-semibold">Track record</h2>
+                <dl class="grid gap-3 sm:grid-cols-3">
+                    <div class="rounded-lg border border-zinc-200 p-3"><dt class="text-sm text-zinc-600">Projects completed</dt><dd class="text-xl font-semibold">{{ $facts->projects_completed }}</dd></div>
+                    @if ($facts->firstPassPercent() !== null)
+                        <div class="rounded-lg border border-zinc-200 p-3"><dt class="text-sm text-zinc-600">Tasks approved first time</dt><dd class="text-xl font-semibold">{{ $facts->firstPassPercent() }}%</dd></div>
+                    @endif
+                    @if ($facts->onTimePercent() !== null)
+                        <div class="rounded-lg border border-zinc-200 p-3"><dt class="text-sm text-zinc-600">Tasks on time</dt><dd class="text-xl font-semibold">{{ $facts->onTimePercent() }}%</dd></div>
+                    @endif
+                    @if ($facts->reviews_count > 0)
+                        <div class="rounded-lg border border-zinc-200 p-3"><dt class="text-sm text-zinc-600">Client reviews</dt><dd class="text-xl font-semibold">{{ $facts->reviews_count }}, average {{ $facts->avg_rating }} of 5</dd></div>
+                    @endif
+                </dl>
+            </section>
+        @endif
+
+        @if ($proofs->isNotEmpty())
+            <section aria-labelledby="proof-heading" class="flex flex-col gap-3">
+                <h2 id="proof-heading" class="text-xl font-semibold">Work</h2>
+                <ul class="grid gap-4 sm:grid-cols-2">
+                    @foreach ($proofs as $proof)
+                        <x-proof-card :item="$proof" />
+                    @endforeach
+                </ul>
+            </section>
+        @endif
+
         @if ($profile->linkedin_url || $profile->portfolio_url)
             <p class="flex gap-4 text-brand-blue">
                 @if ($profile->linkedin_url)

@@ -76,6 +76,14 @@
         </section>
     @endif
 
+    @if (in_array($project->status, [\App\Enums\ProjectStatus::Accepted, \App\Enums\ProjectStatus::Closed], true))
+        <section aria-labelledby="reviews-heading" class="flex flex-col gap-2 rounded-lg border border-zinc-200 p-5">
+            <flux:heading id="reviews-heading" size="lg" level="2">Reviews and showcase</flux:heading>
+            <flux:text>Review the team, and choose whether this project may be shown as an example of our work.</flux:text>
+            <div><flux:button :href="route('client.projects.reviews', $project)" wire:navigate>Open</flux:button></div>
+        </section>
+    @endif
+
     @unless ($teamHidden)
         <section aria-labelledby="team-heading" class="flex flex-col gap-4">
             <flux:heading id="team-heading" size="lg" level="2">Your team</flux:heading>

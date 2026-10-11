@@ -6,6 +6,7 @@ use App\Enums\FeatureFlag;
 use App\Http\Controllers\Controller;
 use App\Models\OpenRole;
 use App\Models\Profile;
+use App\Models\ProofOfWork;
 use App\Services\FeatureFlags\FeatureFlags;
 use Illuminate\Http\Response;
 
@@ -42,6 +43,20 @@ class SitemapController extends Controller
 
             foreach ($profiles as $profile) {
                 $urls[] = ['loc' => route('contributors.show', $profile->slug), 'lastmod' => $profile->updated_at?->toAtomString()];
+            }
+        }
+
+        // Only published, public items whose project consent is anonymous or named. Consent `none` never appears (spec 9).
+        if ($flags->enabled(FeatureFlag::ProofOfWorkPublic->value)) {
+            $urls[] = ['loc' => route('work.index'), 'lastmod' => null];
+
+            $items = ProofOfWork::query()->publiclyVisible()
+                ->orderBy('proof_of_work.id')
+                ->limit(self::MAX_URLS - count($urls))
+                ->get(['proof_of_work.id', 'proof_of_work.slug', 'proof_of_work.updated_at']);
+
+            foreach ($items as $item) {
+                $urls[] = ['loc' => route('work.show', $item->slug), 'lastmod' => $item->updated_at?->toAtomString()];
             }
         }
 

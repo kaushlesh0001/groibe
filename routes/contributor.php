@@ -6,6 +6,8 @@ use App\Livewire\Contributor\Discover;
 use App\Livewire\Contributor\EditProfile;
 use App\Livewire\Contributor\MyApplications;
 use App\Livewire\Contributor\Onboarding;
+use App\Livewire\Contributor\Portfolio;
+use App\Livewire\Contributor\Reputation;
 use App\Livewire\Contributor\Work\MyWork;
 use App\Livewire\Contributor\Work\ProjectBoard;
 use App\Livewire\Contributor\Work\TaskDetail;
@@ -41,4 +43,14 @@ Route::middleware(['auth', 'verified', 'role:contributor', 'active.contributor',
         Route::livewire('discover', Discover\Index::class)->name('discover');
         Route::livewire('discover/{slug}', Discover\Show::class)->name('discover.show');
         Route::livewire('applications', MyApplications::class)->name('applications');
+    });
+
+// Portfolio and Reputation (spec 11). Active contributors only: drafts exist once a project they worked on closes.
+Route::middleware(['auth', 'verified', 'role:contributor', 'active.contributor'])
+    ->prefix('app/contributor')
+    ->name('contributor.')
+    ->group(function (): void {
+        Route::livewire('portfolio', Portfolio\Index::class)->name('portfolio');
+        Route::livewire('portfolio/{proof}', Portfolio\Edit::class)->name('portfolio.edit');
+        Route::livewire('reputation', Reputation::class)->name('reputation');
     });

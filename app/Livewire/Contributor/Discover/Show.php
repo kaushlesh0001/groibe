@@ -4,10 +4,12 @@ namespace App\Livewire\Contributor\Discover;
 
 use App\Actions\Applications\SubmitApplication;
 use App\Enums\ApplicationStatus;
+use App\Enums\ProofStatus;
 use App\Exceptions\ActionBlocked;
 use App\Livewire\Forms\ApplicationForm;
 use App\Models\Application;
 use App\Models\OpenRole;
+use App\Models\ProofOfWork;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
@@ -68,6 +70,9 @@ class Show extends Component
             && ($application === null || $application->status === ApplicationStatus::Withdrawn);
 
         return view('livewire.contributor.discover.show', [
+            'proofItems' => $canApply
+                ? ProofOfWork::query()->ownedBy($user)->where('status', ProofStatus::Published->value)->orderByDesc('published_at')->get(['id', 'title'])
+                : collect(),
             'role' => $role,
             'application' => $application,
             'canApply' => $canApply,
