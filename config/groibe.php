@@ -50,6 +50,11 @@ return [
         'photo_max_px' => 800,
     ],
 
+    // Spec 17.3: public lists, stats and the homepage are cached for 5 to 15 minutes and cleared when their data changes.
+    'cache' => [
+        'public_minutes' => 10,
+    ],
+
     // Spec 10.2: slugs a CMS page may not take, because a route or app area already owns them (SCR-021).
     'cms' => [
         'reserved_slugs' => [

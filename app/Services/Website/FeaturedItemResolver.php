@@ -3,7 +3,6 @@
 namespace App\Services\Website;
 
 use App\Enums\FeaturedItemType;
-use App\Enums\OpenRoleVisibility;
 use App\Models\FeaturedItem;
 use App\Models\OpenRole;
 use App\Models\Organization;
@@ -12,6 +11,7 @@ use App\Models\Project;
 use App\Models\ProofOfWork;
 use App\Models\Testimonial;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 
 /**
@@ -57,6 +57,27 @@ class FeaturedItemResolver
             ->all();
     }
 
+    /**
+     * The admin's active picks of one type, in the admin's order, limited to records the public can see right now.
+     * A pick that is missing or no longer public is skipped.
+     *
+     * @param  list<string>  $with  relations to load, so the page that shows them does not query per row
+     * @return Collection<int, Model>
+     */
+    public function featured(FeaturedItemType $type, int $limit, array $with = []): Collection
+    {
+        $ids = FeaturedItem::query()->active()->ofType($type)->ordered()->pluck('item_id')->all();
+
+        if ($ids === []) {
+            return new Collection;
+        }
+
+        $records = $this->visible($type)->with($with)->whereIn($this->idColumn($type), $ids)->get()
+            ->keyBy(fn ($record): int => $this->idOf($type, $record));
+
+        return collect($ids)->map(fn (int $id) => $records->get($id))->filter()->take($limit)->values();
+    }
+
     public function label(FeaturedItemType $type, int $id): ?string
     {
         $record = $this->visible($type)->where($this->idColumn($type), $id)->first();
@@ -72,10 +93,9 @@ class FeaturedItemResolver
     private function visible(FeaturedItemType $type): Builder
     {
         return match ($type) {
-            FeaturedItemType::OpenRole => OpenRole::query()->published()->where('visibility', OpenRoleVisibility::Public->value),
-            FeaturedItemType::Contributor => Profile::query()->with('user')->where('is_public', true)->whereNotNull('slug')
-                ->where('onboarding_state', 'active')->whereHas('user', fn (Builder $user) => $user->where('status', 'active')->where('role', 'contributor')),
-            FeaturedItemType::Organization => Organization::query()->where('is_public', true)->where('status', 'verified'),
+            FeaturedItemType::OpenRole => OpenRole::query()->visibleTo(null),
+            FeaturedItemType::Contributor => Profile::query()->publiclyVisible()->with('user'),
+            FeaturedItemType::Organization => Organization::query()->public(),
             FeaturedItemType::ProofOfWork => ProofOfWork::query()->publiclyVisible(),
             FeaturedItemType::Testimonial => Testimonial::query()->active(),
             FeaturedItemType::Project => Project::query()->whereIn('status', ['accepted', 'closed'])->whereIn('showcase_consent', ['anonymous', 'named']),
