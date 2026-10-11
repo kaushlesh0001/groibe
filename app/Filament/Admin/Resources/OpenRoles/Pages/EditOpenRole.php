@@ -7,12 +7,14 @@ use App\Actions\OpenRoles\CloseOpenRole;
 use App\Actions\OpenRoles\PublishOpenRole;
 use App\Actions\OpenRoles\SaveOpenRole;
 use App\Enums\OpenRoleStatus;
+use App\Exceptions\ActionBlocked;
 use App\Filament\Admin\Resources\OpenRoles\OpenRoleResource;
 use App\Filament\Admin\Support\DomainActionRunner;
 use App\Models\OpenRole;
 use Closure;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 use Illuminate\Database\Eloquent\Model;
 
@@ -43,8 +45,17 @@ class EditOpenRole extends EditRecord
         $skillIds = array_map('intval', $data['skill_ids'] ?? []);
         unset($data['skill_ids']);
 
-        /** @var OpenRole $record */
-        return app(SaveOpenRole::class)(auth()->user(), $data, $record, $skillIds);
+        try {
+            /** @var OpenRole $record */
+            return app(SaveOpenRole::class)(auth()->user(), $data, $record, $skillIds);
+        } catch (ActionBlocked $e) {
+            // A closed, filled or archived role is history. Say so instead of showing an error page.
+            Notification::make()->title('That role can no longer be changed')->body($e->getMessage())->danger()->send();
+
+            $this->halt();
+
+            return $record;
+        }
     }
 
     /** @param  class-string  $action */

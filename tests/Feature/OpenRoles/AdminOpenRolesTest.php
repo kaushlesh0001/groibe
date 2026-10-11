@@ -66,6 +66,17 @@ it('shows the publish, close and archive buttons only in the right state', funct
         ->assertActionHidden('publish')->assertActionVisible('close')->assertActionVisible('archive');
 });
 
+it('says so, rather than failing, when a closed role is saved', function () {
+    $role = OpenRole::factory()->status(OpenRoleStatus::Closed)->create(['title' => 'Original title']);
+
+    Livewire::actingAs($this->dm)->test(EditOpenRole::class, ['record' => $role->getKey()])
+        ->fillForm(['title' => 'Changed title'])
+        ->call('save')
+        ->assertNotified('That role can no longer be changed');
+
+    expect($role->fresh()->title)->toBe('Original title');
+});
+
 it('explains a refused publish instead of failing', function () {
     $role = OpenRole::factory()->create(['summary' => null]);
 
