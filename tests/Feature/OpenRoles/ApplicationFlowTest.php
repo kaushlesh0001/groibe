@@ -119,10 +119,9 @@ describe('submit', function () {
             ->and(Application::query()->count())->toBe(0);
     });
 
-    it('does not take proof-of-work ids until Pass 6, even if sent', function () {
-        $application = applyTo($this->role, $this->contributor, ['proof_of_work_ids' => [1, 2]]);
-
-        expect($application->proof_of_work_ids)->toBeNull();
+    it('refuses proof-of-work ids that are not the applicant own published items (Pass 6)', function () {
+        expect(fn () => applyTo($this->role, $this->contributor, ['proof_of_work_ids' => [1, 2]]))->toThrow(ActionBlocked::class, 'own published')
+            ->and(Application::query()->count())->toBe(0);
     });
 });
 
