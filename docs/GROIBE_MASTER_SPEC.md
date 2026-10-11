@@ -109,6 +109,8 @@ Legend: C create, R read, U update, D delete, A approve, own = own records only,
 | Review | - | C own (after close), R about self | C (after acceptance) | RUA (moderate) | R | - | all |
 | Proof of Work | R published | RU own text, toggle visibility | consent toggle | CRUA | RUA | - | all |
 | Payout | - | R own | - | R | - | CRUD | all |
+| Thread (project conversation) | - | participant: active contributor with an active or completed seat | participant: org owner and manager | RU (moderate) | - | - | all |
+| Thread (support) | - | CR own | CR own | - | RU (answer) | - | all |
 | Agreements | - | accept | accept | R | R | R | CRUD |
 | Website CMS | - | - | - | - | CRUD | - | all |
 | Settings, flags | - | - | - | - | - | - | CRUD |
@@ -258,7 +260,7 @@ Unique (project_id, user_id) where status in active states (enforce in code).
 
 ### 7.8 Communication
 
-**threads**: id, project_id (nullable), type (`project|support|application`), subject, created_by. **thread_participants**: thread_id, user_id, last_read_at. **messages**: id, thread_id, user_id, body, is_internal (visible to admin only), created_at. Message files: media library, private.
+**threads**: id, uuid, project_id (nullable), type (`project|support|application`), subject, created_by, last_message_at (nullable), timestamps. One `project` thread per project. `application` is kept and unused in v1. **thread_participants**: thread_id, user_id, last_read_at. It holds read markers only: who may see a thread is worked out from live data (section 14), never stored. **messages**: id, thread_id, user_id, body, is_internal (visible to admin only), created_at, updated_at. `messages.created_at` and `last_read_at` keep microseconds so unread counts are exact. Message files: media library, private. (SCR-022)
 **notifications**: use Laravel's database notifications table, plus an `email_log` table and a `notification_preferences` table (SCR-023).
 **email_log**: id, user_id (nullable), template (class name), to, status (`sent|failed`), error (nullable, trimmed to 500 characters), sent_at (nullable), timestamps. One row per recipient address. It never stores the message body or subject. A row is written for every message the mailer sends, and for a queued notification email or the contact inbox email that fails after its last try.
 **notification_preferences**: id, user_id, category, database (bool), mail (bool), timestamps. Unique (user_id, category). No row means both channels are on. Categories are listed in `config/groibe.php`.
@@ -417,7 +419,11 @@ Required admin capabilities:
 ## 14. Messaging and notifications
 
 - Project threads: participants are project admins, assigned contributors, and client users. Messages flagged `is_internal` are visible to Admin only. Contributors and clients never talk directly outside a project thread, and Admin can moderate.
-- Contributors cannot start threads with clients. Support thread (user <-> admin) available to everyone.
+- Who is in a project thread is derived from live data (SCR-022): admins holding `threads.view` (delivery manager, super admin); contributors with an `active` or `completed` assignment who are themselves active; and the client organization's `owner` and `manager` (not `viewer`). A removed or suspended person loses access at once.
+- A project thread is created when the SOW is sent (clients see nothing before then, section 22), and on first use for older projects. Nothing exists for a `draft` project. It is read-only for clients and contributors once the project is `closed` or `cancelled`; admins can always post.
+- Only admins may post `is_internal` messages, and no query, page, notification or file link returns them to anyone else.
+- Contributors cannot start threads with clients. Support thread (user <-> admin) is available to every contributor, whatever their review state, and to every client. Only the person who started it and admins holding `support.view` (community manager, super admin) can read it; admins answer support threads and do not start them. The `application` thread type is unused in v1.
+- A new-message notification carries no message text and no author name.
 - Notifications (database + email, user-configurable per category except security):
   - Brief status changes, SOW sent/accepted, assignment invite, application status, task assigned/changed, submission QA result, deliverable shared, deliverable accepted/changes requested, review requested, new message, payout status change, onboarding status change.
 - Bell icon with unread count, notifications page (`/notifications`, every signed-in role), mark read and mark all read. Preferences are at `/settings/notifications` (SCR-023).
@@ -578,3 +584,4 @@ Stored in `feature_flags`, cached, toggled in Admin. Defaults:
 | 2026-10-10 | 2.2, 7.4 | SCR-018: added `open_role_invites`, the admin-managed invite list for `invite_only` open roles | Founder |
 | 2026-10-10 | 6.5, 7.4, 22 | SCR-019: added `withdrawn -> submitted` (reapply reuses the same application row); rejected, declined and accepted applicants cannot reapply | Founder |
 | 2026-10-11 | 5, 7.8, 14 | SCR-023: added `notification_preferences`; `email_log` rules (one row per recipient, no body, failures logged, super admin read-only); preference and locked-category rules; notification centre and preferences pages | Founder |
+| 2026-10-11 | 5, 7.8, 14 | SCR-022: messaging access rules: `threads` and `support` permissions; conversation membership derived from live project data; project thread opens with the SOW and is read-only after close or cancel; admin-only internal messages; support thread privacy; unused `application` type; microsecond read markers | Founder |
