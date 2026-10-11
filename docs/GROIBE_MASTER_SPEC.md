@@ -153,6 +153,7 @@ Implement each as a PHP backed Enum plus an Action class per transition (`app/Ac
 ### 6.5 Application
 `submitted -> shortlisted -> offered -> accepted` ; also `submitted|shortlisted|offered -> rejected` ; `submitted|shortlisted -> withdrawn` ; `offered -> declined`.
 - `accepted` creates an Assignment (state `active`) on the linked project.
+- `withdrawn -> submitted` (SCR-019): the contributor reapplies by submitting new answers. The existing row is reused and the earlier answers stay in the activity log. A rejected, declined or accepted applicant cannot reapply.
 
 ### 6.6 Assignment
 `invited -> active -> completed` ; `invited -> declined` ; `active -> removed`.
@@ -234,6 +235,7 @@ Submission files: media library, collection `submission_files`, private. Any adm
 Unique (project_id, user_id) where status in active states (enforce in code).
 **open_roles**: id, uuid, project_id (nullable), title, slug, summary, description, tasks_list (json array of strings), learning_outcomes (json), project_type_id, work_mode, est_hours_min, est_hours_max, duration_label, compensation_type (`paid|stipend|unpaid_learning|other`), compensation_note, visibility, positions_needed, status, deadline, is_featured, created_by, published_at, closed_at.
 **open_role_skills**: open_role_id, skill_id.
+**open_role_invites** (SCR-018): id, open_role_id, user_id, invited_by (nullable), timestamps. Unique (open_role_id, user_id). The admin-managed list for `invite_only` roles: only listed active contributors see the role and may apply.
 **applications**: id, open_role_id, user_id, status, motivation, relevant_experience, availability_note, expected_amount (nullable), proof_of_work_ids (json of ids), admin_note, shortlisted_at, decided_at, decided_by. Unique (open_role_id, user_id).
 
 ### 7.5 Proof, reviews, reputation
@@ -542,7 +544,7 @@ Stored in `feature_flags`, cached, toggled in Admin. Defaults:
 - Projects are INR-only.
 - Clients do not see a project, or any SOW draft, until the SOW is sent (project status `draft` is internal).
 - Contributors may hold multiple active assignments.
-- Applications cannot be edited after submission (withdraw and reapply).
+- Applications cannot be edited after submission. To change one, withdraw it and reapply (6.5, SCR-019).
 - Reviews are moderated before publishing.
 
 ## 23. Change log
@@ -568,3 +570,5 @@ Stored in `feature_flags`, cached, toggled in Admin. Defaults:
 | 2026-10-10 | 6.9 | SCR-015: added `in_qa -> in_progress`, automatic when a task leaves `submitted` or `approved` (QA changes requested, or removal returns a task to `todo`) | Founder |
 | 2026-10-10 | 6.2 | SCR-016: added `delivered -> in_qa`, automatic when the client requests changes on a milestone | Founder |
 | 2026-10-10 | 1, 10.1, 10.3 | SCR-017: new brand: colors (navy `#042B65`, green `#0EAE44`, blue `#046CEA`, plus green-alt and teal), Inter, logo files and rules, contrast rules, tagline "Where Ideas Find People" | Founder |
+| 2026-10-10 | 2.2, 7.4 | SCR-018: added `open_role_invites`, the admin-managed invite list for `invite_only` open roles | Founder |
+| 2026-10-10 | 6.5, 7.4, 22 | SCR-019: added `withdrawn -> submitted` (reapply reuses the same application row); rejected, declined and accepted applicants cannot reapply | Founder |

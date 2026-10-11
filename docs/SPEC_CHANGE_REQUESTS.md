@@ -140,7 +140,7 @@ Proposed changes only. The spec is edited by the founder, between passes, and lo
 
 ## SCR-018: Invite list for `invite_only` open roles (spec sections 2.2, 5, 7.4)
 
-- **Status:** ACCEPTED 2026-10-10 by the founder, option (a). Spec text (sections 7.4 and 23) still to be updated by the founder.
+- **Status:** ACCEPTED 2026-10-10 by the founder, option (a). Spec sections 7.4 and 23 updated.
 - **Gap:** 2.2 gives open roles a visibility `invite_only`, and section 5 says contributors read open roles "if allowed", but nothing says how a contributor is invited, and section 7 has no table for it.
 - **Options:**
   - (a) Add `open_role_invites` (open_role_id, user_id, invited_by, timestamps, unique on role and user). An admin picks active contributors on the role. Only invited contributors see the role in Discover and may apply.
@@ -151,11 +151,11 @@ Proposed changes only. The spec is edited by the founder, between passes, and lo
 
 ## SCR-019: Reapplying after a withdrawal (spec sections 6.5, 7.4, 22)
 
-- **Status:** PROPOSED 2026-10-10. Implemented provisionally as option (a) in Pass 5; the founder has not confirmed it. Reverting it is one Action.
+- **Status:** ACCEPTED 2026-10-10 by the founder, option (a), as built in Pass 5. Spec sections 6.5, 22 and 23 updated.
 - **Gap:** Section 22 says an application cannot be edited after submission ("withdraw and reapply"), but 7.4 makes (open_role_id, user_id) unique and 6.5 has no way out of `withdrawn`, so a withdrawn contributor could never reapply.
 - **Options:**
   - (a) Add `withdrawn -> submitted`, done by the contributor by submitting a fresh application. The existing row is reused with the new answers, and the activity log keeps the earlier ones. A rejected or declined applicant cannot reapply.
   - (b) Drop the unique index and allow many rows per contributor and role, only one of them open.
   - (c) Do not allow reapplying. A withdrawal is final.
 - **Recommendation:** (a). It keeps the unique index and the single row per contributor and role, and adds one small edge to 6.5.
-- **Code status:** Pass 5, provisional.
+- **Code status:** Pass 5.
