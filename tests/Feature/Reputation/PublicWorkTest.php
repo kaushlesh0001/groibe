@@ -9,6 +9,7 @@ use App\Models\ProofOfWork;
 use App\Models\ReputationFact;
 use App\Models\Skill;
 use App\Services\FeatureFlags\FeatureFlags;
+use Illuminate\Support\Facades\DB;
 
 /** A published, public item on a closed project with the given consent. @return array{0: ProofOfWork, 1: array<string, mixed>} */
 function showcased(ShowcaseConsent $consent, array $proof = []): array
@@ -130,4 +131,29 @@ it('shows reputation facts and consented work on a public profile only', functio
     $this->actingAs($seat['contributor'])->get(route('contributors.show', $seat['contributor']->profile->slug))
         ->assertOk()
         ->assertDontSee('Track record');
+});
+
+it('issues the same number of queries for 3 items as for 10 on the work list', function () {
+    $count = function (): int {
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+        $this->get(route('work.index'))->assertOk();
+        $queries = count(DB::getQueryLog());
+        DB::disableQueryLog();
+
+        return $queries;
+    };
+
+    foreach (range(1, 3) as $i) {
+        showcased(ShowcaseConsent::Named, ['title' => "Item {$i}"]);
+    }
+
+    $count(); // warm caches (flags, session) so only row-driven queries are compared
+    $small = $count();
+
+    foreach (range(4, 10) as $i) {
+        showcased(ShowcaseConsent::Named, ['title' => "Item {$i}"]);
+    }
+
+    expect($count())->toBe($small);
 });
