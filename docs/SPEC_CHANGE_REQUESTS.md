@@ -159,3 +159,15 @@ Proposed changes only. The spec is edited by the founder, between passes, and lo
   - (c) Do not allow reapplying. A withdrawal is final.
 - **Recommendation:** (a). It keeps the unique index and the single row per contributor and role, and adds one small edge to 6.5.
 - **Code status:** Pass 5.
+
+## SCR-020: Proof of work, reviews and reputation gaps (spec sections 7.5, 9, 10.2, 16)
+
+- **Status:** PROPOSED 2026-10-11, built in Pass 6 on the assumption it is approved. The `organization_stats` columns (item 2) were chosen by the founder in the Pass 6 session ("mirror, via SCR"). Items 1, 3 and 4 are additions made to keep the build working and need a yes or a different answer. Spec sections 7.5 and 23 are not edited until approved.
+- **Gap:** Section 7.5 leaves four things open that the build cannot do without.
+- **Proposal:**
+  1. `proof_of_work.slug` (string, unique, nullable). Section 10.2 gives `/work/{slug}` and section 16 says public models get immutable slugs, but 7.5 lists no slug column. The slug is generated once, on first publication, as the title plus a random suffix, and never changes.
+  2. `organization_stats` columns: organization_id (unique), projects_completed, reviews_count, avg_rating, avg_clarity, avg_communication, avg_professionalism, avg_feedback_time, avg_fairness, recomputed_at. Section 7.5 only says "Org equivalent". Admin-only in v1. The organization review uses five criteria (clarity, communication, professionalism, feedback time, fairness), because section 9 lists `communication` among them.
+  3. `reputation_facts.tasks_with_due_date`. The founder decided that approved tasks without a due date are left out of the on-time percentage. With only `on_time_tasks` and `tasks_total` there is no honest denominator for it, so the column holds one.
+  4. A unique index on `proof_of_work (user_id, project_id)`, so closing a project cannot create two drafts for one contributor. No new column.
+- **Decided by the founder in the same session (logged here, no spec text needed beyond this):** internal admin reviews are never shown to the contributor, never counted in reputation and never public; client owners and managers write contributor reviews and set showcase consent, from `accepted` on and still changeable after `closed`; only `completed` assignments get a draft proof or can be reviewed; first pass means the version 1 submission was approved, on time means approved on or before the due date.
+- **Code status:** Pass 6.
