@@ -329,3 +329,6 @@ Built in one pass, after a stop for four data-model and permission questions tha
 172. **Low: the Reputation page writes on a read.** `Reputation::render()` calls the calculator when the contributor has no `reputation_facts` row yet. Harmless, but a page view should not write. Create the row when the first assignment completes instead.
 173. **Low: `Reputation::submitClientReview` answers 404 for a project id that does not exist and 403 for one that does** (the gate runs after `findOrFail`). Ids are internal, so the leak is negligible. Authorize first if this pattern spreads.
 174. **Low: no index on `projects.showcase_consent` or `proof_of_work.published_at`.** The public list filters on the first through `whereHas` and sorts on the second. Fine at v1 volumes; add both if `/work` passes a few thousand items.
+
+**Pass 8 follow-ups**
+175. **Restore a line on the For clients page after Pass 7.** The built-in text in `StaticPageDefaults::forClients()` leaves out "you can message the team in the project thread", because messaging is not built yet. Once Pass 7 ships project threads, add it back to the "How the work runs" list (and check `/how-it-works` and the homepage defaults for the same promise).
