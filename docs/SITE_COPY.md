@@ -423,7 +423,7 @@ No copy. The page only redirects to account creation.
 - Recent Contributions
 - No recent contributions.
 
-[CHECK] Follow, Message and Connect are not in the spec (no direct contact between clients and contributors). The admin-only strings on this page ("Edit My Profile", "Manage Featured Profiles", "Homepage curation is enabled for this profile", and similar) are WordPress admin hints and are left out.
+[CHECK] Follow, Message and Connect are not in the spec (no direct contact between clients and contributors). The admin-only strings on this page ("Edit My Profile", "Manage Featured Profiles", "Homepage curation is enabled for this profile", and similar) are WordPress admin hints and are left out. - REMOVE
 
 ## Default page and single post
 
