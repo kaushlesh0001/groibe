@@ -1,12 +1,16 @@
 <?php
 
+use App\Http\Controllers\Public\ContactController;
 use App\Http\Controllers\Public\ContributorDirectoryController;
+use App\Http\Controllers\Public\FaqController;
 use App\Http\Controllers\Public\HomeController;
 use App\Http\Controllers\Public\LegalPageController;
 use App\Http\Controllers\Public\OpportunityController;
 use App\Http\Controllers\Public\OrganizationDirectoryController;
+use App\Http\Controllers\Public\PageController;
 use App\Http\Controllers\Public\SitemapController;
 use App\Http\Controllers\Public\SkillController;
+use App\Http\Controllers\Public\StaticPageController;
 use App\Http\Controllers\Public\WorkController;
 use Illuminate\Support\Facades\Route;
 
@@ -41,3 +45,15 @@ Route::middleware('feature:proof_of_work_public')->group(function (): void {
 Route::get('skills/{slug}', [SkillController::class, 'show'])->name('skills.show');
 Route::get('terms', [LegalPageController::class, 'terms'])->name('terms');
 Route::get('privacy', [LegalPageController::class, 'privacy'])->name('privacy');
+
+// Static and contact pages (spec 10.2). A Page written in Admin with the same address replaces the built-in text.
+Route::get('how-it-works', [StaticPageController::class, 'howItWorks'])->name('how-it-works');
+Route::get('for-contributors', [StaticPageController::class, 'forContributors'])->name('for-contributors');
+Route::get('for-clients', [StaticPageController::class, 'forClients'])->name('for-clients');
+Route::get('about', [StaticPageController::class, 'about'])->name('about');
+Route::get('faq', FaqController::class)->name('faq');
+Route::get('contact', [ContactController::class, 'show'])->name('contact');
+Route::post('contact', [ContactController::class, 'store'])->middleware('throttle:contact')->name('contact.store');
+
+// CMS pages at /{slug}. A fallback, so it only runs when no real route matched and can never shadow one.
+Route::fallback(PageController::class);

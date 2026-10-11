@@ -2,15 +2,20 @@
 
 namespace App\Http\Controllers\Public;
 
+use App\Enums\AgreementType;
 use App\Enums\FeatureFlag;
 use App\Http\Controllers\Controller;
 use App\Models\OpenRole;
+use App\Models\Organization;
+use App\Models\Page;
 use App\Models\Profile;
 use App\Models\ProofOfWork;
+use App\Models\Skill;
 use App\Services\FeatureFlags\FeatureFlags;
+use App\Services\Website\PublicSkillIndex;
 use Illuminate\Http\Response;
 
-/** `/sitemap.xml` and `/robots.txt` (spec 10.2, 10.4). Private profiles are never listed. Built per request so a visibility change takes effect at once. */
+/** `/sitemap.xml` and `/robots.txt` (spec 10.2, 10.4). Private profiles, private organizations, unpublished legal pages and unreviewed CMS pages are never listed. Built per request so a visibility change takes effect at once. */
 class SitemapController extends Controller
 {
     private const MAX_URLS = 50000;
@@ -18,6 +23,11 @@ class SitemapController extends Controller
     public function sitemap(FeatureFlags $flags): Response
     {
         $urls = [['loc' => route('home'), 'lastmod' => null]];
+
+        // The built-in pages that always exist. About is listed only once it has been published in Admin.
+        foreach (['how-it-works', 'for-contributors', 'for-clients', 'faq', 'contact'] as $name) {
+            $urls[] = ['loc' => route($name), 'lastmod' => null];
+        }
 
         // Only public, published roles. Members-only, invite-only and every other state never appear (spec 10.4).
         if ($flags->enabled(FeatureFlag::OpenRoles->value)) {
@@ -44,6 +54,18 @@ class SitemapController extends Controller
             foreach ($profiles as $profile) {
                 $urls[] = ['loc' => route('contributors.show', $profile->slug), 'lastmod' => $profile->updated_at?->toAtomString()];
             }
+
+            // Only verified, public organizations (spec 10.4). Private and pending ones never appear.
+            $urls[] = ['loc' => route('organizations.index'), 'lastmod' => null];
+
+            $organizations = Organization::query()->public()
+                ->orderBy('organizations.id')
+                ->limit(max(0, self::MAX_URLS - count($urls)))
+                ->get(['organizations.id', 'organizations.slug', 'organizations.updated_at']);
+
+            foreach ($organizations as $organization) {
+                $urls[] = ['loc' => route('organizations.show', $organization->slug), 'lastmod' => $organization->updated_at?->toAtomString()];
+            }
         }
 
         // Only published, public items whose project consent is anonymous or named. Consent `none` never appears (spec 9).
@@ -60,6 +82,27 @@ class SitemapController extends Controller
             }
         }
 
+        // Skill pages that have something to show; an empty skill page is kept out (it is also noindex).
+        foreach (Skill::query()->active()->whereIn('skills.id', PublicSkillIndex::idsWithContent($flags))->orderBy('skills.id')->limit(max(0, self::MAX_URLS - count($urls)))->get(['skills.id', 'skills.slug', 'skills.updated_at']) as $skill) {
+            $urls[] = ['loc' => route('skills.show', $skill->slug), 'lastmod' => $skill->updated_at?->toAtomString()];
+        }
+
+        // Terms and Privacy only once real wording is published (they answer 404 before that).
+        foreach ([[AgreementType::Terms, 'terms'], [AgreementType::Privacy, 'privacy']] as [$type, $name]) {
+            if (LegalPageController::published($type) !== null) {
+                $urls[] = ['loc' => route($name), 'lastmod' => null];
+            }
+        }
+
+        // CMS pages written in Admin: active and approved only. They are also the About page and any replacement of a built-in page.
+        foreach (Page::query()->active()->orderBy('pages.id')->limit(max(0, self::MAX_URLS - count($urls)))->get(['pages.id', 'pages.slug', 'pages.updated_at']) as $page) {
+            $loc = url($page->slug);
+
+            if (! in_array($loc, array_column($urls, 'loc'), true)) {
+                $urls[] = ['loc' => $loc, 'lastmod' => $page->updated_at?->toAtomString()];
+            }
+        }
+
         return response()->view('public.sitemap', ['urls' => $urls], 200, ['Content-Type' => 'application/xml; charset=UTF-8']);
     }
 
@@ -72,6 +115,7 @@ class SitemapController extends Controller
             'Disallow: /login',
             'Disallow: /register',
             'Disallow: /invite/',
+            'Disallow: /livewire',
             'Sitemap: '.route('sitemap'),
         ];
 

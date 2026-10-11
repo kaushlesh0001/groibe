@@ -61,6 +61,7 @@ use App\Services\FeatureFlags\FeatureFlags;
 use App\Services\Projects\EloquentProjectTransitionGuards;
 use App\Services\Projects\ProjectTransitionGuards;
 use App\Services\Settings\Settings;
+use App\Services\Website\PublicNavigation;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
@@ -68,6 +69,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Livewire\Livewire;
@@ -96,6 +98,14 @@ class AppServiceProvider extends ServiceProvider
 
         // Spec 17.2: throttle invite redemption.
         RateLimiter::for('invite', fn (Request $request) => Limit::perMinute(10)->by($request->ip()));
+
+        // Spec 17.2: throttle the public contact form, per visitor address.
+        RateLimiter::for('contact', fn (Request $request) => [
+            Limit::perMinute(3)->by($request->ip()),
+            Limit::perHour(12)->by($request->ip()),
+        ]);
+
+        View::composer('components.layouts.public', fn ($view) => $view->with('nav', app(PublicNavigation::class)->links()));
 
         Event::listen(Login::class, function (Login $event): void {
             if (! session()->has(StartImpersonation::SESSION_KEY) && $event->user instanceof User) {

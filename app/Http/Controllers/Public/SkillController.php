@@ -41,6 +41,7 @@ class SkillController extends Controller
 
         return response()
             ->view('public.skills.show', ['skill' => $skill, 'roles' => $roles, 'profiles' => $profiles, 'proofs' => $proofs])
-            ->header('X-Robots-Tag', 'index, follow');
+            // An empty skill page is thin content: kept out of search and out of the sitemap.
+            ->header('X-Robots-Tag', $roles->isEmpty() && $profiles->isEmpty() && $proofs->isEmpty() ? 'noindex, follow' : 'index, follow');
     }
 }
