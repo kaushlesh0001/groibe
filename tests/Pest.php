@@ -2,11 +2,15 @@
 
 use App\Actions\Agreements\AcceptClientMsa;
 use App\Enums\AdminRole;
+use App\Enums\AssignmentStatus;
 use App\Enums\OnboardingState;
 use App\Enums\OrgRole;
+use App\Enums\ProjectStatus;
 use App\Enums\UserStatus;
+use App\Models\Assignment;
 use App\Models\Organization;
 use App\Models\Profile;
+use App\Models\Project;
 use App\Models\Skill;
 use App\Models\User;
 use Database\Seeders\AgreementTemplateSeeder;
@@ -111,4 +115,26 @@ function publicContributor(string $name = 'Asha Rao', array $profile = []): User
     $contributor->skills()->attach(Skill::factory()->create()->id, ['level' => 'expert']);
 
     return $contributor;
+}
+
+/**
+ * A project in the given status for a verified organization with an owner, and one `completed` seat for a public
+ * contributor. Returns the pieces the Pass 6 tests need.
+ *
+ * @param  array<string, mixed>  $project
+ * @return array{project: Project, organization: Organization, owner: User, contributor: User, assignment: Assignment}
+ */
+function projectWithCompletedSeat(ProjectStatus $status = ProjectStatus::Accepted, array $project = []): array
+{
+    $organization = Organization::factory()->verified()->create(['industry' => 'Logistics']);
+    $owner = clientUser($organization, OrgRole::Owner);
+    $contributor = publicContributor('Meera Nair', ['slug' => 'meera-nair-'.str()->lower(str()->random(6))]);
+    $project = Project::factory()->status($status)->create(['organization_id' => $organization->id, ...$project]);
+    $assignment = Assignment::factory()->status(AssignmentStatus::Completed)->create([
+        'project_id' => $project->id,
+        'user_id' => $contributor->id,
+        'role_title' => 'Research Analyst',
+    ]);
+
+    return compact('project', 'organization', 'owner', 'contributor', 'assignment');
 }
