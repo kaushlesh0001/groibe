@@ -29,7 +29,12 @@ class PageForm
                 })
                 ->disabledOn('edit')
                 ->helperText('The address of the page: /your-slug. Lowercase letters, numbers and dashes. It cannot be changed after the page is created.'),
-            RichEditor::make('body_html')->label('Content')->rule(new PublicCopy)->columnSpanFull(),
+            RichEditor::make('body_html')
+                ->label('Content')
+                // No file attachments: uploads are limited by spec 17.2 and the site cannot rely on public storage links.
+                ->toolbarButtons([['bold', 'italic', 'link'], ['h2', 'h3'], ['bulletList', 'orderedList', 'blockquote'], ['undo', 'redo']])
+                ->rule(new PublicCopy)
+                ->columnSpanFull(),
             TextInput::make('meta_title')->maxLength(70)->rule(new PublicCopy)->helperText('Shown in search results. Leave empty to use the title.'),
             Textarea::make('meta_description')->rows(2)->maxLength(320)->rule(new PublicCopy)->helperText('Shown in search results. Around 150 characters works best.'),
             ...NeedsReview::toggles('Published'),

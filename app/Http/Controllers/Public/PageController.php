@@ -17,7 +17,7 @@ class PageController extends Controller
     {
         $slug = $request->path();
 
-        abort_unless($request->isMethod('GET') && preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $slug) === 1, 404);
+        abort_unless($request->isMethodSafe() && preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $slug) === 1, 404);
 
         return StaticPageController::cms($slug) ?? abort(404);
     }

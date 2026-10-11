@@ -9,6 +9,10 @@ return [
 
     'contact_email' => env('GROIBE_CONTACT_EMAIL'),
 
+    // Proxies whose X-Forwarded-For header is trusted: '*' behind Cloudflare, or a comma-separated list. Empty trusts none, so a
+    // direct request cannot fake its address and slip past the rate limits (spec 17.2).
+    'trusted_proxies' => env('TRUSTED_PROXIES'),
+
     'invites' => [
         'expire_days' => 7,
     ],

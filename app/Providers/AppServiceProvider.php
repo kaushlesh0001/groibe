@@ -66,6 +66,7 @@ use App\Services\Website\PublicNavigation;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\Middleware\TrustProxies;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
@@ -96,6 +97,13 @@ class AppServiceProvider extends ServiceProvider
         // page's middleware there. Role and active-contributor checks must be on that list (spec 4, 16), or a
         // contributor suspended while a page is open could keep using it.
         Livewire::addPersistentMiddleware([EnsureUserRole::class, EnsureActiveContributor::class, EnsureFeatureEnabled::class]);
+
+        // Behind Cloudflare the visitor's address arrives in X-Forwarded-For, so rate limits and stored addresses need it.
+        $trusted = trim((string) config('groibe.trusted_proxies'));
+
+        if ($trusted !== '') {
+            TrustProxies::at($trusted === '*' ? '*' : array_map('trim', explode(',', $trusted)));
+        }
 
         // Spec 17.2: throttle invite redemption.
         RateLimiter::for('invite', fn (Request $request) => Limit::perMinute(10)->by($request->ip()));
