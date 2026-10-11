@@ -2,7 +2,6 @@
 
 Source: `docs/site-content` (gitignored, read-only). Wording is copied as written, in the original order, with no rewriting. Only human-readable text is kept. Links, forms, logos, colors and images are left out.
 
-`[CHECK]` marks text that looks like an unverifiable claim, a made-up number, a placeholder, or a promise of something that is not in `docs/GROIBE_MASTER_SPEC.md`. Nothing here is approved for the public site until each `[CHECK]` is resolved.
 
 General notes for whoever uses this copy:
 - The old theme is a community and reputation site. The spec is a managed-delivery platform where clients submit briefs and Groibe staffs the work. Anything about open posting, following, messaging, learning rooms or mentors does not match the spec.
@@ -17,7 +16,7 @@ General notes for whoever uses this copy:
 - Logged out: Log in, Create account
 - Logged in: Open dashboard
 
-[CHECK] "Discover" and "Resources" lead to pages whose content is not in the spec. The spec's public pages are how-it-works, for-contributors, for-clients, about, contact, faq, opportunities, contributors, organizations and work.
+[CHECK] "Discover" and "Resources" lead to pages whose content is not in the spec. The spec's public pages are how-it-works, for-contributors, for-clients, about, contact, faq, opportunities, contributors, organizations and work. - YES THIS IS CORRECT
 
 ## Footer
 
@@ -28,7 +27,7 @@ General notes for whoever uses this copy:
 - (c) Groibe. All rights reserved.
 - Community-Powered Trust Network
 
-[CHECK] "Community-Powered Trust Network" is not a spec phrase. The spec describes a "community-powered professional ecosystem and project delivery platform".
+[CHECK] "Community-Powered Trust Network" is not a spec phrase. The spec describes a "community-powered professional ecosystem and project delivery platform". - YES THIS IS CORRECT
 
 ## Home (front page)
 
@@ -46,7 +45,7 @@ General notes for whoever uses this copy:
 - Founders
 - Problem solvers
 
-[CHECK] "Trusted by" reads as a customer claim and there are no customers named.
+[CHECK] "Trusted by" reads as a customer claim and there are no customers named. - YES THIS IS CORRECT
 
 ### Proof strip
 - 6 Community principles
@@ -54,7 +53,7 @@ General notes for whoever uses this copy:
 - 8 Business focus areas
 - 1 Accountable network
 
-[CHECK] Made-up counts. The spec says "No invented member counts or other numbers". Use live counts from the database instead.
+[CHECK] Made-up counts. The spec says "No invented member counts or other numbers". Use live counts from the database instead. - YES THIS IS CORRECT
 
 ### Featured Profiles
 - Featured Profiles
@@ -80,7 +79,7 @@ General notes for whoever uses this copy:
 - 06 Deliver Projects
 - 07 Grow Community
 
-[CHECK] "Learn" and "Grow Community" promise learning and community features the spec does not have.
+[CHECK] "Learn" and "Grow Community" promise learning and community features the spec does not have. - YES THIS IS CORRECT
 
 ### Who Groibe Is For
 - Who Groibe Is For
@@ -89,7 +88,7 @@ General notes for whoever uses this copy:
 - **Growing Businesses:** Work with trusted contributors who understand problems, not just task lists.
 - **Early Builders:** Find peers, collaborators, and project support without relying on random marketplaces.
 
-[CHECK] "Find peers, collaborators" promises peer matching. The spec has no peer-to-peer features.
+[CHECK] "Find peers, collaborators" promises peer matching. The spec has no peer-to-peer features. - YES THIS IS CORRECT
 
 ### Solutions
 - Solutions
@@ -114,14 +113,14 @@ General notes for whoever uses this copy:
 - Playbook: Building with trusted contributors. How businesses can define problems and work with community-backed teams.
 - Notes: Community principles. The behaviors Groibe wants to reward from day one.
 
-[CHECK] These three items are placeholder titles for content that does not exist.
+[CHECK] These three items are placeholder titles for content that does not exist. - YES THIS IS CORRECT
 
 ### Events
 - Events
 - Small rooms. Useful conversations. Real momentum.
 - Groibe will host focused sessions for learning, contribution, business problem-solving, and founder conversations.
 
-[CHECK] Events are not in the spec.
+[CHECK] Events are not in the spec. - YES THIS IS CORRECT
 
 ### FAQ
 - FAQ
@@ -131,7 +130,7 @@ General notes for whoever uses this copy:
 - **Who can join?** Curious people, builders, operators, founders, students, and professionals who want to grow by contributing.
 - **How do businesses work with Groibe?** Businesses share a problem, Groibe shapes the outcome, and trusted contributors help deliver meaningful work.
 
-[CHECK] "Who can join" includes students. The spec's members are vetted skilled professionals, and joining is reviewed by an admin.
+[CHECK] "Who can join" includes students. The spec's members are vetted skilled professionals, and joining is reviewed by an admin. - YES THIS IS CORRECT
 
 ## About
 
@@ -145,7 +144,7 @@ General notes for whoever uses this copy:
 - Business Process and Systems Analyst building Groibe from Kolkata for a global future.
 
 [CHECK] Founder name, job title and location are personal claims and need the founder's own confirmation. The name should also be compared with the name used in company records.
-
+- YES THIS IS CORRECT
 ### Mission
 - Mission
 - Build a trusted community where curious people grow together and businesses build with confidence.
@@ -160,7 +159,7 @@ General notes for whoever uses this copy:
 - **Reputation System:** Make proof visible beyond resumes.
 - **Business Dashboard:** Connect trusted people to real outcomes.
 
-[CHECK] A public roadmap promises a "Community Portal" with learning and meeting. Not in the spec.
+[CHECK] A public roadmap promises a "Community Portal" with learning and meeting. Not in the spec. - YES THIS IS CORRECT
 
 ### Next chapter
 - Next Chapter
@@ -177,7 +176,7 @@ General notes for whoever uses this copy:
 - Buttons: Book Discovery; See Solutions
 - For Teams: Startups, SMEs, Leaders, Founders
 
-[CHECK] "Book Discovery" promises a booking step. The spec's client flow is: register, get verified, submit a brief.
+[CHECK] "Book Discovery" promises a booking step. The spec's client flow is: register, get verified, submit a brief. - YES THIS IS CORRECT
 
 ### What We Deliver
 - What We Deliver
@@ -215,7 +214,7 @@ General notes for whoever uses this copy:
 - Useful work. Clear outcomes. Less chaos in the group chat.
 - Cards: CRM, Automation, Analytics, Operations, Web, Marketing Systems, Research, Consulting. Each card reads: Community-backed execution with a practical delivery plan.
 
-[CHECK] The spec's project types are Market Research, Dashboard/Reporting, Content & Social, Process Automation, Website/App Build, Financial Modelling and Operations Support. CRM, Consulting and Marketing Systems do not match.
+[CHECK] The spec's project types are Market Research, Dashboard/Reporting, Content & Social, Process Automation, Website/App Build, Financial Modelling and Operations Support. CRM, Consulting and Marketing Systems do not match. - YES THIS IS CORRECT
 
 ### Workflow
 - Workflow
@@ -231,7 +230,7 @@ General notes for whoever uses this copy:
 - Groibe does not send a list of strangers and wish you luck. That is not a strategy. That is admin cosplay.
 - We build around contribution, reputation, and accountability so businesses can focus on outcomes.
 
-[CHECK] "admin cosplay" is a joke that may not suit the calm, professional tone in the spec.
+[CHECK] "admin cosplay" is a joke that may not suit the calm, professional tone in the spec. - YES THIS IS CORRECT
 
 ### Business Inquiry
 - Business Inquiry
@@ -239,7 +238,7 @@ General notes for whoever uses this copy:
 - Join the waitlist and tell us what you want to build, fix, or improve.
 - Button: Create your account
 
-[CHECK] "Join the waitlist" does not match the button, which creates an account.
+[CHECK] "Join the waitlist" does not match the button, which creates an account. -REMOVE
 
 ## Community
 
@@ -250,7 +249,7 @@ General notes for whoever uses this copy:
 - Buttons: Create account; See Events
 - Member Journey: 1 Discover the community, 2 Join learning rooms, 3 Contribute to real problems, 4 Earn recognition, 5 Unlock opportunities
 
-[CHECK] "Join learning rooms" and "Earn recognition" are not in the spec. "Build reputation in public" conflicts with the spec, where public display needs consent.
+[CHECK] "Join learning rooms" and "Earn recognition" are not in the spec. "Build reputation in public" conflicts with the spec, where public display needs consent. - YES
 
 ### Principles
 - Principles
@@ -271,7 +270,7 @@ General notes for whoever uses this copy:
 - Project delivery history
 
 [CHECK] The spec's reputation is evidence from delivered projects only (counts and averages). Learning participation, community contribution, peer trust and mentor feedback are not in it.
-
+- YES
 ### Your Move
 - Your Move
 - Join before it becomes obvious.
@@ -301,7 +300,7 @@ General notes for whoever uses this copy:
 - The first rooms will be small by design.
 - Button: Create your account
 
-[CHECK] The whole Events page promises a feature that is not in the spec. Mentors are out of scope for v1 (spec section 21).
+[CHECK] The whole Events page promises a feature that is not in the spec. Mentors are out of scope for v1 (spec section 21). - YES THIS IS CORRECT
 
 ## Resources
 
@@ -312,7 +311,7 @@ General notes for whoever uses this copy:
 - Buttons: Create account; Upcoming Events
 - Topic Clusters: CRM, Zoho, Automation, Analytics, Leadership, Community, Learning, Case Studies
 
-[CHECK] "Zoho" is a tool name used as a topic. Confirm it is wanted on a public page.
+[CHECK] "Zoho" is a tool name used as a topic. Confirm it is wanted on a public page. - YES THIS IS CORRECT
 
 ### Knowledge Hub
 - Knowledge Hub
@@ -321,7 +320,7 @@ General notes for whoever uses this copy:
 - **Playbook:** Automation without nonsense. Build workflows that save time without creating new headaches.
 - **Case Notes:** From contribution to trust. Stories of people growing through useful work.
 
-[CHECK] "SEO gold, but make it useful." is an internal note, not public copy. The three items are placeholder titles for content that does not exist, and "Case Notes" promises stories that do not exist.
+[CHECK] "SEO gold, but make it useful." is an internal note, not public copy. The three items are placeholder titles for content that does not exist, and "Case Notes" promises stories that do not exist. - YES THIS IS CORRECT
 
 ### Internal Links
 - Internal Links
@@ -331,7 +330,7 @@ General notes for whoever uses this copy:
 - Event recaps lead to join page
 - Case studies lead to business inquiry
 
-[CHECK] This whole section is a note to the site builder, not public copy.
+[CHECK] This whole section is a note to the site builder, not public copy. - YES THIS IS CORRECT
 
 ### Stay Close
 - Stay Close
@@ -350,7 +349,7 @@ General notes for whoever uses this copy:
 - contact@groibe.com
 - For partnership and business conversations, use the email above. The waitlist remains the best entry point for everyone else.
 
-[CHECK] The email address is not in the spec, and the spec wants the contact address in config, not in copy. Confirm it exists. "Event coordination" and "waitlist" refer to things that are not in the spec.
+[CHECK] The email address is not in the spec, and the spec wants the contact address in config, not in copy. Confirm it exists. "Event coordination" and "waitlist" refer to things that are not in the spec. - REMOVE
 
 ### Need Help?
 - Need Help?
@@ -360,7 +359,7 @@ General notes for whoever uses this copy:
 - Learning and updates: use `Resources`
 - Community participation: use `Community`
 
-[CHECK] Reads as a note to the site builder, with page names in code quotes.
+[CHECK] Reads as a note to the site builder, with page names in code quotes. - YES
 
 ## Join (retired)
 
@@ -390,7 +389,7 @@ No copy. The page only redirects to account creation.
 - View Profile
 - No people found matching your criteria.
 
-[CHECK] "Open Projects" with budgets shown publicly: in the spec, clients cannot post open work. They submit briefs, and only Groibe publishes Open Roles. "Shared knowledge" and "Advanced filtering coming soon" promise things that do not exist.
+[CHECK] "Open Projects" with budgets shown publicly: in the spec, clients cannot post open work. They submit briefs, and only Groibe publishes Open Roles. "Shared knowledge" and "Advanced filtering coming soon" promise things that do not exist. - REMOVE
 
 ## Single project page
 
@@ -406,7 +405,7 @@ No copy. The page only redirects to account creation.
 - Client
 - Your profile and reputation score will be shared with the business.
 
-[CHECK] "reputation score" contradicts the spec (no composite score in v1). "Your profile will be shared with the business" contradicts the spec (clients never see applicants unless the admin enables it). Budget defaults such as "To be discussed" and "Not specified" appear in the code as fallbacks.
+[CHECK] "reputation score" contradicts the spec (no composite score in v1). "Your profile will be shared with the business" contradicts the spec (clients never see applicants unless the admin enables it). Budget defaults such as "To be discussed" and "Not specified" appear in the code as fallbacks. - REMOVE
 
 ## Public profile page (author)
 
