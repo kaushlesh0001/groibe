@@ -40,7 +40,7 @@ class ApplicationUpdated extends GroibeNotification
     {
         return $this->toAdmin
             ? ApplicationResource::getUrl('view', ['record' => $this->application])
-            : route('contributor.dashboard');
+            : route('contributor.applications');
     }
 
     /** @return array<string, mixed> */

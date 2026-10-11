@@ -6,7 +6,9 @@ use App\Enums\ProjectStatus;
 use App\Enums\UserRole;
 use App\Models\AgreementAcceptance;
 use App\Models\AgreementTemplate;
+use App\Models\Application;
 use App\Models\Brief;
+use App\Models\OpenRole;
 use App\Models\Organization;
 use App\Models\Profile;
 use App\Models\Project;
@@ -123,6 +125,7 @@ it('is safe to run twice: no duplicates and no rewritten records', function () {
         Project::query()->count(), AgreementAcceptance::query()->count(), DB::table('skill_user')->count(),
         DB::table('organization_users')->count(), DB::table('assignments')->count(), DB::table('tasks')->count(),
         DB::table('milestones')->count(), DB::table('sows')->count(), DB::table('agreement_templates')->count(),
+        DB::table('open_roles')->count(), DB::table('open_role_skills')->count(), DB::table('open_role_invites')->count(), DB::table('applications')->count(),
     ];
     $before = $snapshot();
     $hash = User::query()->where('email', 'aditi.sharma@demo.groibe.test')->value('password');
@@ -159,4 +162,17 @@ it('sends no mail, notifications or queued jobs while seeding', function () {
     Mail::assertNothingQueued();
     Notification::assertNothingSent();
     Queue::assertNothingPushed();
+});
+
+it('creates open roles in every visibility and state, with applications and an invite list', function () {
+    $this->seed(DemoSeeder::class);
+
+    $roles = OpenRole::query()->get();
+
+    expect($roles)->toHaveCount(4)
+        ->and($roles->pluck('status')->map->value->all())->toEqualCanonicalizing(['published', 'published', 'published', 'draft'])
+        ->and(OpenRole::query()->visibleTo(null)->pluck('title')->all())->toBe(['Survey analyst'])
+        ->and(Application::query()->count())->toBe(4)
+        ->and(DB::table('open_role_invites')->count())->toBe(1)
+        ->and(OpenRole::query()->where('slug', 'demo-dashboard-support')->value('project_id'))->not->toBeNull();
 });

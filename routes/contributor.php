@@ -2,7 +2,9 @@
 
 use App\Http\Controllers\Contributor\ProfilePhotoController;
 use App\Livewire\Contributor\Dashboard;
+use App\Livewire\Contributor\Discover;
 use App\Livewire\Contributor\EditProfile;
+use App\Livewire\Contributor\MyApplications;
 use App\Livewire\Contributor\Onboarding;
 use App\Livewire\Contributor\Work\MyWork;
 use App\Livewire\Contributor\Work\ProjectBoard;
@@ -29,4 +31,14 @@ Route::middleware(['auth', 'verified', 'role:contributor', 'active.contributor']
         Route::livewire('/', MyWork::class)->name('');
         Route::livewire('projects/{project}', ProjectBoard::class)->name('.project');
         Route::livewire('tasks/{task}', TaskDetail::class)->name('.task');
+    });
+
+// Discover and My Applications (spec 11). Active contributors only, and gone entirely when the `open_roles` flag is off.
+Route::middleware(['auth', 'verified', 'role:contributor', 'active.contributor', 'feature:open_roles'])
+    ->prefix('app/contributor')
+    ->name('contributor.')
+    ->group(function (): void {
+        Route::livewire('discover', Discover\Index::class)->name('discover');
+        Route::livewire('discover/{slug}', Discover\Show::class)->name('discover.show');
+        Route::livewire('applications', MyApplications::class)->name('applications');
     });

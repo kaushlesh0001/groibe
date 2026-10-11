@@ -2,9 +2,11 @@
 
 namespace App\Filament\Admin\Resources\Projects\Schemas;
 
+use App\Enums\FeatureFlag;
 use App\Enums\ProjectStatus;
 use App\Enums\UserRole;
 use App\Models\User;
+use App\Services\FeatureFlags\FeatureFlags;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -43,7 +45,10 @@ class ProjectForm
                     ->label('Delivery manager')
                     ->options(fn (): array => User::query()->where('role', UserRole::Admin->value)->orderBy('name')->pluck('name', 'id')->all())
                     ->searchable(),
-                Toggle::make('client_can_view_shortlist')->label('Client can view shortlist'),
+                Toggle::make('client_can_view_shortlist')
+                    ->label('Client can view shortlist')
+                    ->default(fn (): bool => app(FeatureFlags::class)->enabled(FeatureFlag::ClientCanViewShortlist))
+                    ->helperText('Shows shortlisted applicants to the client by first name, headline and skills, once the SOW is accepted. New projects start from the client_can_view_shortlist feature flag.'),
                 Toggle::make('hide_team')->label('Hide the team from the client')->helperText('Clients see first name, role and headline of each contributor once the SOW is accepted. Switch on to hide them for this project.'),
                 TextInput::make('zoho_invoice_ref')->label('Zoho invoice reference')->maxLength(255),
             ]);

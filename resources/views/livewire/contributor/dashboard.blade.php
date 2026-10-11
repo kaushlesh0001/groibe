@@ -25,4 +25,34 @@
             <flux:button :href="route('contributor.profile')" wire:navigate>Edit profile</flux:button>
         </div>
     </section>
+
+    @if ($rolesOn)
+        @if ($offers > 0)
+            <section aria-labelledby="offers-heading" class="flex flex-col gap-3 rounded-lg border border-brand-navy p-5">
+                <flux:heading id="offers-heading" size="lg" level="2">{{ $offers === 1 ? 'You have an offer waiting' : "You have {$offers} offers waiting" }}</flux:heading>
+                <div>
+                    <flux:button variant="primary" :href="route('contributor.applications')" wire:navigate>Review offers</flux:button>
+                </div>
+            </section>
+        @endif
+
+        <section aria-labelledby="recommended-heading" class="flex flex-col gap-3 rounded-lg border border-zinc-200 p-5">
+            <flux:heading id="recommended-heading" size="lg" level="2">Roles that match your skills</flux:heading>
+
+            @forelse ($recommended as $role)
+                <div wire:key="recommended-{{ $role->id }}" class="flex flex-wrap items-center justify-between gap-3">
+                    <div class="flex flex-col">
+                        <a class="font-medium text-brand-blue underline" href="{{ route('contributor.discover.show', $role->slug) }}" wire:navigate>{{ $role->title }}</a>
+                        <flux:text>{{ $role->matching_skills_count }} of your skills &middot; {{ $role->work_mode->getLabel() }} &middot; {{ $role->compensation_type->getLabel() }}</flux:text>
+                    </div>
+                </div>
+            @empty
+                <flux:text>Nothing matches right now. Add skills to your profile and check back, or browse every role in Discover.</flux:text>
+            @endforelse
+
+            <div>
+                <flux:button :href="route('contributor.discover')" wire:navigate>Browse all roles</flux:button>
+            </div>
+        </section>
+    @endif
 </div>
