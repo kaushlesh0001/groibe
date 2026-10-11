@@ -75,7 +75,7 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
     /** @return HasOne<Profile, $this> */
     public function profile(): HasOne
     {
-        return $this->hasOne(Profile::class);
+        return $this->hasOne(Profile::class)->chaperone();
     }
 
     /** @return BelongsToMany<Organization, $this, OrganizationUser, 'pivot'> */
