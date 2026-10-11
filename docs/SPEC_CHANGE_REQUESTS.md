@@ -187,7 +187,7 @@ Proposed changes only. The spec is edited by the founder, between passes, and lo
 
 ## SCR-022: Messaging access rules (spec sections 5, 7.8, 14)
 
-- **Status:** PROPOSED 2026-10-11, built in Pass 7 item 1. The founder gave the privacy rules (participants see only their threads, internal messages never reach clients or contributors, support threads are private to the person and the admin team) and told the Pass 7 session to proceed. The remaining points below were not answered one by one, so they follow the recommendations from the Pass 7 opener. Spec sections 5, 7.8 and 23 are not edited until approved.
+- **Status:** ACCEPTED 2026-10-11 by the founder (recommendation accepted, including that client viewers are not in a project thread), built in Pass 7 item 1, and written into the master spec (sections 5, 7.8, 14 and the section 23 change log). The founder had given the privacy rules (participants see only their threads, internal messages never reach clients or contributors, support threads are private to the person and the admin team) and told the Pass 7 session to proceed; the remaining points followed the recommendations from the Pass 7 opener.
 - **Gap:** Section 14 names the participants of a project thread but the permission matrix has no Threads row, `thread_participants` has only `last_read_at`, `threads.type` lists `application` with no use, and nothing says who answers support threads or when a project thread starts.
 - **Proposal:**
   1. Two permission groups (view, update): `threads` for project conversations, `delivery_manager` `ru` and `super_admin` all; `support` for support threads, `community_manager` `ru` and `super_admin` all. Nobody else, so `finance_ops` has no access to either.
