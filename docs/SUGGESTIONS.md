@@ -231,3 +231,32 @@ All of it traces to a pass item or an accepted decision, and none adds a screen 
 127. **`/terms` and `/privacy` are not built yet** (spec 10.2). The Terms and Privacy templates can be edited and versioned, and the screen says nothing shows them yet. They go live with the public pages.
 128. **Demo dataset is smaller than spec 19** by the founder's request: 12 contributors, 4 organizations, 6 briefs, 4 projects. Spec 19 lists 30, 12, 8 and 6. Open roles, applications, reviews and proof-of-work items are not seeded because those models are not built yet. Extend the seeder when they are.
 129. **Risk, medium: every demo account shares one documented password** (`docs/DEMO_DATA.md`). Fine on a local machine. On a staging site reachable from the internet, put it behind HTTP auth or change the password constant before seeding, because the repo documents it.
+
+## Pass 5: Open Roles and Applications
+
+Spec changes: SCR-018 (invite list for invite-only roles) is accepted and built. SCR-019 (reapply after withdrawal) is proposed and built provisionally; confirm it or revert the one Action. Both are in `docs/SPEC_CHANGE_REQUESTS.md`, and the spec text for SCR-018 (7.4, 23) still needs the founder's edit. Item 128 is partly out of date: open roles, applications and an invite list are now seeded.
+
+### Medium
+130. **Seats from an accepted offer have no agreed amount, and nothing edits it afterwards.** Spec 7.4 gives applications `expected_amount` but no offered amount, so the new assignment is created with `agreed_amount` empty. The project Team tab only invites and removes, so there is no screen to set it. Pass 7 payouts will need it. Add an edit action on the Team tab (or an amount on the offer) when Pass 7 starts.
+131. **A filled role leaves other offers hanging.** When accepted offers reach `positions_needed` the role becomes `filled`, but applicants who were already offered stay `offered`. They get a clear "no longer open" message if they try to accept, but nobody tells them. Consider auto-rejecting or notifying them when the role fills.
+132. **Proof-of-work selection on the apply form is not built.** Spec 11 and 7.4 list it, but the proof model arrives in Pass 6. The form and `SubmitApplication` ignore `proof_of_work_ids` on purpose, so nobody can attach another person's items. Pass 6 must add the picker and check that each id belongs to the applicant.
+
+### Decisions where the spec is silent (each a small rule that is easy to relax)
+133. **Role states are exactly spec 6.4.** `closed`, `filled` and `archived` are terminal, with no reopen. Editing is allowed in `draft` and `published` only. `draft -> archived` is not allowed.
+134. **Discover, role pages and My Applications are for active contributors only.** "Members only" means active contributors (the `active.contributor` rule), so a pending or suspended contributor sees public roles on the public site only.
+135. **Admin rules for applications.** Shortlist needs `applications.update` and the role to be published. Offer needs `applications.approve`, a shortlisted application and a published role. Reject needs `applications.update` and works on any role state, so closed roles can be tidied up. Delivery and community managers both hold all three (spec 5), finance holds none.
+136. **Accepting an offer creates the assignment as `active` directly** (spec 6.5 literal), through a shared `SeatContributor` action with the same guards as an admin invite: active contributor, project `staffing` or `active`, no existing open seat. The prompt pack's "invited then active" ends in the same state. A community role (no project) creates no assignment. A blocked seat rolls the whole acceptance back.
+137. **Deadlines.** Applications stop after the deadline day. The role stays published and visible, with "applications have closed". Roles are not closed automatically.
+138. **Slugs are immutable after publication,** so no `slug_redirects` table was added.
+139. **Role description is plain text,** shown with line breaks, never HTML. This avoids the unsanitized-HTML risk in item 3. Skills and tasks are plain lists.
+140. **Client shortlist rules.** Shown only when the project switch is on, the SOW is accepted (spec 22) and the team is not hidden. Only shortlisted and offered applicants appear, with first name, role applied for, headline and up to five skill names. The feature flag `client_can_view_shortlist` is the default for the project switch on new projects (spec 18).
+141. **Notifications.** New application, withdrawal and offer answers go to every admin holding `applications.update`; shortlist, offer and rejection go to the contributor; an invite-list addition notifies only once the role is published. Admin notes never appear in messages.
+142. **Public pages use `BreadcrumbList` structured data only.** Spec 10.4 allows job-posting data "only if applicable", and unpaid or learning roles do not fit it well.
+143. **The duration filter is a drop-down of the labels in use,** because `duration_label` is free text in spec 7.4.
+
+### Low and process
+144. **Search on SQLite uses LIKE; MySQL uses FULLTEXT.** The FULLTEXT index on `open_roles(title, summary)` is only created on MySQL, and no test exercises it (same as item 6). MySQL's minimum word length and stop words also apply.
+145. **Not checked by eye.** The new pages, emails and admin screens were tested by assertions, not looked at in a browser. Check `/opportunities`, a role page, Discover, the apply form and the admin Open Roles screen on a real screen. Lighthouse scores for the opportunity pages are part of the Pass 8 gate.
+146. **Homepage pieces belong to Pass 8:** the "Live open roles" section and the featured-roles picker. `is_featured` is already set from the admin form.
+147. **Running tests here:** `php artisan test` still hangs on this machine (item 11). `php vendor/bin/pest` works. Running many upload tests in one process hits the 128 MB CLI limit, so use `php -d memory_limit=1G vendor/bin/pest`.
+148. **Review prompt result.** Authorization checked on every new route, Filament resource, action and relation manager, with denied-path tests for guest, wrong role, pending, suspended and cross-visibility. Query counts are flat on the public list, Discover, My Applications, dashboard, client shortlist and admin applications. One defect fixed in the audit: saving a closed role in the admin threw an uncaught error and now shows a message.
