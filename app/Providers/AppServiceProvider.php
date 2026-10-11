@@ -18,6 +18,8 @@ use App\Models\Organization;
 use App\Models\Profile;
 use App\Models\Project;
 use App\Models\ProjectType;
+use App\Models\ProofOfWork;
+use App\Models\Review;
 use App\Models\Setting;
 use App\Models\Skill;
 use App\Models\Sow;
@@ -38,6 +40,8 @@ use App\Policies\OrganizationPolicy;
 use App\Policies\ProfilePolicy;
 use App\Policies\ProjectPolicy;
 use App\Policies\ProjectTypePolicy;
+use App\Policies\ProofOfWorkPolicy;
+use App\Policies\ReviewPolicy;
 use App\Policies\SettingPolicy;
 use App\Policies\SowPolicy;
 use App\Policies\SubmissionPolicy;
@@ -111,6 +115,8 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(TaskComment::class, TaskCommentPolicy::class);
         Gate::policy(Submission::class, SubmissionPolicy::class);
         Gate::policy(Sow::class, SowPolicy::class);
+        Gate::policy(ProofOfWork::class, ProofOfWorkPolicy::class);
+        Gate::policy(Review::class, ReviewPolicy::class);
         Gate::policy(Media::class, MediaPolicy::class);
 
         // Spec 17.2: minimum 10 characters, compromised-password check where available.
