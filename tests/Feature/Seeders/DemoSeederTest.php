@@ -13,6 +13,8 @@ use App\Models\AgreementAcceptance;
 use App\Models\AgreementTemplate;
 use App\Models\Application;
 use App\Models\Brief;
+use App\Models\Faq;
+use App\Models\FeaturedItem;
 use App\Models\OpenRole;
 use App\Models\Organization;
 use App\Models\Profile;
@@ -20,6 +22,7 @@ use App\Models\Project;
 use App\Models\ProofOfWork;
 use App\Models\ReputationFact;
 use App\Models\Review;
+use App\Models\Testimonial;
 use App\Models\User;
 use App\Services\Agreements\AgreementGate;
 use Database\Seeders\DemoSeeder;
@@ -136,6 +139,7 @@ it('is safe to run twice: no duplicates and no rewritten records', function () {
         DB::table('open_roles')->count(), DB::table('open_role_skills')->count(), DB::table('open_role_invites')->count(), DB::table('applications')->count(),
         DB::table('proof_of_work')->count(), DB::table('proof_of_work_skill')->count(), DB::table('reviews')->count(),
         DB::table('reputation_facts')->count(), DB::table('organization_stats')->count(),
+        DB::table('cms_sections')->count(), DB::table('faqs')->count(), DB::table('pages')->count(), DB::table('featured_items')->count(), DB::table('testimonials')->count(),
     ];
     $before = $snapshot();
     $hash = User::query()->where('email', 'aditi.sharma@demo.groibe.test')->value('password');
@@ -228,4 +232,16 @@ it('creates published and pending reviews and fills reputation from them', funct
         ->and(ReputationFact::query()->where('user_id', User::query()->where('email', 'aditi.sharma@demo.groibe.test')->value('id'))->first())
         ->reviews_count->toBe(2)
         ->projects_completed->toBe(2);
+});
+
+it('fills the homepage with picks and two clearly fake testimonials, and leaves every draft hidden', function () {
+    $this->seed(DemoSeeder::class);
+
+    $home = $this->get('/')->assertOk()->getContent();
+
+    expect(FeaturedItem::query()->count())->toBe(7)
+        ->and(Testimonial::query()->count())->toBe(2)
+        ->and($home)->toContain('Survey analyst')->toContain('Kestrel Foods (Demo)')->toContain('Vikram Singh')->toContain('Demo quote for testing the homepage')
+        ->and($home)->not->toContain('What is Groibe?')
+        ->and(Faq::query()->active()->count())->toBe(0);
 });

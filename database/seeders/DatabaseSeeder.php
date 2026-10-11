@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
             TaxonomySeeder::class,
             FeatureFlagSeeder::class,
             AgreementTemplateSeeder::class,
+            WebsiteContentSeeder::class,
         ]);
     }
 }
