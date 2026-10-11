@@ -53,6 +53,7 @@ class ProjectBoard extends Component
 
         return view('livewire.contributor.work.project-board', [
             'tasks' => $tasks,
+            'canMessage' => Auth::user()->can('message', $this->project),
             'columns' => collect($columns)->map(fn (array $statuses) => $tasks->getCollection()->filter(fn (Task $task) => in_array($task->status, $statuses, true))),
         ]);
     }

@@ -5,6 +5,9 @@
             <div class="flex flex-col">
                 <flux:heading size="xl" level="1">{{ $project->title }}</flux:heading>
                 <flux:text>{{ $project->code }}</flux:text>
+                @if ($canMessage)
+                    <div class="mt-2"><flux:button size="sm" :href="route('client.messages.project', $project)">Message the team</flux:button></div>
+                @endif
             </div>
             <x-status-badge :status="$project->status" />
         </div>

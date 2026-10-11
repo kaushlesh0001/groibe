@@ -366,3 +366,25 @@ Built in one pass, after a stop for four data-model and permission questions tha
 
 **Pass 9 follow-up**
 197. **Check why the public pages load about 650 KiB of unused JavaScript, and whether the public layout can skip the app-wide bundle.** Lighthouse (item 181) flagged it on all three pages. Look at what `resources/js/app.js` pulls in (Livewire, Flux and Alpine come in through `@fluxScripts` and the Vite bundle), find out whether the public pages need any of it (the tabs and FAQ use only CSS and `details`), and if not, give the public layout its own small entry point or none. Re-run Lighthouse on a production build with compression on after the change.
+
+**Pass 7 item 1: messaging (built, decisions and follow-ups)**
+198. **Decision: who is in a conversation is worked out from live project data, not from `thread_participants`.** `Thread::visibleTo` is the single rule behind the policy, the inbox, unread counts and the admin list (SCR-022). A removed or suspended contributor loses access on the next refresh. `thread_participants` only holds each person's read marker.
+199. **Decision: a reply does not mark the thread read.** Opening the conversation does. Otherwise a message that arrived while someone typed would be hidden from their unread count.
+200. **Decision: notifications and emails for a new message carry no text and no author.** Only the subject and a link. Internal messages notify the project's delivery manager (or every admin holding `threads.view` when there is none) and nobody else.
+201. **Decision: names shown to each reader.** Clients see contributors by first name, or "Project team" when `hide_team` is set (spec 12). Contributors see client people by first name and organization. Outsiders see staff as "First (Groibe)". Admins see full names.
+202. **Done: SUGGESTIONS 175.** The For clients page now says clients can message the team in the project thread. Still to check by eye: `/how-it-works` and the homepage defaults for the same promise (the homepage copy lives in the website content seeder and was not changed).
+203. **Low: every message sends an email.** A busy thread will send many. Consider sending the email only for the first unread message in a thread (the in-app notification would still go out), or a digest. Left as is until Pass 7 item 2 adds preferences.
+204. **Low: no way to edit or delete a message in v1.** Admin moderation of one message is not built; staff can hide nothing short of a database edit. Add "hide message" if moderation is needed.
+205. **Low: the contributor Messages entry shows for any contributor, but a contributor who is not approved only has support threads.** That matches spec 14 ("support thread available to everyone").
+206. **Low: attachments are 20 MB each, up to 5 per message, and share the document allowlist.** Spec 17.2 gives no separate message cap, so the document cap was used.
+207. **Not done yet (later items in this pass):** notification preferences and the bell (item 2), payouts and invoice references (item 3), demo messages and wider tests (item 4). The `application` thread type is unused.
+
+**Pass 7 item 2: notifications and email log (built, decisions and follow-ups)**
+208. **Decision: one bell and one notification page for every role.** Admins get the same bell in the admin panel (user menu), linking to `/notifications`, which uses the app layout, not the Filament one. Filament's own database notification tray is not enabled, because it expects a different payload.
+209. **Decision: the Livewire page class is `NotificationCentre`, not `Index`.** A class named `Notifications\Index` registers as `notifications`, which Filament already uses, and every call on it failed. Keep this in mind for any future component under a `Notifications` namespace.
+210. **Decision: the email log records every message the mailer sends, not only notifications.** That includes sign-up verification and password reset emails and the invite email (they carry no Groibe category), so the log is complete. Failures are recorded only for queued notifications and the contact email job; a failed password reset sent directly is not.
+211. **Done: SUGGESTIONS 185.** The contact form email now appears in the log as sent, and as failed after its last try. The stored message was never lost.
+212. **Medium: nothing trims the email log.** It holds recipient addresses. Add a scheduled clean-up (for example, delete rows older than 12 months) with the retention decision for contact messages (item 192).
+213. **Low: no security notification exists yet.** The `security` category is locked and tested, but nothing sends one today (the built-in auth emails bypass categories). Add login-from-new-device or password-changed notices later if wanted.
+214. **Low: the preferences page lists every category to every role.** A client sees "Assignments" and "Portfolio". Filter by role if that confuses people.
+215. **Low: the bell polls every 60 seconds, the conversation every 20.** Both only while the tab is visible. Revisit if shared hosting load shows it.

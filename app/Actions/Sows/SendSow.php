@@ -2,6 +2,7 @@
 
 namespace App\Actions\Sows;
 
+use App\Actions\Messages\GetProjectThread;
 use App\Actions\Projects\Concerns\TransitionsProject;
 use App\Enums\ProjectStatus;
 use App\Enums\SowStatus;
@@ -56,6 +57,9 @@ class SendSow
         });
 
         $sow->refresh()->loadMissing('project.organization');
+        // The project conversation opens with the SOW (spec 14, 22: clients see nothing before it is sent).
+        app(GetProjectThread::class)->ensure($sow->project, $actor);
+
         $this->dispatcher->toOrganization($sow->project->organization, new SowSent($sow, $sow->project->title, $sow->project->uuid));
 
         return $sow;

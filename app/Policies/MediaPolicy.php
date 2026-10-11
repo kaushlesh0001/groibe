@@ -6,6 +6,7 @@ use App\Enums\ProjectStatus;
 use App\Enums\SubmissionStatus;
 use App\Models\Brief;
 use App\Models\Deliverable;
+use App\Models\Message;
 use App\Models\Project;
 use App\Models\Submission;
 use App\Models\User;
@@ -32,6 +33,7 @@ class MediaPolicy
         return match (true) {
             $owner instanceof Brief && $media->collection_name === Brief::FILES => $actor->can('view', $owner),
             $owner instanceof Project && $media->collection_name === Project::FILES => $actor->can('view', $owner),
+            $owner instanceof Message && $media->collection_name === Message::FILES => $actor->can('view', $owner),
             $owner instanceof Submission && $media->collection_name === Submission::FILES => $this->canViewSubmissionFile($actor, $owner),
             default => false,
         };

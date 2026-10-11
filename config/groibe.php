@@ -76,9 +76,34 @@ return [
         'per_page' => 12,
     ],
 
+    // Spec 14: project and support threads.
+    'messages' => [
+        'max_chars' => 5000,
+        'max_files' => 5,
+        'poll_seconds' => 20,
+        'page_size' => 50,
+        'per_minute' => 20,
+    ],
+
     // Per-category preferences are a placeholder until Pass 7. Locked categories can never be disabled.
     'notifications' => [
-        'categories' => ['brief', 'sow', 'project', 'assignment', 'application', 'task', 'submission', 'deliverable', 'review', 'portfolio', 'onboarding', 'security'],
+        'categories' => ['brief', 'sow', 'project', 'assignment', 'application', 'task', 'submission', 'deliverable', 'message', 'review', 'portfolio', 'onboarding', 'security'],
         'locked_categories' => ['security'],
+        // Shown on the preferences page (spec 14).
+        'labels' => [
+            'brief' => ['name' => 'Briefs', 'hint' => 'Status changes and questions about a brief'],
+            'sow' => ['name' => 'Statements of Work', 'hint' => 'A statement of work sent or accepted'],
+            'project' => ['name' => 'Projects', 'hint' => 'Project progress and delivery'],
+            'assignment' => ['name' => 'Assignments', 'hint' => 'Invitations to a project team and changes to your seat'],
+            'application' => ['name' => 'Applications', 'hint' => 'Updates on open role applications'],
+            'task' => ['name' => 'Tasks', 'hint' => 'Tasks assigned to you or changed'],
+            'submission' => ['name' => 'Submissions', 'hint' => 'Work received and review results'],
+            'deliverable' => ['name' => 'Deliverables', 'hint' => 'Deliverables shared, accepted or sent back for changes'],
+            'message' => ['name' => 'Messages', 'hint' => 'New messages in your conversations'],
+            'review' => ['name' => 'Reviews', 'hint' => 'Reviews requested or received'],
+            'portfolio' => ['name' => 'Portfolio', 'hint' => 'Proof of work drafts and publication'],
+            'onboarding' => ['name' => 'Onboarding', 'hint' => 'Changes to your account review status'],
+            'security' => ['name' => 'Account security', 'hint' => 'Sign-in, password and account safety emails'],
+        ],
     ],
 ];

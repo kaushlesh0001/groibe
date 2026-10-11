@@ -50,6 +50,10 @@ class AdminPanelProvider extends PanelProvider
                 AccountWidget::class,
             ])
             ->renderHook(
+                PanelsRenderHook::USER_MENU_BEFORE,
+                fn (): string => Blade::render('<livewire:notifications.bell />'),
+            )
+            ->renderHook(
                 PanelsRenderHook::BODY_START,
                 fn (): string => Blade::render('<x-impersonation-banner />'),
             )

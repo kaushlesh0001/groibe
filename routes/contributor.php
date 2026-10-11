@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Contributor\ProfilePhotoController;
+use App\Http\Controllers\Shared\OpenProjectThreadController;
 use App\Livewire\Contributor\Dashboard;
 use App\Livewire\Contributor\Discover;
 use App\Livewire\Contributor\EditProfile;
@@ -11,6 +12,8 @@ use App\Livewire\Contributor\Reputation;
 use App\Livewire\Contributor\Work\MyWork;
 use App\Livewire\Contributor\Work\ProjectBoard;
 use App\Livewire\Contributor\Work\TaskDetail;
+use App\Livewire\Shared\Messages\Conversation;
+use App\Livewire\Shared\Messages\Inbox;
 use Illuminate\Support\Facades\Route;
 
 // Onboarding, profile and the dashboard are open to every contributor, whatever their review state.
@@ -53,4 +56,15 @@ Route::middleware(['auth', 'verified', 'role:contributor', 'active.contributor']
         Route::livewire('portfolio', Portfolio\Index::class)->name('portfolio');
         Route::livewire('portfolio/{proof}', Portfolio\Edit::class)->name('portfolio.edit');
         Route::livewire('reputation', Reputation::class)->name('reputation');
+    });
+
+// Messages (spec 11, 14). Support threads are open to every contributor, whatever their review state. Project
+// conversations are limited to active contributors with a seat by the policy, not by this group. Gone while `messaging` is off.
+Route::middleware(['auth', 'verified', 'role:contributor', 'feature:messaging'])
+    ->prefix('app/contributor/messages')
+    ->name('contributor.messages.')
+    ->group(function (): void {
+        Route::livewire('/', Inbox::class)->name('index');
+        Route::get('project/{project}', OpenProjectThreadController::class)->name('project');
+        Route::livewire('{thread}', Conversation::class)->name('show');
     });

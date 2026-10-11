@@ -11,9 +11,12 @@
         <flux:sidebar sticky stashable class="border-r border-zinc-200 bg-zinc-50">
             <flux:sidebar.toggle class="lg:hidden" icon="x-mark" />
 
-            <a href="{{ route('dashboard') }}" class="mr-5 flex items-center space-x-2" wire:navigate>
-                <x-app-logo />
-            </a>
+            <div class="flex items-center justify-between gap-2">
+                <a href="{{ route('dashboard') }}" class="mr-2 flex items-center space-x-2" wire:navigate>
+                    <x-app-logo />
+                </a>
+                <livewire:notifications.bell />
+            </div>
 
             <flux:navlist variant="outline">
                 <flux:navlist.group heading="Workspace" class="grid">
@@ -35,6 +38,10 @@
                         <flux:navlist.item icon="document-text" :href="route('client.briefs.index')" :current="request()->routeIs('client.briefs.*')" wire:navigate>Briefs</flux:navlist.item>
                         <flux:navlist.item icon="briefcase" :href="route('client.projects.index')" :current="request()->routeIs('client.projects.*')" wire:navigate>Projects</flux:navlist.item>
                         <flux:navlist.item icon="check-badge" :href="route('client.deliverables')" :current="request()->routeIs('client.deliverables')" wire:navigate>Deliverables</flux:navlist.item>
+                    @endif
+                    @if ((auth()->user()->isContributor() || auth()->user()->isClient()) && app(\App\Services\FeatureFlags\FeatureFlags::class)->enabled(\App\Enums\FeatureFlag::Messaging))
+                        @php($unreadMessages = app(\App\Services\Messaging\UnreadMessages::class)->count(auth()->user()))
+                        <flux:navlist.item icon="chat-bubble-left-right" :href="route(auth()->user()->isClient() ? 'client.messages.index' : 'contributor.messages.index')" :current="request()->routeIs('client.messages.*', 'contributor.messages.*')" :badge="$unreadMessages > 0 ? (string) $unreadMessages : null" wire:navigate>Messages</flux:navlist.item>
                     @endif
                 </flux:navlist.group>
             </flux:navlist>
@@ -90,6 +97,8 @@
             <flux:sidebar.toggle class="lg:hidden" icon="bars-2" inset="left" />
 
             <flux:spacer />
+
+            <livewire:notifications.bell />
 
             <flux:dropdown position="top" align="end">
                 <flux:profile :initials="auth()->user()->initials()" icon-trailing="chevron-down" />

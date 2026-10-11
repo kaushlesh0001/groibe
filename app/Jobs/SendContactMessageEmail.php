@@ -4,12 +4,14 @@ namespace App\Jobs;
 
 use App\Mail\ContactMessageReceived;
 use App\Models\ContactMessage;
+use App\Services\Notifications\EmailLogger;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Mail;
+use Throwable;
 
 /**
  * Emails a stored contact message to the address in `groibe.contact_email` (spec 10.2, 14). Runs on the queue, retries
@@ -38,5 +40,15 @@ class SendContactMessageEmail implements ShouldQueue
         Mail::to($to)->send(new ContactMessageReceived($message));
 
         $message->forceFill(['email_sent_at' => now()])->saveQuietly();
+    }
+
+    /** After the last try: the message stays stored, and the failure is recorded in the email log (spec 14). */
+    public function failed(Throwable $error): void
+    {
+        $to = (string) config('groibe.contact_email');
+
+        if ($to !== '') {
+            app(EmailLogger::class)->failed(class_basename(ContactMessageReceived::class), $to, $error);
+        }
     }
 }
