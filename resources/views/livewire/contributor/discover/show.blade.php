@@ -37,6 +37,14 @@
                 <flux:textarea wire:model="form.relevant_experience" label="Relevant experience" rows="4" />
                 <flux:input wire:model="form.availability_note" label="Your availability" />
                 <flux:input wire:model="form.expected_amount" label="Expected amount in INR (optional)" type="number" min="0" step="0.01" inputmode="decimal" />
+                @if ($proofItems->isNotEmpty())
+                    <flux:checkbox.group wire:model="form.proof_of_work_ids" label="Show your work (optional)" description="Pick up to 5 of your published pieces to go with this application.">
+                        @foreach ($proofItems as $item)
+                            <flux:checkbox value="{{ $item->id }}" label="{{ $item->title }}" />
+                        @endforeach
+                    </flux:checkbox.group>
+                    @error('form.proof_of_work_ids') <p role="alert" class="text-sm text-red-600">{{ $message }}</p> @enderror
+                @endif
                 <div>
                     <flux:button type="submit" variant="primary">Send application</flux:button>
                 </div>

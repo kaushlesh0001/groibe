@@ -24,6 +24,10 @@
                             <flux:navlist.item icon="magnifying-glass" :href="route('contributor.discover')" :current="request()->routeIs('contributor.discover*')" wire:navigate>Discover</flux:navlist.item>
                             <flux:navlist.item icon="paper-airplane" :href="route('contributor.applications')" :current="request()->routeIs('contributor.applications')" wire:navigate>My applications</flux:navlist.item>
                         @endif
+                        @if (auth()->user()->isActiveContributor())
+                            <flux:navlist.item icon="trophy" :href="route('contributor.portfolio')" :current="request()->routeIs('contributor.portfolio*')" wire:navigate>Portfolio</flux:navlist.item>
+                            <flux:navlist.item icon="star" :href="route('contributor.reputation')" :current="request()->routeIs('contributor.reputation')" wire:navigate>Reputation</flux:navlist.item>
+                        @endif
                         <flux:navlist.item icon="clipboard-document-check" :href="route('contributor.onboarding')" :current="request()->routeIs('contributor.onboarding')" wire:navigate>Onboarding</flux:navlist.item>
                         <flux:navlist.item icon="user-circle" :href="route('contributor.profile')" :current="request()->routeIs('contributor.profile')" wire:navigate>Profile</flux:navlist.item>
                     @endif

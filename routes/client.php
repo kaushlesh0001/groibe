@@ -8,6 +8,7 @@ use App\Livewire\Client\Briefs\BriefShow;
 use App\Livewire\Client\Dashboard;
 use App\Livewire\Client\Deliverables\DeliverableIndex;
 use App\Livewire\Client\Projects\ProjectIndex;
+use App\Livewire\Client\Projects\ProjectReviews;
 use App\Livewire\Client\Projects\ProjectShow;
 use Illuminate\Support\Facades\Route;
 
@@ -28,6 +29,7 @@ Route::middleware(['auth', 'verified', 'role:client'])
 
         Route::livewire('projects', ProjectIndex::class)->name('projects.index');
         Route::livewire('projects/{project}', ProjectShow::class)->name('projects.show');
+        Route::livewire('projects/{project}/reviews', ProjectReviews::class)->name('projects.reviews');
         Route::get('projects/{project}/sows/{version}/print', [SowDocumentController::class, 'print'])
             ->whereNumber('version')->name('projects.sow.print');
         Route::get('projects/{project}/sows/{version}/pdf', [SowDocumentController::class, 'pdf'])

@@ -2,9 +2,13 @@
 
 namespace App\Http\Controllers\Public;
 
+use App\Enums\FeatureFlag;
 use App\Http\Controllers\Controller;
 use App\Models\Profile;
+use App\Models\ProofOfWork;
+use App\Models\ReputationFact;
 use App\Models\Skill;
+use App\Services\FeatureFlags\FeatureFlags;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -50,7 +54,7 @@ class ContributorDirectoryController extends Controller
         ]);
     }
 
-    public function show(string $slug): Response
+    public function show(string $slug, FeatureFlags $flags): Response
     {
         $profile = Profile::query()->where('slug', $slug)->with(['user.skills'])->firstOrFail();
 
@@ -59,8 +63,16 @@ class ContributorDirectoryController extends Controller
 
         $public = $profile->isPubliclyVisible();
 
+        // Evidence only, and only on a profile the public can see (spec 9). Proof items follow the proof flag and consent.
+        $facts = $public ? ReputationFact::query()->where('user_id', $profile->user_id)->first() : null;
+        $proofs = $public && $flags->enabled(FeatureFlag::ProofOfWorkPublic)
+            ? ProofOfWork::query()->publiclyVisible()->ownedBy($profile->user_id)
+                ->with(['user.profile', 'project.organization:id,name,industry'])
+                ->orderByDesc('proof_of_work.published_at')->limit(6)->get()
+            : collect();
+
         return response()
-            ->view('public.contributors.show', ['profile' => $profile, 'public' => $public])
+            ->view('public.contributors.show', ['profile' => $profile, 'public' => $public, 'facts' => $facts, 'proofs' => $proofs])
             ->header('X-Robots-Tag', $public ? 'index, follow' : 'noindex, nofollow');
     }
 
