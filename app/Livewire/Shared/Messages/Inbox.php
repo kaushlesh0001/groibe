@@ -7,6 +7,7 @@ use App\Exceptions\ActionBlocked;
 use App\Models\Thread;
 use App\Services\Messaging\ThreadLinks;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
@@ -64,8 +65,11 @@ class Inbox extends Component
             'threads' => Thread::query()
                 ->visibleTo($user)
                 ->withUnread($user)
+                // The time of the latest message this person may see. `threads.last_message_at` also counts internal notes, so
+                // using it here would tell a client or contributor that staff just wrote something (SCR-022).
+                ->withMax(['messages as last_visible_message_at' => fn (Builder $messages) => $messages->scopes(['visibleTo' => [$user]])], 'created_at')
                 ->with('project:id,uuid,code,title')
-                ->orderByDesc('last_message_at')
+                ->orderByDesc('last_visible_message_at')
                 ->orderByDesc('threads.id')
                 ->paginate(15),
             'canStartSupport' => Gate::forUser($user)->allows('startSupport', Thread::class),

@@ -1,10 +1,13 @@
 <?php
 
+use App\Enums\FeatureFlag;
 use App\Models\CmsSection;
 use App\Models\Faq;
 use App\Models\Page;
 use App\Rules\PublicCopy;
+use App\Services\FeatureFlags\FeatureFlags;
 use App\Support\Website\PageSlug;
+use App\Support\Website\StaticPageDefaults;
 
 describe('built-in pages', function () {
     it('shows How it works, For contributors and For clients without any admin content', function (string $route, string $text) {
@@ -100,5 +103,27 @@ describe('CMS pages', function () {
 
     it('does not serve a page to a non-GET request', function () {
         $this->post('/careers')->assertStatus(405);
+    });
+});
+
+describe('the project thread promise on For clients (SUGGESTIONS 175)', function () {
+    it('tells clients they can message the team in the project thread', function () {
+        $this->get(route('for-clients'))->assertOk()
+            ->assertSee('How the work runs')
+            ->assertSee('You can message the team in the project thread.');
+    });
+
+    it('does not make the promise while messaging is switched off', function () {
+        app(FeatureFlags::class)->set(FeatureFlag::Messaging, false);
+
+        $this->get(route('for-clients'))->assertOk()
+            ->assertSee('How the work runs')
+            ->assertDontSee('message the team in the project thread');
+    });
+
+    it('keeps the line free of em dashes and the banned wording', function () {
+        $line = collect(StaticPageDefaults::forClients()['blocks'])->pluck('items')->flatten()->first(fn (string $item) => str_contains($item, 'project thread'));
+
+        expect($line)->not->toBeNull()->and(PublicCopy::violation($line))->toBeNull();
     });
 });

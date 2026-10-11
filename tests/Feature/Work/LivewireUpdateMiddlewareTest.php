@@ -23,13 +23,27 @@ use Livewire\Livewire;
  * who is suspended while a page is open could keep using it.
  */
 
-/** Opens a page over HTTP and posts a refresh of its first component to Livewire's update endpoint. */
+/**
+ * The snapshot of the page's own component. The layout also carries chrome components such as the notification bell, which come
+ * first in the HTML, so taking the first snapshot would refresh the bell and prove nothing about the page.
+ */
+function pageSnapshot(string $html): string
+{
+    preg_match_all('/wire:snapshot="([^"]+)"[^>]*wire:name="([^"]+)"/', $html, $matches, PREG_SET_ORDER);
+
+    $page = collect($matches)->first(fn (array $match): bool => $match[2] !== 'notifications.bell');
+
+    expect($page)->not->toBeNull('the page has a component of its own');
+
+    return html_entity_decode($page[1]);
+}
+
+/** Opens a page over HTTP and posts a refresh of its own component to Livewire's update endpoint. */
 function refreshOpenPage(string $url): TestResponse
 {
     $html = test()->get($url)->assertOk()->getContent();
 
-    preg_match('/wire:snapshot="([^"]+)"/', $html, $match);
-    $snapshot = html_entity_decode($match[1]);
+    $snapshot = pageSnapshot($html);
 
     return test()->withHeaders(['X-Livewire' => 'true'])->postJson(Livewire::getUpdateUri(), [
         'components' => [['snapshot' => $snapshot, 'updates' => [], 'calls' => [['path' => '', 'method' => '$refresh', 'params' => []]]]],
@@ -55,8 +69,7 @@ it('refuses a refresh once the contributor has been suspended or is no longer ac
     $url = $page === 'board' ? route('contributor.work.project', $this->project) : route('contributor.work.task', $this->task);
 
     $html = $this->get($url)->assertOk()->getContent();
-    preg_match('/wire:snapshot="([^"]+)"/', $html, $match);
-    $snapshot = html_entity_decode($match[1]);
+    $snapshot = pageSnapshot($html);
 
     $this->me->forceFill(['status' => UserStatus::Suspended])->save();
     $this->me->profile->forceFill(['onboarding_state' => OnboardingState::Suspended])->save();
@@ -71,8 +84,7 @@ it('refuses a refresh of a client page by someone who is not a client', function
     asUser($owner);
 
     $html = $this->get(route('client.deliverables'))->assertOk()->getContent();
-    preg_match('/wire:snapshot="([^"]+)"/', $html, $match);
-    $snapshot = html_entity_decode($match[1]);
+    $snapshot = pageSnapshot($html);
 
     // The account is switched to a contributor mid-session (for example by an admin).
     $owner->forceFill(['role' => UserRole::Contributor])->save();
@@ -92,8 +104,7 @@ it('stops showing a task to a contributor who has been taken off it', function (
     $url = route('contributor.work.task', $this->task);
 
     $html = $this->get($url)->assertOk()->getContent();
-    preg_match('/wire:snapshot="([^"]+)"/', $html, $match);
-    $snapshot = html_entity_decode($match[1]);
+    $snapshot = pageSnapshot($html);
 
     // An admin removes the contributor: the task returns to unassigned.
     app(RemoveAssignment::class)($this->task->assignment, adminUser(AdminRole::DeliveryManager), 'Left the project');
@@ -110,8 +121,7 @@ it('stops showing a project to a client who has been removed from the organizati
     $url = route('client.projects.show', $project);
 
     $html = $this->get($url)->assertOk()->getContent();
-    preg_match('/wire:snapshot="([^"]+)"/', $html, $match);
-    $snapshot = html_entity_decode($match[1]);
+    $snapshot = pageSnapshot($html);
 
     $project->organization->users()->detach($client->id);
 
@@ -133,8 +143,7 @@ it('stops an open Discover or My Applications page once the open_roles flag is s
         app(FeatureFlags::class)->flush();
 
         $html = $this->get($url)->assertOk()->getContent();
-        preg_match('/wire:snapshot="([^"]+)"/', $html, $match);
-        $snapshot = html_entity_decode($match[1]);
+        $snapshot = pageSnapshot($html);
 
         app(FeatureFlags::class)->set(FeatureFlag::OpenRoles, false);
         app(FeatureFlags::class)->flush();
