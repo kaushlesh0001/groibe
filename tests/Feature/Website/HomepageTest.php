@@ -263,6 +263,7 @@ describe('quality', function () {
         $count();
         $small = $count();
         $addRoles(7);
+        $count(); // new rows clear the menu cache, so warm it again: only row-driven queries are compared
 
         expect($count())->toBe($small);
     });

@@ -62,9 +62,10 @@ class FeaturedItemResolver
      * A pick that is missing or no longer public is skipped.
      *
      * @param  list<string>  $with  relations to load, so the page that shows them does not query per row
+     * @param  list<string>  $columns  columns to read, so a cached copy holds only what the page shows
      * @return Collection<int, Model>
      */
-    public function featured(FeaturedItemType $type, int $limit, array $with = []): Collection
+    public function featured(FeaturedItemType $type, int $limit, array $with = [], array $columns = ['*']): Collection
     {
         $ids = FeaturedItem::query()->active()->ofType($type)->ordered()->pluck('item_id')->all();
 
@@ -72,7 +73,7 @@ class FeaturedItemResolver
             return new Collection;
         }
 
-        $records = $this->visible($type)->with($with)->whereIn($this->idColumn($type), $ids)->get()
+        $records = $this->visible($type)->select($columns)->with($with)->whereIn($this->idColumn($type), $ids)->get()
             ->keyBy(fn ($record): int => $this->idOf($type, $record));
 
         return collect($ids)->map(fn (int $id) => $records->get($id))->filter()->take($limit)->values();

@@ -61,6 +61,7 @@ use App\Services\FeatureFlags\FeatureFlags;
 use App\Services\Projects\EloquentProjectTransitionGuards;
 use App\Services\Projects\ProjectTransitionGuards;
 use App\Services\Settings\Settings;
+use App\Services\Website\PublicCache;
 use App\Services\Website\PublicNavigation;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -104,6 +105,9 @@ class AppServiceProvider extends ServiceProvider
             Limit::perMinute(3)->by($request->ip()),
             Limit::perHour(12)->by($request->ip()),
         ]);
+
+        // Spec 17.3: the homepage, its stats, the menu and the sitemap are cached and cleared when their data changes.
+        $this->app->make(PublicCache::class)->watch();
 
         View::composer('components.layouts.public', fn ($view) => $view->with('nav', app(PublicNavigation::class)->links()));
 
