@@ -171,3 +171,14 @@ Proposed changes only. The spec is edited by the founder, between passes, and lo
   4. A unique index on `proof_of_work (user_id, project_id)`, so closing a project cannot create two drafts for one contributor. No new column.
 - **Decided by the founder in the same session (logged here, no spec text needed beyond this):** internal admin reviews are never shown to the contributor, never counted in reputation and never public; client owners and managers write contributor reviews and set showcase consent, from `accepted` on and still changeable after `closed`; only `completed` assignments get a draft proof or can be reviewed; first pass means the version 1 submission was approved, on time means approved on or before the due date.
 - **Code status:** Pass 6.
+
+## SCR-021: Website CMS columns and contact messages (spec sections 7.9, 10.1, 10.2, 13)
+
+- **Status:** PROPOSED 2026-10-11, built in Pass 8 on the assumption it is approved. The founder chose the contact message columns and the "needs review" handling in the Pass 8 session. Spec sections 7.9 and 23 are not edited until approved.
+- **Gap:** Section 7.9 lists the CMS tables but gives `contact_messages` no definition, although 10.2 says the contact form stores to the database and 13 lists a Contact Messages screen. It also has no way to mark seeded copy whose wording is not approved yet.
+- **Proposal:**
+  1. `contact_messages`: id, name, email, subject (nullable), message, ip, user_agent, status (`new|read|handled`, default `new`), handled_by (nullable user), handled_at, email_sent_at (nullable), timestamps. Any move between the three statuses is allowed. The activity log records status moves only, never the message text or sender.
+  2. `needs_review` (bool, default false) on `cms_sections`, `testimonials`, `faqs` and `pages`. Content seeded from copy that is still unresolved is stored inactive with this flag, and the admin screens label it "needs review". An admin turns it off when they approve the wording. Nothing flagged is ever public.
+  3. A unique index on `featured_items (type, item_id)`, so one item cannot be featured twice. `item_id` has no foreign key: the public read resolves it every time and skips anything missing or no longer public.
+- **Decided by the founder in the same session:** the contact form sends to `CONTACT_EMAIL` (config/groibe.php, `contact@groibe.com` in `.env.example`); `/terms` and `/privacy` come from the active agreement template of that type and return 404 until one is published; stats overrides live in the stats section's content; "projects delivered" means projects in `accepted` or `closed`.
+- **Code status:** Pass 8.
