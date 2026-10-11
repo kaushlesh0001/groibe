@@ -6,6 +6,7 @@ use App\Enums\AgreementType;
 use App\Http\Controllers\Controller;
 use App\Models\AgreementTemplate;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Str;
 
 /**
  * /terms and /privacy (spec 10.2, 8). The text comes from the active agreement template of that type, never from code.
@@ -38,6 +39,6 @@ class LegalPageController extends Controller
 
         abort_if($template === null, 404);
 
-        return view('public.legal.show', ['template' => $template, 'route' => $route]);
+        return view('public.legal.show', ['template' => $template, 'route' => $route, 'body' => Str::sanitizeHtml((string) $template->body_html)]);
     }
 }

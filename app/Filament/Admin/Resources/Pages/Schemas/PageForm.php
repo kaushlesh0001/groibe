@@ -4,6 +4,7 @@ namespace App\Filament\Admin\Resources\Pages\Schemas;
 
 use App\Filament\Admin\Support\NeedsReview;
 use App\Rules\PublicCopy;
+use App\Support\Website\PageSlug;
 use Closure;
 use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Textarea;
@@ -22,7 +23,7 @@ class PageForm
                 ->regex('/^[a-z0-9]+(?:-[a-z0-9]+)*$/')
                 ->unique(ignoreRecord: true)
                 ->rule(fn (): Closure => function (string $attribute, mixed $value, Closure $fail): void {
-                    if (in_array(strtolower((string) $value), config('groibe.cms.reserved_slugs', []), true)) {
+                    if (PageSlug::isReserved((string) $value)) {
                         $fail('That address is already used by the site. Choose another.');
                     }
                 })
