@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\GatedByReview;
 use Database\Factories\PageFactory;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Spatie\Activitylog\LogOptions;
@@ -13,7 +13,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
 class Page extends Model
 {
     /** @use HasFactory<PageFactory> */
-    use HasFactory, LogsActivity;
+    use GatedByReview, HasFactory, LogsActivity;
 
     /** @var list<string> */
     protected $fillable = ['slug', 'title', 'body_html', 'meta_title', 'meta_description', 'is_active', 'needs_review'];
@@ -32,11 +32,5 @@ class Page extends Model
             ->logOnly(['slug', 'title', 'meta_title', 'meta_description', 'is_active', 'needs_review'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs();
-    }
-
-    /** @param Builder<Page> $query */
-    public function scopeActive(Builder $query): void
-    {
-        $query->where('is_active', true);
     }
 }

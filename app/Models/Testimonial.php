@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\GatedByReview;
 use Database\Factories\TestimonialFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -13,7 +14,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
 class Testimonial extends Model
 {
     /** @use HasFactory<TestimonialFactory> */
-    use HasFactory, LogsActivity;
+    use GatedByReview, HasFactory, LogsActivity;
 
     /** @var list<string> */
     protected $fillable = ['author_name', 'author_title', 'organization_name', 'quote', 'photo_path', 'is_active', 'needs_review', 'sort'];
@@ -33,12 +34,6 @@ class Testimonial extends Model
             ->logOnly(['author_name', 'author_title', 'organization_name', 'quote', 'is_active', 'needs_review', 'sort'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs();
-    }
-
-    /** @param Builder<Testimonial> $query */
-    public function scopeActive(Builder $query): void
-    {
-        $query->where('is_active', true);
     }
 
     /** @param Builder<Testimonial> $query */

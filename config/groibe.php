@@ -50,6 +50,15 @@ return [
         'photo_max_px' => 800,
     ],
 
+    // Spec 10.2: slugs a CMS page may not take, because a route or app area already owns them (SCR-021).
+    'cms' => [
+        'reserved_slugs' => [
+            'admin', 'app', 'api', 'login', 'logout', 'register', 'forgot-password', 'reset-password', 'verify-email',
+            'invite', 'up', 'storage', 'build', 'brand', 'livewire', 'sitemap.xml', 'robots.txt', 'contact', 'faq',
+            'terms', 'privacy', 'opportunities', 'contributors', 'organizations', 'work', 'skills',
+        ],
+    ],
+
     'directory' => [
         'per_page' => 12,
     ],

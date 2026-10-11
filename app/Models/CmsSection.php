@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\GatedByReview;
 use Database\Factories\CmsSectionFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -13,7 +14,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
 class CmsSection extends Model
 {
     /** @use HasFactory<CmsSectionFactory> */
-    use HasFactory, LogsActivity;
+    use GatedByReview, HasFactory, LogsActivity;
 
     /** @var list<string> */
     protected $fillable = ['key', 'title', 'content', 'sort', 'is_active', 'needs_review'];
@@ -34,12 +35,6 @@ class CmsSection extends Model
             ->logOnly(['key', 'title', 'sort', 'is_active', 'needs_review'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs();
-    }
-
-    /** @param Builder<CmsSection> $query */
-    public function scopeActive(Builder $query): void
-    {
-        $query->where('is_active', true);
     }
 
     /** @param Builder<CmsSection> $query */
