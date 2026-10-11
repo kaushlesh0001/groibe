@@ -284,3 +284,38 @@ Done-when ("admin publishes a role, a contributor applies, admin shortlists and 
 - Transitions: every edge of 6.4 and 6.5 is asserted exactly, each Action is tested from legal and illegal states, and rollback on a blocked seat is tested for each blocking case.
 - Queries: no per-row queries on the public list, Discover, My Applications, the dashboard, the client shortlist or the admin lists (tests compare 3 rows against 12).
 - Indexes: status, visibility, `(status, visibility, published_at)`, both unique pairs, and every foreign key are indexed.
+
+## Pass 6: Reviews, Proof of Work, Reputation
+
+Built in one pass, after a stop for four data-model and permission questions that the founder answered (logged in SCR-020). Pass 6 was run before Pass 7, and Pass 8 was put on hold until it was done.
+
+**Done-when, as built:** closing a project (`CloseProject`) creates a draft proof of work per completed assignment, asks the client for reviews and showcase consent, asks contributors to finish drafts and review the client, and queues a reputation recompute. Published items reach the public only through `ProofOfWork::publiclyVisible()`, which re-checks the project consent on every read. The gate ("a `none` consent project can never surface publicly") is tested for the list, the search, the page, the sitemap and the contributor profile, including consent changed back to `none` after publication.
+
+**Critical:** none. **Secrets in code:** none.
+
+**Incident, needs your attention**
+155. **Pint reformatted `docs/site-content/` by mistake.** I ran `./vendor/bin/pint` with no path. The folder is gitignored (`.gitignore` line 31) and holds a copy of an old WordPress theme, so Pint rewrote 30 of its 38 files (spacing, array syntax, `if:`/`endif` blocks) and git cannot restore them. Nothing in the app reads that folder. The changes are formatting only as far as I can tell, but the `no_alternative_syntax` rewrite could in principle change template markup. If you have the original theme elsewhere, copy it back. To stop it happening again, add `docs/site-content` to a `pint.json` exclude list, or run Pint only on `app tests database routes config`.
+
+**Decisions I made without a question (reverse any of them)**
+156. **Proof-of-work states beyond the spec list:** an admin can send a pending item back to `draft` (with a note) and can hide a published item and publish it again. The contributor edits wording only while the item is a draft, and can switch visibility (private, members, public) on their own item at any time unless it is hidden. Setting public does not publish; an admin still approves.
+157. **Draft titles never use the project title.** A project title can name the client, so the draft is titled "role: project type". The summary is left blank for the contributor, and a summary plus a contribution text are required before publication is requested. Skills on a draft are the project skills the contributor also holds (all project skills when none overlap), because tasks have no skills of their own.
+158. **Public pages credit the contributor by name only when their profile is public;** otherwise the item shows the role alone. Under `anonymous` consent the client shows as "Confidential client, industry"; the project title is never shown.
+159. **Internal reviews need `reviews.create`, which the permission matrix gives to super admin only** (delivery manager is RUA). Spec 9 says "Admin may add an internal review". I took the matrix literally. If delivery managers should add them, grant `reviews.create` in `PermissionMatrix` and record it as an SCR.
+160. **Org-directed reviews have no public surface at all.** The `public_client_reviews` flag exists but nothing reads it yet, because there is no public organization page until Pass 8. Add the check there.
+161. **Applications can now carry up to 5 of the applicant's own published proof-of-work items** (spec 11, item 132). Ids that are not theirs, or are drafts or hidden, are refused with a message. The admin application page lists the titles. The old Pass 5 test that said ids were ignored was replaced.
+
+**Medium, logged**
+162. **No scheduled reputation recompute.** Spec 17.1 lists it among the scheduled jobs; for now it runs only on close and on review publish or hide. Verifying a skill does not refresh `verified_skills_count` until the next recompute. Pass 9 should add a nightly recompute and a hook on skill verification.
+163. **Two applications racing can still reach the unique index** (same as item 151). `SavesReview` catches the violation for reviews; `SubmitApplication` still does not.
+164. **A confidential brief can still end in `named` consent.** The client chooses it deliberately, but you may want the brief's `confidentiality` to cap it at `anonymous`.
+165. **Consent is per project.** There is no organization-wide default. Fine for v1.
+166. **Demo data has no closed project, proof of work or reviews yet.** Pass 8's homepage showcase needs some. Add a closed demo project with two proof items (one per consent level) and a few published reviews to `DemoSeeder` at the start of Pass 8.
+167. **Not checked by eye.** The Portfolio, Reputation, client review page, admin Reviews and Proof of Work screens, and `/work` were tested by assertions, not looked at in a browser. The Lighthouse gate belongs to Pass 8.
+
+**Checked and fine**
+- Authorization: every new route (3 contributor, 1 client, 2 public) and both Filament resources have denied-path tests for guest, wrong role, other organization, viewer, finance ops and non-active contributors. Livewire actions scope every id to the signed-in user.
+- Transitions: every edge of the proof-of-work and review state machines, legal and illegal, plus project close from a wrong state or by a wrong actor.
+- Queries: the new pages run with `preventLazyLoading` on and eager load their relations.
+
+**Open item (test run stall)**
+168. **Folder-level and some single-file Pest runs stall on the dev machine.** `php artisan test tests/Feature/Work` ran past 10 minutes with no output after `QaQueueTest`, and was stopped. Run file by file, all 14 Work files pass (the same files had passed inside the aborted run). A second pass over single files stalled once on `ContributorWorkTest` (about 14 minutes, near-zero CPU, no output), then passed alone in 44s. `PortfolioAndReviewPagesTest` took 295s for 29 tests where similar files take about 1s per test. Tests use sqlite in memory, array cache and the sync queue, so no state is shared between files. Not reproduced on demand; suspect the machine (antivirus scanning, Herd or the Windows process wrapper) rather than app code. Still open: watch for it in the next pass and, if it repeats, time a run with Defender excluded for the project folder.
