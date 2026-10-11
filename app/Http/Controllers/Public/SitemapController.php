@@ -12,15 +12,25 @@ use App\Models\Profile;
 use App\Models\ProofOfWork;
 use App\Models\Skill;
 use App\Services\FeatureFlags\FeatureFlags;
+use App\Services\Website\PublicCache;
 use App\Services\Website\PublicSkillIndex;
+use Illuminate\Contracts\Cache\Repository as Cache;
 use Illuminate\Http\Response;
 
-/** `/sitemap.xml` and `/robots.txt` (spec 10.2, 10.4). Private profiles, private organizations, unpublished legal pages and unreviewed CMS pages are never listed. Built per request so a visibility change takes effect at once. */
+/** `/sitemap.xml` and `/robots.txt` (spec 10.2, 10.4). Private profiles, private organizations, unpublished legal pages and unreviewed CMS pages are never listed. Cached for a few minutes and cleared when anything it lists changes. */
 class SitemapController extends Controller
 {
     private const MAX_URLS = 50000;
 
-    public function sitemap(FeatureFlags $flags): Response
+    public function sitemap(FeatureFlags $flags, Cache $cache): Response
+    {
+        // Kept for a few minutes and cleared as soon as anything it lists changes (PublicCache::watch).
+        $xml = $cache->remember(PublicCache::SITEMAP_KEY, now()->addMinutes(PublicCache::minutes()), fn (): string => $this->build($flags));
+
+        return response($xml, 200, ['Content-Type' => 'application/xml; charset=UTF-8']);
+    }
+
+    private function build(FeatureFlags $flags): string
     {
         $urls = [['loc' => route('home'), 'lastmod' => null]];
 
@@ -103,7 +113,7 @@ class SitemapController extends Controller
             }
         }
 
-        return response()->view('public.sitemap', ['urls' => $urls], 200, ['Content-Type' => 'application/xml; charset=UTF-8']);
+        return view('public.sitemap', ['urls' => $urls])->render();
     }
 
     public function robots(): Response

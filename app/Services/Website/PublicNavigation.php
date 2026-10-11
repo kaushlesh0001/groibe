@@ -23,7 +23,7 @@ class PublicNavigation
     /** @return array{header: list<array{label: string, url: string}>, footer: list<array{label: string, url: string}>} */
     public function links(): array
     {
-        return $this->cache->remember(self::CACHE_KEY, now()->addMinutes((int) config('groibe.cache.public_minutes', 10)), fn (): array => $this->build());
+        return $this->cache->remember(self::CACHE_KEY, now()->addMinutes(PublicCache::minutes()), fn (): array => $this->build());
     }
 
     public function flush(): void

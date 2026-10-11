@@ -34,12 +34,21 @@ class HomepageBuilder
 {
     public const CACHE_KEY = 'website.homepage';
 
+    // The cached copy holds only what the homepage prints: no phone numbers, emails, contract values or GSTINs.
+    private const ROLE_COLUMNS = ['open_roles.id', 'open_roles.slug', 'open_roles.title', 'open_roles.summary', 'open_roles.work_mode', 'open_roles.compensation_type', 'open_roles.duration_label', 'open_roles.deadline', 'open_roles.status', 'open_roles.visibility', 'open_roles.published_at'];
+
+    private const ORGANIZATION_COLUMNS = ['organizations.id', 'organizations.slug', 'organizations.name', 'organizations.industry', 'organizations.city', 'organizations.state', 'organizations.is_public', 'organizations.status'];
+
+    private const PROFILE_COLUMNS = ['profiles.id', 'profiles.user_id', 'profiles.slug', 'profiles.headline', 'profiles.city', 'profiles.state', 'profiles.photo_path', 'profiles.is_public', 'profiles.onboarding_state'];
+
+    private const PROOF_COLUMNS = ['proof_of_work.id', 'proof_of_work.user_id', 'proof_of_work.project_id', 'proof_of_work.slug', 'proof_of_work.title', 'proof_of_work.summary', 'proof_of_work.role_title', 'proof_of_work.status', 'proof_of_work.visibility', 'proof_of_work.client_display', 'proof_of_work.published_at'];
+
     public function __construct(private Cache $cache, private FeatureFlags $flags, private FeaturedItemResolver $featured) {}
 
     /** @return list<array{key: string, content: array<string, mixed>, data: array<string, mixed>}> */
     public function sections(): array
     {
-        return $this->cache->remember(self::CACHE_KEY, now()->addMinutes((int) config('groibe.cache.public_minutes', 10)), fn (): array => $this->build());
+        return $this->cache->remember(self::CACHE_KEY, now()->addMinutes(PublicCache::minutes()), fn (): array => $this->build());
     }
 
     public function flush(): void
@@ -88,10 +97,15 @@ class HomepageBuilder
             'ecosystem', 'how_it_works', 'final_cta' => [],
             'open_roles' => $this->flags->enabled(FeatureFlag::OpenRoles) ? $this->filled('roles', $this->roles($limit)) : null,
             'proof_of_work' => $this->flags->enabled(FeatureFlag::ProofOfWorkPublic)
-                ? $this->filled('items', $this->featured->featured(FeaturedItemType::ProofOfWork, $limit, ['user.profile', 'skills', 'project.organization:id,name,industry']))
+                ? $this->filled('items', $this->featured->featured(
+                    FeaturedItemType::ProofOfWork,
+                    $limit,
+                    ['user:id,name,role,status', 'user.profile:id,user_id,slug,is_public,onboarding_state', 'skills:id,name,slug', 'project:id,organization_id,showcase_consent', 'project.organization:id,name,industry'],
+                    self::PROOF_COLUMNS,
+                ))
                 : null,
             'community' => $this->flags->enabled(FeatureFlag::PublicDirectories)
-                ? $this->filled('profiles', $this->featured->featured(FeaturedItemType::Contributor, $limit, ['user.skills']))
+                ? $this->filled('profiles', $this->featured->featured(FeaturedItemType::Contributor, $limit, ['user:id,name,role,status', 'user.skills:id,name,slug'], self::PROFILE_COLUMNS))
                 : null,
             'organizations' => $this->flags->enabled(FeatureFlag::PublicDirectories) ? $this->filled('organizations', $this->organizations($limit)) : null,
             'stats' => $this->filled('tiles', $this->stats($content)),
@@ -110,9 +124,9 @@ class HomepageBuilder
     /** Featured picks first, in Admin's order, then roles flagged featured on the role itself. @return Collection<int, OpenRole> */
     private function roles(int $limit): Collection
     {
-        $picked = $this->featured->featured(FeaturedItemType::OpenRole, $limit, ['skills', 'projectType']);
+        $picked = $this->featured->featured(FeaturedItemType::OpenRole, $limit, ['skills:id,name,slug', 'projectType:id,name,slug'], self::ROLE_COLUMNS);
 
-        $flagged = OpenRole::query()->visibleTo(null)->where('open_roles.is_featured', true)->with(['skills', 'projectType'])
+        $flagged = OpenRole::query()->visibleTo(null)->select(self::ROLE_COLUMNS)->where('open_roles.is_featured', true)->with(['skills:id,name,slug', 'projectType:id,name,slug'])
             ->orderByDesc('open_roles.published_at')->limit($limit)->get();
 
         return $picked->concat($flagged)->unique('id')->take($limit)->values();
@@ -121,8 +135,8 @@ class HomepageBuilder
     /** @return Collection<int, Model> organizations, as picked by Admin and as flagged featured */
     private function organizations(int $limit): Collection
     {
-        $picked = $this->featured->featured(FeaturedItemType::Organization, $limit);
-        $flagged = Organization::query()->public()->where('is_featured', true)->orderBy('name')->limit($limit)->get();
+        $picked = $this->featured->featured(FeaturedItemType::Organization, $limit, [], self::ORGANIZATION_COLUMNS);
+        $flagged = Organization::query()->public()->select(self::ORGANIZATION_COLUMNS)->where('is_featured', true)->orderBy('name')->limit($limit)->get();
 
         return $picked->concat($flagged)->unique('id')->take($limit)->values();
     }

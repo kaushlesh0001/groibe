@@ -155,5 +155,7 @@ it('issues the same number of queries for 3 items as for 10 on the work list', f
         showcased(ShowcaseConsent::Named, ['title' => "Item {$i}"]);
     }
 
+    $count(); // new rows clear the public caches (menu), so warm them again: only row-driven queries are compared
+
     expect($count())->toBe($small);
 });
