@@ -7,6 +7,7 @@ use App\Livewire\Contributor\Discover;
 use App\Livewire\Contributor\EditProfile;
 use App\Livewire\Contributor\MyApplications;
 use App\Livewire\Contributor\Onboarding;
+use App\Livewire\Contributor\Payouts;
 use App\Livewire\Contributor\Portfolio;
 use App\Livewire\Contributor\Reputation;
 use App\Livewire\Contributor\Work\MyWork;
@@ -56,6 +57,7 @@ Route::middleware(['auth', 'verified', 'role:contributor', 'active.contributor']
         Route::livewire('portfolio', Portfolio\Index::class)->name('portfolio');
         Route::livewire('portfolio/{proof}', Portfolio\Edit::class)->name('portfolio.edit');
         Route::livewire('reputation', Reputation::class)->name('reputation');
+        Route::livewire('payouts', Payouts::class)->name('payouts');
     });
 
 // Messages (spec 11, 14). Support threads are open to every contributor, whatever their review state. Project

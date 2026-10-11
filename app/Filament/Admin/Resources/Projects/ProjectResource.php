@@ -8,7 +8,9 @@ use App\Filament\Admin\Resources\Projects\Pages\ListProjects;
 use App\Filament\Admin\Resources\Projects\Pages\ProjectWorkspace;
 use App\Filament\Admin\Resources\Projects\RelationManagers\AssignmentsRelationManager;
 use App\Filament\Admin\Resources\Projects\RelationManagers\DeliverablesRelationManager;
+use App\Filament\Admin\Resources\Projects\RelationManagers\InvoicesRelationManager;
 use App\Filament\Admin\Resources\Projects\RelationManagers\MilestonesRelationManager;
+use App\Filament\Admin\Resources\Projects\RelationManagers\PayoutsRelationManager;
 use App\Filament\Admin\Resources\Projects\RelationManagers\SowsRelationManager;
 use App\Filament\Admin\Resources\Projects\RelationManagers\TasksRelationManager;
 use App\Filament\Admin\Resources\Projects\RelationManagers\ThreadsRelationManager;
@@ -55,6 +57,8 @@ class ProjectResource extends Resource
             TasksRelationManager::class,
             DeliverablesRelationManager::class,
             ThreadsRelationManager::class,
+            PayoutsRelationManager::class,
+            InvoicesRelationManager::class,
         ];
     }
 

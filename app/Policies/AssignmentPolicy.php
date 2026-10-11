@@ -40,6 +40,12 @@ class AssignmentPolicy
             && $assignment->status === AssignmentStatus::Invited;
     }
 
+    /** The agreed amount payouts are planned against (SCR-024): delivery managers and super admins, who own the staffing. */
+    public function setAmount(User $actor, Assignment $assignment): bool
+    {
+        return $this->adminCan($actor, 'projects.update');
+    }
+
     public function remove(User $actor, Assignment $assignment): bool
     {
         return $this->adminCan($actor, 'projects.update');

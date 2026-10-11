@@ -30,6 +30,7 @@
                         @if (auth()->user()->isActiveContributor())
                             <flux:navlist.item icon="trophy" :href="route('contributor.portfolio')" :current="request()->routeIs('contributor.portfolio*')" wire:navigate>Portfolio</flux:navlist.item>
                             <flux:navlist.item icon="star" :href="route('contributor.reputation')" :current="request()->routeIs('contributor.reputation')" wire:navigate>Reputation</flux:navlist.item>
+                            <flux:navlist.item icon="banknotes" :href="route('contributor.payouts')" :current="request()->routeIs('contributor.payouts')" wire:navigate>Payouts</flux:navlist.item>
                         @endif
                         <flux:navlist.item icon="clipboard-document-check" :href="route('contributor.onboarding')" :current="request()->routeIs('contributor.onboarding')" wire:navigate>Onboarding</flux:navlist.item>
                         <flux:navlist.item icon="user-circle" :href="route('contributor.profile')" :current="request()->routeIs('contributor.profile')" wire:navigate>Profile</flux:navlist.item>

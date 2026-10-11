@@ -87,7 +87,7 @@ return [
 
     // Per-category preferences are a placeholder until Pass 7. Locked categories can never be disabled.
     'notifications' => [
-        'categories' => ['brief', 'sow', 'project', 'assignment', 'application', 'task', 'submission', 'deliverable', 'message', 'review', 'portfolio', 'onboarding', 'security'],
+        'categories' => ['brief', 'sow', 'project', 'assignment', 'application', 'task', 'submission', 'deliverable', 'message', 'payout', 'review', 'portfolio', 'onboarding', 'security'],
         'locked_categories' => ['security'],
         // Shown on the preferences page (spec 14).
         'labels' => [
@@ -100,6 +100,7 @@ return [
             'submission' => ['name' => 'Submissions', 'hint' => 'Work received and review results'],
             'deliverable' => ['name' => 'Deliverables', 'hint' => 'Deliverables shared, accepted or sent back for changes'],
             'message' => ['name' => 'Messages', 'hint' => 'New messages in your conversations'],
+            'payout' => ['name' => 'Payouts and invoices', 'hint' => 'A payout approved, paid or cancelled, or an invoice gone overdue'],
             'review' => ['name' => 'Reviews', 'hint' => 'Reviews requested or received'],
             'portfolio' => ['name' => 'Portfolio', 'hint' => 'Proof of work drafts and publication'],
             'onboarding' => ['name' => 'Onboarding', 'hint' => 'Changes to your account review status'],

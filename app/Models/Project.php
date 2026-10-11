@@ -140,6 +140,18 @@ class Project extends Model implements HasMedia
         return $this->hasManyThrough(Deliverable::class, Milestone::class);
     }
 
+    /** @return HasMany<Payout, $this> */
+    public function payouts(): HasMany
+    {
+        return $this->hasMany(Payout::class);
+    }
+
+    /** @return HasMany<InvoiceRef, $this> */
+    public function invoiceRefs(): HasMany
+    {
+        return $this->hasMany(InvoiceRef::class);
+    }
+
     /** @return HasMany<Thread, $this> */
     public function threads(): HasMany
     {
