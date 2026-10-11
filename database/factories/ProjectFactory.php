@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Enums\ProjectStatus;
+use App\Enums\ShowcaseConsent;
 use App\Models\Organization;
 use App\Models\Project;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -29,6 +30,7 @@ class ProjectFactory extends Factory
             'status' => ProjectStatus::Draft,
             'contract_value' => 150000,
             'currency' => 'INR',
+            'showcase_consent' => ShowcaseConsent::None,
         ];
     }
 
