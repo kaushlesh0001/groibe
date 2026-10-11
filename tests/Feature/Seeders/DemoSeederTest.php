@@ -3,6 +3,11 @@
 use App\Enums\OnboardingState;
 use App\Enums\OrgRole;
 use App\Enums\ProjectStatus;
+use App\Enums\ProofStatus;
+use App\Enums\ProofVisibility;
+use App\Enums\ReviewDirection;
+use App\Enums\ReviewStatus;
+use App\Enums\ShowcaseConsent;
 use App\Enums\UserRole;
 use App\Models\AgreementAcceptance;
 use App\Models\AgreementTemplate;
@@ -12,6 +17,9 @@ use App\Models\OpenRole;
 use App\Models\Organization;
 use App\Models\Profile;
 use App\Models\Project;
+use App\Models\ProofOfWork;
+use App\Models\ReputationFact;
+use App\Models\Review;
 use App\Models\User;
 use App\Services\Agreements\AgreementGate;
 use Database\Seeders\DemoSeeder;
@@ -99,9 +107,9 @@ it('creates briefs and projects across states, with the delivery chain wired up'
     $active = $projects->firstWhere('status', ProjectStatus::Active);
 
     expect(Brief::query()->count())->toBe(6)
-        ->and($projects)->toHaveCount(4)
-        ->and($projects->pluck('status')->map->value->all())->toEqualCanonicalizing(['active', 'sow_sent', 'staffing', 'draft'])
-        ->and($projects->pluck('code')->unique())->toHaveCount(4)
+        ->and($projects)->toHaveCount(8)
+        ->and($projects->pluck('status')->map->value->all())->toEqualCanonicalizing(['active', 'sow_sent', 'staffing', 'draft', 'accepted', 'accepted', 'accepted', 'closed'])
+        ->and($projects->pluck('code')->unique())->toHaveCount(8)
         ->and($active->assignments)->toHaveCount(1)
         ->and($active->milestones)->toHaveCount(2)
         ->and($active->milestones->flatMap->tasks)->toHaveCount(3)
@@ -126,6 +134,8 @@ it('is safe to run twice: no duplicates and no rewritten records', function () {
         DB::table('organization_users')->count(), DB::table('assignments')->count(), DB::table('tasks')->count(),
         DB::table('milestones')->count(), DB::table('sows')->count(), DB::table('agreement_templates')->count(),
         DB::table('open_roles')->count(), DB::table('open_role_skills')->count(), DB::table('open_role_invites')->count(), DB::table('applications')->count(),
+        DB::table('proof_of_work')->count(), DB::table('proof_of_work_skill')->count(), DB::table('reviews')->count(),
+        DB::table('reputation_facts')->count(), DB::table('organization_stats')->count(),
     ];
     $before = $snapshot();
     $hash = User::query()->where('email', 'aditi.sharma@demo.groibe.test')->value('password');
@@ -175,4 +185,47 @@ it('creates open roles in every visibility and state, with applications and an i
         ->and(Application::query()->count())->toBe(4)
         ->and(DB::table('open_role_invites')->count())->toBe(1)
         ->and(OpenRole::query()->where('slug', 'demo-dashboard-support')->value('project_id'))->not->toBeNull();
+});
+
+it('creates three accepted projects and one closed project across the three showcase consent values', function () {
+    $this->seed(DemoSeeder::class);
+
+    $accepted = Project::query()->where('status', ProjectStatus::Accepted)->get();
+    $closed = Project::query()->where('status', ProjectStatus::Closed)->get();
+
+    expect($accepted)->toHaveCount(3)
+        ->and($accepted->pluck('showcase_consent')->map->value->all())->toEqualCanonicalizing(['none', 'anonymous', 'named'])
+        ->and($closed)->toHaveCount(1)
+        ->and($closed->first()->showcase_consent)->toBe(ShowcaseConsent::Named)
+        ->and($closed->first()->closed_at)->not->toBeNull()
+        ->and(Project::query()->whereIn('status', [ProjectStatus::Accepted, ProjectStatus::Closed])->get()->every(
+            fn (Project $project) => $project->assignments()->where('status', 'completed')->exists() && $project->sows()->where('status', 'accepted')->exists(),
+        ))->toBeTrue();
+});
+
+it('creates published and draft proof of work, and only consented public items are visible to the public', function () {
+    $this->seed(DemoSeeder::class);
+
+    $proofs = ProofOfWork::query()->get();
+
+    expect($proofs)->toHaveCount(3)
+        ->and($proofs->where('status', ProofStatus::Published))->toHaveCount(2)
+        ->and($proofs->where('status', ProofStatus::Draft))->toHaveCount(1)
+        ->and($proofs->where('status', ProofStatus::Published)->pluck('visibility')->all())->toEqualCanonicalizing([ProofVisibility::Public, ProofVisibility::Members])
+        ->and(ProofOfWork::query()->publiclyVisible()->count())->toBe(1)
+        ->and(ProofOfWork::query()->publiclyVisible()->first()->clientLabel())->toBe('Kestrel Foods (Demo)');
+});
+
+it('creates published and pending reviews and fills reputation from them', function () {
+    $this->seed(DemoSeeder::class);
+
+    $published = Review::query()->where('status', ReviewStatus::Published)->get();
+
+    expect(Review::query()->count())->toBe(5)
+        ->and($published)->toHaveCount(4)
+        ->and(Review::query()->where('status', ReviewStatus::PendingModeration)->count())->toBe(1)
+        ->and($published->where('direction', ReviewDirection::ContributorToClient))->toHaveCount(1)
+        ->and(ReputationFact::query()->where('user_id', User::query()->where('email', 'aditi.sharma@demo.groibe.test')->value('id'))->first())
+        ->reviews_count->toBe(2)
+        ->projects_completed->toBe(2);
 });

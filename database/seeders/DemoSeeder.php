@@ -7,6 +7,7 @@ use App\Actions\Contributors\AcceptMemberAgreement;
 use App\Enums\ApplicationStatus;
 use App\Enums\AssignmentStatus;
 use App\Enums\BriefStatus;
+use App\Enums\ClientDisplay;
 use App\Enums\CompensationType;
 use App\Enums\Confidentiality;
 use App\Enums\MilestoneStatus;
@@ -16,6 +17,11 @@ use App\Enums\OpenRoleVisibility;
 use App\Enums\OrganizationStatus;
 use App\Enums\OrgRole;
 use App\Enums\ProjectStatus;
+use App\Enums\ProofStatus;
+use App\Enums\ProofVisibility;
+use App\Enums\ReviewDirection;
+use App\Enums\ReviewStatus;
+use App\Enums\ShowcaseConsent;
 use App\Enums\SowStatus;
 use App\Enums\TaskStatus;
 use App\Enums\UserRole;
@@ -27,14 +33,19 @@ use App\Models\Brief;
 use App\Models\Milestone;
 use App\Models\OpenRole;
 use App\Models\Organization;
+use App\Models\OrganizationStat;
 use App\Models\Profile;
 use App\Models\Project;
 use App\Models\ProjectType;
+use App\Models\ProofOfWork;
+use App\Models\ReputationFact;
+use App\Models\Review;
 use App\Models\Skill;
 use App\Models\Sow;
 use App\Models\Task;
 use App\Models\User;
 use App\Services\Projects\ProjectCodeGenerator;
+use App\Services\Reputation\ReputationCalculator;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
@@ -109,6 +120,7 @@ class DemoSeeder extends Seeder
             $this->contributors();
             $organizations = $this->organizations();
             $this->deliveryWork($organizations);
+            $this->showcaseWork($organizations);
             $this->openRoles($organizations);
         }));
     }
@@ -246,6 +258,167 @@ class DemoSeeder extends Seeder
 
         // 4. Draft: internal only, no SOW yet.
         $this->project($kestrel, 'Distributor onboarding playbook', ProjectStatus::Draft, 90000, $admin);
+    }
+
+    /**
+     * Pass 6 showcase data: three accepted projects (one per showcase consent value) and one closed project with
+     * proof of work and reviews. Rows are written directly, so nothing is notified or queued, and reputation is
+     * computed by calling the calculator once for anyone who has no cached row yet.
+     *
+     * @param  array<string, Organization>  $organizations
+     */
+    private function showcaseWork(array $organizations): void
+    {
+        $kestrel = $organizations['kestrel-foods-demo'];
+        $bluepeak = $organizations['bluepeak-logistics-demo'];
+        $northwind = $organizations['northwind-health-demo'];
+        $admin = User::query()->where('role', UserRole::Admin)->orderBy('id')->first();
+
+        // Accepted, one per consent value. Only `anonymous` and `named` can ever reach the public site.
+        $this->finishedProject($bluepeak, 'Warehouse KPI dashboard', ProjectStatus::Accepted, ShowcaseConsent::None, 150000, $admin, 'Dashboard/Reporting', [
+            'Rohan Mehta' => 'API developer',
+        ]);
+        $survey = $this->finishedProject($northwind, 'Patient survey report', ProjectStatus::Accepted, ShowcaseConsent::Anonymous, 110000, $admin, 'Market Research', [
+            'Aditi Sharma' => 'Research analyst',
+        ]);
+        $this->finishedProject($kestrel, 'Pricing page redesign', ProjectStatus::Accepted, ShowcaseConsent::Named, 130000, $admin, 'Website/App Build', [
+            'Sneha Iyer' => 'UX designer',
+        ]);
+
+        // Closed and named: the only project with proof of work, because drafts are created when a project closes.
+        $model = $this->finishedProject($kestrel, 'Distributor pricing model', ProjectStatus::Closed, ShowcaseConsent::Named, 220000, $admin, 'Financial Modelling', [
+            'Vikram Singh' => 'Financial modeller',
+            'Aditi Sharma' => 'Survey analyst',
+            'Sneha Iyer' => 'Presentation designer',
+        ]);
+
+        $this->proof($model, 'Vikram Singh', 'demo-distributor-pricing-model-vikram', ProofStatus::Published, ProofVisibility::Public, [
+            'summary' => 'Built the pricing model that sets distributor margins by region.',
+            'contribution_text' => 'Rebuilt the margin logic from the raw price lists, tested it against a year of orders and handed over a model the finance team now updates themselves.',
+            'outcome_metrics' => [['label' => 'Regions modelled', 'value' => '6'], ['label' => 'Price lists reconciled', 'value' => '14']],
+            'skills' => ['Financial Modelling', 'Excel Modelling'],
+        ], $admin);
+        $this->proof($model, 'Aditi Sharma', 'demo-distributor-survey-aditi', ProofStatus::Published, ProofVisibility::Members, [
+            'summary' => 'Ran the distributor survey that fed the pricing model.',
+            'contribution_text' => 'Wrote the questionnaire, collected responses from distributors and summarised what they said about pricing.',
+            'outcome_metrics' => [['label' => 'Responses', 'value' => '48']],
+            'skills' => ['Survey Design', 'Market Research'],
+        ], $admin);
+        $this->proof($model, 'Sneha Iyer', null, ProofStatus::Draft, ProofVisibility::Private, [
+            'skills' => ['Presentation Design'],
+        ], $admin);
+
+        $this->review($model, 'Rhea Kapoor', ReviewDirection::ClientToContributor, 'Vikram Singh', ReviewStatus::Published, 5, 'Clear, careful and on time. The model answered the questions we actually had.');
+        $this->review($model, 'Rhea Kapoor', ReviewDirection::ClientToContributor, 'Aditi Sharma', ReviewStatus::Published, 4, 'Good survey design and a readable summary.');
+        $this->review($model, 'Rhea Kapoor', ReviewDirection::ClientToContributor, 'Sneha Iyer', ReviewStatus::PendingModeration, 4, 'Clean slides. Waiting in the moderation queue.');
+        $this->review($survey, 'Dr Farhan Qureshi', ReviewDirection::ClientToContributor, 'Aditi Sharma', ReviewStatus::Published, 5, 'Thorough work, delivered ahead of the date.');
+        // Organization-directed, so admin-only while `public_client_reviews` is off.
+        $this->review($model, 'Vikram Singh', ReviewDirection::ContributorToClient, $kestrel, ReviewStatus::Published, 4, 'Clear brief and quick answers to questions.');
+
+        $calculator = app(ReputationCalculator::class);
+
+        foreach (['Vikram Singh', 'Aditi Sharma', 'Sneha Iyer', 'Rohan Mehta'] as $name) {
+            $user = $this->contributor($name);
+
+            if (! ReputationFact::query()->where('user_id', $user->id)->exists()) {
+                $calculator->forUser($user);
+            }
+        }
+
+        if (! OrganizationStat::query()->where('organization_id', $kestrel->id)->exists()) {
+            $calculator->forOrganization($kestrel);
+        }
+    }
+
+    /**
+     * A project that has already been delivered, with one finished milestone and an approved task per seat so
+     * reputation has something to count. Keyed on organization and title, so a second run leaves it alone.
+     *
+     * @param  array<string, string>  $seats  contributor name => role title
+     */
+    private function finishedProject(Organization $organization, string $title, ProjectStatus $status, ShowcaseConsent $consent, int $value, ?User $admin, string $projectType, array $seats): Project
+    {
+        $existing = Project::query()->where('organization_id', $organization->id)->where('title', $title)->first();
+
+        if ($existing !== null) {
+            return $existing;
+        }
+
+        $project = $this->project($organization, $title, $status, $value, $admin);
+        $project->forceFill([
+            'project_type_id' => ProjectType::query()->where('name', $projectType)->value('id'),
+            'showcase_consent' => $consent,
+            'start_date' => now()->subWeeks(10),
+            'due_date' => now()->subWeeks(2),
+            'closed_at' => $status === ProjectStatus::Closed ? now()->subWeek() : null,
+        ])->save();
+
+        $this->sow($project, SowStatus::Accepted, $organization);
+
+        $milestone = Milestone::query()->create([
+            'project_id' => $project->id, 'title' => 'Delivery', 'description' => 'Deliver the agreed work.', 'sort' => 1,
+            'status' => MilestoneStatus::ClientAccepted, 'value' => $value, 'due_date' => now()->subWeeks(3),
+        ]);
+
+        foreach ($seats as $name => $roleTitle) {
+            $assignment = Assignment::query()->create([
+                'project_id' => $project->id, 'user_id' => $this->contributor($name)->id, 'role_title' => $roleTitle,
+                'status' => AssignmentStatus::Completed, 'rate_type' => 'fixed', 'agreed_amount' => intdiv($value, count($seats)),
+                'currency' => 'INR', 'invited_at' => now()->subWeeks(10), 'accepted_at' => now()->subWeeks(10), 'completed_at' => now()->subWeeks(2),
+            ]);
+
+            $this->task($milestone, "Deliver the {$roleTitle} work", TaskStatus::Approved, $assignment);
+        }
+
+        return $project;
+    }
+
+    /**
+     * @param  array{summary?: string, contribution_text?: string, outcome_metrics?: list<array{label: string, value: string}>, skills: list<string>}  $content
+     */
+    private function proof(Project $project, string $contributorName, ?string $slug, ProofStatus $status, ProofVisibility $visibility, array $content, ?User $admin): void
+    {
+        $user = $this->contributor($contributorName);
+        $assignment = Assignment::query()->where('project_id', $project->id)->where('user_id', $user->id)->firstOrFail();
+        $project->loadMissing('projectType');
+
+        $proof = ProofOfWork::query()->firstOrCreate(['user_id' => $user->id, 'project_id' => $project->id], [
+            'slug' => $status === ProofStatus::Published ? $slug : null,
+            'title' => $assignment->role_title.': '.$project->projectType->name,
+            'role_title' => $assignment->role_title,
+            'summary' => $content['summary'] ?? null,
+            'contribution_text' => $content['contribution_text'] ?? null,
+            'outcome_metrics' => $content['outcome_metrics'] ?? [],
+            'visibility' => $visibility,
+            'status' => $status,
+            'client_display' => $project->showcase_consent === ShowcaseConsent::Named ? ClientDisplay::Named : ClientDisplay::Anonymous,
+            'approved_by' => $status === ProofStatus::Published ? $admin?->id : null,
+            'published_at' => $status === ProofStatus::Published ? now()->subDays(5) : null,
+        ]);
+
+        if ($proof->wasRecentlyCreated) {
+            $proof->skills()->sync(Skill::query()->whereIn('name', $content['skills'])->pluck('id')->all());
+        }
+    }
+
+    /** One rating applied to every criterion of the direction. $reviewee is a contributor's name or the organization. */
+    private function review(Project $project, string $reviewerName, ReviewDirection $direction, string|Organization $reviewee, ReviewStatus $status, int $rating, string $comment): void
+    {
+        $reviewer = User::query()->where('email', Str::slug($reviewerName, '.').'@'.self::EMAIL_DOMAIN)->firstOrFail();
+        $revieweeId = $reviewee instanceof Organization ? $reviewee->id : $this->contributor($reviewee)->id;
+
+        Review::query()->firstOrCreate([
+            'project_id' => $project->id,
+            'reviewer_id' => $reviewer->id,
+            'reviewee_type' => $direction->revieweeType(),
+            'reviewee_id' => $revieweeId,
+        ], [
+            'direction' => $direction,
+            ...array_fill_keys($direction->criteria(), $rating),
+            'comment' => $comment,
+            'status' => $status,
+            'published_at' => $status === ReviewStatus::Published ? now()->subDays(4) : null,
+        ]);
     }
 
     /** @param  array<string, Organization>  $organizations */
