@@ -2,6 +2,7 @@
 
 use App\Actions\Assignments\RemoveAssignment;
 use App\Enums\AdminRole;
+use App\Enums\FeatureFlag;
 use App\Enums\OnboardingState;
 use App\Enums\OrgRole;
 use App\Enums\ProjectStatus;
@@ -9,8 +10,10 @@ use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use App\Models\Assignment;
 use App\Models\Milestone;
+use App\Models\OpenRole;
 use App\Models\Project;
 use App\Models\Task;
+use App\Services\FeatureFlags\FeatureFlags;
 use Illuminate\Testing\TestResponse;
 use Livewire\Livewire;
 
@@ -118,4 +121,26 @@ it('stops showing a project to a client who has been removed from the organizati
     $this->withHeaders(['X-Livewire' => 'true'])
         ->postJson(Livewire::getUpdateUri(), ['components' => [['snapshot' => $snapshot, 'updates' => [], 'calls' => [['path' => '', 'method' => '$refresh', 'params' => []]]]]])
         ->assertForbidden();
+});
+
+it('stops an open Discover or My Applications page once the open_roles flag is switched off', function () {
+    $contributor = contributorIn(OnboardingState::Active);
+    OpenRole::factory()->published()->create(['title' => 'Still listed?']);
+    asUser($contributor);
+
+    foreach (['/app/contributor/discover', '/app/contributor/applications'] as $url) {
+        app(FeatureFlags::class)->set(FeatureFlag::OpenRoles, true);
+        app(FeatureFlags::class)->flush();
+
+        $html = $this->get($url)->assertOk()->getContent();
+        preg_match('/wire:snapshot="([^"]+)"/', $html, $match);
+        $snapshot = html_entity_decode($match[1]);
+
+        app(FeatureFlags::class)->set(FeatureFlag::OpenRoles, false);
+        app(FeatureFlags::class)->flush();
+
+        $this->withHeaders(['X-Livewire' => 'true'])
+            ->postJson(Livewire::getUpdateUri(), ['components' => [['snapshot' => $snapshot, 'updates' => [], 'calls' => [['path' => '', 'method' => '$refresh', 'params' => []]]]]])
+            ->assertNotFound();
+    }
 });

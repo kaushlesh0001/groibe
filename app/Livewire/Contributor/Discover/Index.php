@@ -45,7 +45,11 @@ class Index extends Component
     public function render(OpenRoleSearch $search)
     {
         $user = Auth::user();
-        $filters = $this->validate(OpenRoleSearch::rules());
+        // Filters come from the URL, so an invalid one is ignored rather than turned into an error page.
+        $filters = OpenRoleSearch::sanitize([
+            'q' => $this->q, 'skill' => $this->skill, 'type' => $this->type,
+            'work_mode' => $this->work_mode, 'compensation' => $this->compensation, 'duration' => $this->duration,
+        ]);
 
         $roles = $search->apply(OpenRole::query()->visibleTo($user), $filters)
             ->with(['skills', 'projectType'])

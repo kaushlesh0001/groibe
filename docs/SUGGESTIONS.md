@@ -234,7 +234,7 @@ All of it traces to a pass item or an accepted decision, and none adds a screen 
 
 ## Pass 5: Open Roles and Applications
 
-Spec changes: SCR-018 (invite list for invite-only roles) is accepted and built. SCR-019 (reapply after withdrawal) is proposed and built provisionally; confirm it or revert the one Action. Both are in `docs/SPEC_CHANGE_REQUESTS.md`, and the spec text for SCR-018 (7.4, 23) still needs the founder's edit. Item 128 is partly out of date: open roles, applications and an invite list are now seeded.
+Spec changes: SCR-018 (invite list for invite-only roles) and SCR-019 (reapply after withdrawal) are both accepted, built and written into the spec (6.5, 7.4, 22, 23). Item 128 is partly out of date: open roles, applications and an invite list are now seeded.
 
 ### Medium
 130. **Seats from an accepted offer have no agreed amount, and nothing edits it afterwards.** Spec 7.4 gives applications `expected_amount` but no offered amount, so the new assignment is created with `agreed_amount` empty. The project Team tab only invites and removes, so there is no screen to set it. Pass 7 payouts will need it. Add an edit action on the Team tab (or an amount on the offer) when Pass 7 starts.
@@ -260,3 +260,27 @@ Spec changes: SCR-018 (invite list for invite-only roles) is accepted and built.
 146. **Homepage pieces belong to Pass 8:** the "Live open roles" section and the featured-roles picker. `is_featured` is already set from the admin form.
 147. **Running tests here:** `php artisan test` still hangs on this machine (item 11). `php vendor/bin/pest` works. Running many upload tests in one process hits the 128 MB CLI limit, so use `php -d memory_limit=1G vendor/bin/pest`.
 148. **Review prompt result.** Authorization checked on every new route, Filament resource, action and relation manager, with denied-path tests for guest, wrong role, pending, suspended and cross-visibility. Query counts are flat on the public list, Discover, My Applications, dashboard, client shortlist and admin applications. One defect fixed in the audit: saving a closed role in the admin threw an uncaught error and now shows a message.
+
+### Pass 5 audit (second pass, against the spec and the Done-when list)
+
+Done-when ("admin publishes a role, a contributor applies, admin shortlists and offers, contributor accepts and appears as an active assignee") is now one test, `DoneWhenTest`, and passes. Gate ("`open_roles` off and nothing leaks publicly or in the sitemap") is covered by `PublicOpportunitiesTest` and now also for pages that are already open.
+
+**Critical:** none. **Secrets in code:** none found. The only credential in the repo is the documented demo password (item 129).
+
+**High, fixed in the audit**
+149. **Discover returned a 500 for any invalid filter value in the URL** (`?work_mode=bogus`, an over-long search, a stale bookmark). The Livewire page validated filters during render and the error became a server error. Invalid filter values are now ignored and the valid ones still apply (`OpenRoleSearch::sanitize`). Tested.
+150. **The `open_roles` flag did not apply to pages that were already open.** `EnsureFeatureEnabled` was not in Livewire's persistent middleware list, so an open Discover or My Applications page kept refreshing and listing roles after an admin switched the flag off. It is now on the list, with a test that fails without it.
+
+**Medium, logged**
+151. **Two simultaneous submissions can still hit the unique index.** A second application to the same role is refused with a message in the normal case, but two requests racing (two browser tabs) can reach the database together and one gets a server error instead of the message. Same for adding the same contributor to an invite list twice at once. Catch `UniqueConstraintViolationException` in `SubmitApplication` and `InviteToOpenRole` and turn it into the same message.
+
+**Low, logged**
+152. **Built beyond the pack's list, small and tied to spec 11 and 14:** an "offers waiting" panel on the contributor dashboard, the sidebar links, and the notification when someone is added to a live invite list. Drop any of them if unwanted.
+153. **No index on `open_roles.is_featured` or `deadline`.** Not needed at this size. Pass 8 will query featured roles on the homepage, so add `is_featured` then.
+154. **Public opportunity pages are neither cached nor rate limited.** Pass 8 adds the 5 to 15 minute caching with bust-on-change.
+
+**Checked and fine**
+- Authorization: every new route (3 contributor, 2 public) and Filament screen (Open Roles, Applications, the invites and applications tabs, the project button) has denied-path tests for guest, client, admin on contributor routes, finance, pending and suspended. Livewire actions scope every id to the signed-in user.
+- Transitions: every edge of 6.4 and 6.5 is asserted exactly, each Action is tested from legal and illegal states, and rollback on a blocked seat is tested for each blocking case.
+- Queries: no per-row queries on the public list, Discover, My Applications, the dashboard, the client shortlist or the admin lists (tests compare 3 rows against 12).
+- Indexes: status, visibility, `(status, visibility, published_at)`, both unique pairs, and every foreign key are indexed.
