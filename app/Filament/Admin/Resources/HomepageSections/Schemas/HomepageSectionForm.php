@@ -18,7 +18,7 @@ use Filament\Schemas\Schema;
 /** The section settings plus one JSON-backed content editor per section key (spec 10.1). */
 class HomepageSectionForm
 {
-    private const URL_PATTERN = '/^(\/[A-Za-z0-9\-._~\/?#=&%]*|https:\/\/\S+)$/';
+    private const URL_PATTERN = '/^(\/(?!\/)[A-Za-z0-9\-._~\/?#=&%]*|https:\/\/\S+)$/';
 
     public static function configure(Schema $schema): Schema
     {
