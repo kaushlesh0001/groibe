@@ -98,7 +98,30 @@
         </section>
     @endunless
 
-    <section aria-labelledby="sow-heading" class="flex flex-col gap-4">
+    @if ($shortlist->isNotEmpty())
+        <section aria-labelledby="shortlist-heading" class="flex flex-col gap-4">
+            <flux:heading id="shortlist-heading" size="lg" level="2">Shortlisted for your project</flux:heading>
+            <flux:text>People Groibe is considering for open roles on your project. Groibe makes the final choice and keeps you informed.</flux:text>
+            <ul class="grid gap-3 sm:grid-cols-2">
+                @foreach ($shortlist as $candidate)
+                    <li class="flex flex-col gap-1 rounded-lg border border-zinc-200 p-3">
+                        <span class="font-medium">{{ $candidate['first_name'] }}</span>
+                        <span class="text-sm">Applied for {{ $candidate['role'] }}</span>
+                        @if ($candidate['headline']) <span class="text-sm text-zinc-600">{{ $candidate['headline'] }}</span> @endif
+                        @if ($candidate['skills'])
+                            <span class="flex flex-wrap gap-1">
+                                @foreach ($candidate['skills'] as $skill)
+                                    <span class="rounded bg-zinc-100 px-2 py-0.5 text-xs">{{ $skill }}</span>
+                                @endforeach
+                            </span>
+                        @endif
+                    </li>
+                @endforeach
+            </ul>
+        </section>
+    @endif
+
+    <section aria-labelledby="sow-heading"class="flex flex-col gap-4">
         <flux:heading id="sow-heading" size="lg" level="2">Statement of Work</flux:heading>
 
         @if ($sows->isEmpty())

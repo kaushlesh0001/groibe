@@ -20,6 +20,10 @@
                     <flux:navlist.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard', 'contributor.dashboard', 'client.dashboard')" wire:navigate>Dashboard</flux:navlist.item>
                     @if (auth()->user()->isContributor())
                         <flux:navlist.item icon="briefcase" :href="route('contributor.work')" :current="request()->routeIs('contributor.work*')" wire:navigate>My work</flux:navlist.item>
+                        @if (auth()->user()->isActiveContributor() && app(\App\Services\FeatureFlags\FeatureFlags::class)->enabled(\App\Enums\FeatureFlag::OpenRoles))
+                            <flux:navlist.item icon="magnifying-glass" :href="route('contributor.discover')" :current="request()->routeIs('contributor.discover*')" wire:navigate>Discover</flux:navlist.item>
+                            <flux:navlist.item icon="paper-airplane" :href="route('contributor.applications')" :current="request()->routeIs('contributor.applications')" wire:navigate>My applications</flux:navlist.item>
+                        @endif
                         <flux:navlist.item icon="clipboard-document-check" :href="route('contributor.onboarding')" :current="request()->routeIs('contributor.onboarding')" wire:navigate>Onboarding</flux:navlist.item>
                         <flux:navlist.item icon="user-circle" :href="route('contributor.profile')" :current="request()->routeIs('contributor.profile')" wire:navigate>Profile</flux:navlist.item>
                     @endif

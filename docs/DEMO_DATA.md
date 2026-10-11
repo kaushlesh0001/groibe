@@ -45,4 +45,5 @@ All demo accounts use the password `DemoPass#2026`. Emails end in `@demo.groibe.
 
 - Briefs: draft, submitted, needs info, scoped and two converted.
 - Projects: one active (accepted SOW, assignment for Arjun Das, two milestones, three tasks), one with the SOW sent, one in staffing (Priya Nair invited), one draft.
+- Open roles: four. Survey analyst (public, featured, two positions), Dashboard support analyst (members only, linked to the active project), Brand refresh designer (invite only, Sneha Iyer is on the list) and a draft Content editor. Applications: Aditi Sharma (submitted) and Rohan Mehta (shortlisted) for the survey role, Meera Kulkarni (offer waiting) for the dashboard role, Sneha Iyer (submitted) for the brand role.
 - Admin: use your own login. No demo admin accounts are created.

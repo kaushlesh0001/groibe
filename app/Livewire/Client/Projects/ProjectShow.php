@@ -11,6 +11,7 @@ use App\Models\Milestone;
 use App\Models\Project;
 use App\Models\Sow;
 use App\Services\Agreements\AgreementGate;
+use App\Services\Projects\ClientShortlist;
 use App\Services\Projects\ClientTeam;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\Auth;
@@ -82,6 +83,7 @@ class ProjectShow extends Component
             'teamHidden' => $team->isHidden($project),
             'teamAvailable' => $team->sowAccepted($project),
             'teamMembers' => $team->members($project),
+            'shortlist' => app(ClientShortlist::class)->entries($project),
             'project' => $project,
             'sows' => $sows,
             'openSow' => $open,

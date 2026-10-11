@@ -54,6 +54,10 @@ return [
         'per_page' => 12,
     ],
 
+    'opportunities' => [
+        'per_page' => 12,
+    ],
+
     // Per-category preferences are a placeholder until Pass 7. Locked categories can never be disabled.
     'notifications' => [
         'categories' => ['brief', 'sow', 'project', 'assignment', 'application', 'task', 'submission', 'deliverable', 'onboarding', 'security'],

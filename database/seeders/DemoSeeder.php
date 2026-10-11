@@ -4,11 +4,15 @@ namespace Database\Seeders;
 
 use App\Actions\Agreements\AcceptClientMsa;
 use App\Actions\Contributors\AcceptMemberAgreement;
+use App\Enums\ApplicationStatus;
 use App\Enums\AssignmentStatus;
 use App\Enums\BriefStatus;
+use App\Enums\CompensationType;
 use App\Enums\Confidentiality;
 use App\Enums\MilestoneStatus;
 use App\Enums\OnboardingState;
+use App\Enums\OpenRoleStatus;
+use App\Enums\OpenRoleVisibility;
 use App\Enums\OrganizationStatus;
 use App\Enums\OrgRole;
 use App\Enums\ProjectStatus;
@@ -16,9 +20,12 @@ use App\Enums\SowStatus;
 use App\Enums\TaskStatus;
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
+use App\Enums\WorkMode;
+use App\Models\Application;
 use App\Models\Assignment;
 use App\Models\Brief;
 use App\Models\Milestone;
+use App\Models\OpenRole;
 use App\Models\Organization;
 use App\Models\Profile;
 use App\Models\Project;
@@ -102,6 +109,7 @@ class DemoSeeder extends Seeder
             $this->contributors();
             $organizations = $this->organizations();
             $this->deliveryWork($organizations);
+            $this->openRoles($organizations);
         }));
     }
 
@@ -238,6 +246,77 @@ class DemoSeeder extends Seeder
 
         // 4. Draft: internal only, no SOW yet.
         $this->project($kestrel, 'Distributor onboarding playbook', ProjectStatus::Draft, 90000, $admin);
+    }
+
+    /** @param  array<string, Organization>  $organizations */
+    private function openRoles(array $organizations): void
+    {
+        $admin = User::query()->where('role', UserRole::Admin)->orderBy('id')->first();
+        $dashboard = Project::query()->where('organization_id', $organizations['kestrel-foods-demo']->id)->where('title', 'Sales dashboard in Power BI')->first();
+
+        $survey = $this->role('demo-survey-analyst', 'Survey analyst', OpenRoleVisibility::Public, OpenRoleStatus::Published, ['Survey Design', 'Market Research'], $admin, [
+            'summary' => 'Help design and analyse a distributor survey for a manufacturing client.',
+            'deadline' => now()->addWeeks(3), 'duration_label' => '4 weeks', 'is_featured' => true, 'positions_needed' => 2,
+        ]);
+        $support = $this->role('demo-dashboard-support', 'Dashboard support analyst', OpenRoleVisibility::MembersOnly, OpenRoleStatus::Published, ['Power BI', 'SQL'], $admin, [
+            'summary' => 'Support the build of a sales dashboard.', 'duration_label' => '6 weeks', 'project_id' => $dashboard?->id,
+            'work_mode' => WorkMode::Hybrid, 'compensation_type' => CompensationType::Stipend,
+        ]);
+        $invite = $this->role('demo-brand-refresh', 'Brand refresh designer', OpenRoleVisibility::InviteOnly, OpenRoleStatus::Published, ['Brand Identity', 'UI Design'], $admin, [
+            'summary' => 'A short design engagement for invited contributors.', 'duration_label' => '3 weeks',
+        ]);
+        $this->role('demo-content-editor', 'Content editor', OpenRoleVisibility::MembersOnly, OpenRoleStatus::Draft, ['Editing and Proofreading'], $admin, [
+            'summary' => 'A draft role, not yet visible to anyone but admins.',
+        ]);
+
+        $invite->invitedUsers()->syncWithoutDetaching([$this->contributor('Sneha Iyer')->id => ['invited_by' => $admin?->id]]);
+
+        $this->application($survey, 'Aditi Sharma', ApplicationStatus::Submitted);
+        $this->application($survey, 'Rohan Mehta', ApplicationStatus::Shortlisted);
+        $this->application($support, 'Meera Kulkarni', ApplicationStatus::Offered);
+        $this->application($invite, 'Sneha Iyer', ApplicationStatus::Submitted);
+    }
+
+    /**
+     * @param  list<string>  $skills
+     * @param  array<string, mixed>  $extra
+     */
+    private function role(string $slug, string $title, OpenRoleVisibility $visibility, OpenRoleStatus $status, array $skills, ?User $admin, array $extra = []): OpenRole
+    {
+        $role = OpenRole::query()->firstOrCreate(['slug' => $slug], [
+            'title' => $title,
+            'description' => 'Demo role. Fake data for testing.',
+            'tasks_list' => ['Work with the team', 'Share findings'],
+            'learning_outcomes' => ['Client-ready delivery'],
+            'work_mode' => WorkMode::Remote,
+            'est_hours_min' => 5,
+            'est_hours_max' => 10,
+            'compensation_type' => CompensationType::Paid,
+            'compensation_note' => 'Fixed fee on delivery',
+            'visibility' => $visibility,
+            'positions_needed' => 1,
+            'status' => $status,
+            'published_at' => $status === OpenRoleStatus::Draft ? null : now()->subDays(3),
+            'created_by' => $admin?->id,
+            ...$extra,
+        ]);
+
+        if ($role->wasRecentlyCreated) {
+            $role->skills()->sync(Skill::query()->whereIn('name', $skills)->pluck('id')->all());
+        }
+
+        return $role;
+    }
+
+    private function application(OpenRole $role, string $contributorName, ApplicationStatus $status): void
+    {
+        Application::query()->firstOrCreate(['open_role_id' => $role->id, 'user_id' => $this->contributor($contributorName)->id], [
+            'status' => $status,
+            'motivation' => 'Demo application. I would enjoy this work and have done similar projects before.',
+            'relevant_experience' => 'Several comparable engagements.',
+            'availability_note' => 'Ten hours a week.',
+            'shortlisted_at' => in_array($status, [ApplicationStatus::Shortlisted, ApplicationStatus::Offered], true) ? now()->subDay() : null,
+        ]);
     }
 
     private function user(string $name, UserRole $role, UserStatus $status): User

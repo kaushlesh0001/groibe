@@ -22,7 +22,7 @@ class OpenRoleInvited extends GroibeNotification
 
     public function url(): string
     {
-        return route('contributor.dashboard');
+        return route('contributor.discover.show', $this->role->slug);
     }
 
     /** @return array<string, mixed> */
