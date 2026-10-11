@@ -12,3 +12,8 @@ Schedule::command('queue:work --stop-when-empty --max-time=50 --tries=3')
 Schedule::command('groibe:notify-overdue-tasks')
     ->dailyAt('08:00')
     ->withoutOverlapping(30);
+
+// Invoice references past their due date become overdue, with one digest to finance (SCR-024).
+Schedule::command('groibe:mark-overdue-invoices')
+    ->dailyAt('08:15')
+    ->withoutOverlapping(30);

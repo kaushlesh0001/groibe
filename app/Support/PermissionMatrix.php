@@ -43,6 +43,8 @@ class PermissionMatrix
         'reviews' => ['rua', 'r', ''],
         'proof_of_work' => ['crua', 'rua', ''],
         'payouts' => ['r', '', 'crud'],
+        // Pass 7 (SCR-024): invoice references follow the payouts row. Delivery managers read, finance manages.
+        'invoice_refs' => ['r', '', 'crud'],
         'agreements' => ['r', 'r', 'r'],
         // Pass 7 (SCR-022): moderating project threads, and answering support threads.
         'threads' => ['ru', '', ''],

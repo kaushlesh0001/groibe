@@ -388,3 +388,15 @@ Built in one pass, after a stop for four data-model and permission questions tha
 213. **Low: no security notification exists yet.** The `security` category is locked and tested, but nothing sends one today (the built-in auth emails bypass categories). Add login-from-new-device or password-changed notices later if wanted.
 214. **Low: the preferences page lists every category to every role.** A client sees "Assignments" and "Portfolio". Filter by role if that confuses people.
 215. **Low: the bell polls every 60 seconds, the conversation every 20.** Both only while the tab is visible. Revisit if shared hosting load shows it.
+
+**Pass 7 item 3: payouts and invoice references (built, decisions and follow-ups)**
+216. **Decision (founder: "go with your recommendations"):** all 15 recommended answers were built. They are written up as SCR-024, which also records the two small column additions (`payouts.approved_at`, `invoice_refs.currency`). SUGGESTIONS 130 (no way to set a seat's amount) is done: the Team tab has "Set amount".
+217. **Decision: the activity log never holds a payout's reference or notes.** It records ids, amounts, status and dates, and a cancel reason. Anyone with the audit log can still see that a payout was marked paid and when.
+218. **Medium: delivery managers can read payout notes.** The matrix gives them read access to payouts, and notes are internal to finance. If notes become sensitive, hide the `notes` column from `delivery_manager` or move it behind `payouts.update`.
+219. **Medium (earlier pass): community managers can see agreed amounts on a project's Team tab,** because it shows `agreed_amount` to anyone holding `projects.view`. Spec 12 calls contributor rates internal. Hide that column from roles without `payouts.view`.
+220. **Low: no queued export.** Spec 15.2 asks for a queued file with an emailed link above 5,000 rows. At that size the admin is asked to narrow the filters. Build the queued path (a private file plus a signed link) when a real export needs it.
+221. **Low: `payouts.approve` and `invoice_refs.approve` exist in the permission list but nothing uses them.** Approval is `payouts.update` by decision. They follow the existing matrix pattern and can be removed if you prefer.
+222. **Low: there is no maker-checker.** The person who plans a payout may approve it. If finance grows past one person, require a different approver (the audit log already records who did what).
+223. **Low: a project that is cancelled keeps its planned payouts.** Nothing cancels them automatically; finance cancels each one. Consider a prompt when a project is cancelled.
+224. **Low: a seat's amount can be set while `invited`.** That lets staff agree a fee before the contributor accepts. Payouts still need an active or completed seat.
+225. **Not done yet (item 4):** the demo seed for messages, payouts and invoices, and the wider end-to-end tests.

@@ -4,6 +4,7 @@ namespace App\Filament\Admin\Resources\Projects\RelationManagers;
 
 use App\Actions\Assignments\InviteContributor;
 use App\Actions\Assignments\RemoveAssignment;
+use App\Actions\Assignments\SetAssignmentAmount;
 use App\Enums\AssignmentStatus;
 use App\Enums\OnboardingState;
 use App\Enums\RateType;
@@ -86,6 +87,20 @@ class AssignmentsRelationManager extends RelationManager
                     }),
             ])
             ->recordActions([
+                Action::make('setAmount')
+                    ->label('Set amount')
+                    ->icon('heroicon-o-currency-rupee')
+                    ->visible(fn (Assignment $record): bool => in_array($record->status, [AssignmentStatus::Invited, AssignmentStatus::Active, AssignmentStatus::Completed], true)
+                        && auth()->user()?->can('setAmount', $record))
+                    ->fillForm(fn (Assignment $record): array => ['agreed_amount' => $record->agreed_amount === null ? null : (string) $record->agreed_amount])
+                    ->schema([
+                        TextInput::make('agreed_amount')->label('Agreed amount')->numeric()->required()->minValue(0.01)->prefix('INR')
+                            ->helperText('Payouts are planned against this. It cannot go below what is already planned or paid.'),
+                    ])
+                    ->action(fn (Assignment $record, array $data) => DomainActionRunner::run(
+                        fn () => app(SetAssignmentAmount::class)($record, auth()->user(), $data['agreed_amount']),
+                        'Agreed amount saved',
+                    )),
                 Action::make('remove')
                     ->label('Remove')
                     ->icon('heroicon-o-user-minus')
