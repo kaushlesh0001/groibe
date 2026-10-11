@@ -113,6 +113,7 @@ Legend: C create, R read, U update, D delete, A approve, own = own records only,
 | Website CMS | - | - | - | - | CRUD | - | all |
 | Settings, flags | - | - | - | - | - | - | CRUD |
 | Audit log | - | - | - | R own actions | R own actions | R own | R all |
+| Email log | - | - | - | - | - | - | R (read-only, nobody edits or deletes) |
 | Import/Export | - | - | - | contributors+projects | contributors | payouts | all |
 
 Enforcement: Laravel Policies for every model. Filament resources must call the same policies. No authorization in controllers by role-name string checks; use `can()` abilities.
@@ -258,7 +259,9 @@ Unique (project_id, user_id) where status in active states (enforce in code).
 ### 7.8 Communication
 
 **threads**: id, project_id (nullable), type (`project|support|application`), subject, created_by. **thread_participants**: thread_id, user_id, last_read_at. **messages**: id, thread_id, user_id, body, is_internal (visible to admin only), created_at. Message files: media library, private.
-**notifications**: use Laravel's database notifications table, plus an `email_log` table (user_id, template, to, status, error, sent_at).
+**notifications**: use Laravel's database notifications table, plus an `email_log` table and a `notification_preferences` table (SCR-023).
+**email_log**: id, user_id (nullable), template (class name), to, status (`sent|failed`), error (nullable, trimmed to 500 characters), sent_at (nullable), timestamps. One row per recipient address. It never stores the message body or subject. A row is written for every message the mailer sends, and for a queued notification email or the contact inbox email that fails after its last try.
+**notification_preferences**: id, user_id, category, database (bool), mail (bool), timestamps. Unique (user_id, category). No row means both channels are on. Categories are listed in `config/groibe.php`.
 
 ### 7.9 Website CMS and ops
 
@@ -417,7 +420,9 @@ Required admin capabilities:
 - Contributors cannot start threads with clients. Support thread (user <-> admin) available to everyone.
 - Notifications (database + email, user-configurable per category except security):
   - Brief status changes, SOW sent/accepted, assignment invite, application status, task assigned/changed, submission QA result, deliverable shared, deliverable accepted/changes requested, review requested, new message, payout status change, onboarding status change.
-- Bell icon with unread count, notifications page, mark read.
+- Bell icon with unread count, notifications page (`/notifications`, every signed-in role), mark read and mark all read. Preferences are at `/settings/notifications` (SCR-023).
+- Per-category preferences choose the database and email channels separately. Security categories are locked on: they always send both channels and cannot be saved as off. A category switched off on both channels sends nothing.
+- The email log (section 7.8) is read-only and super admin only (section 5).
 - Email via Laravel Mail with markdown templates; templates editable only in code in v1 (listed in `resources/views/emails`). Use a `NotificationDispatcher` service so providers can change later.
 - Emails sent through the queue (database driver). Failures logged to `email_log`.
 
@@ -572,3 +577,4 @@ Stored in `feature_flags`, cached, toggled in Admin. Defaults:
 | 2026-10-10 | 1, 10.1, 10.3 | SCR-017: new brand: colors (navy `#042B65`, green `#0EAE44`, blue `#046CEA`, plus green-alt and teal), Inter, logo files and rules, contrast rules, tagline "Where Ideas Find People" | Founder |
 | 2026-10-10 | 2.2, 7.4 | SCR-018: added `open_role_invites`, the admin-managed invite list for `invite_only` open roles | Founder |
 | 2026-10-10 | 6.5, 7.4, 22 | SCR-019: added `withdrawn -> submitted` (reapply reuses the same application row); rejected, declined and accepted applicants cannot reapply | Founder |
+| 2026-10-11 | 5, 7.8, 14 | SCR-023: added `notification_preferences`; `email_log` rules (one row per recipient, no body, failures logged, super admin read-only); preference and locked-category rules; notification centre and preferences pages | Founder |
