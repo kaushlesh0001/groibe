@@ -45,6 +45,8 @@ class PermissionMatrix
         'payouts' => ['r', '', 'crud'],
         'agreements' => ['r', 'r', 'r'],
         'cms' => ['', 'crud', ''],
+        // SCR-021: the contact form inbox. Read and update for community managers; delete is super admin only (personal data).
+        'contact_messages' => ['', 'ru', ''],
         'admin_users' => ['', '', ''],
         'taxonomy' => ['r', 'crud', ''],
         'project_types' => ['r', '', ''],

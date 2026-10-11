@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\FaqAudience;
+use App\Models\Concerns\GatedByReview;
 use Database\Factories\FaqFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -14,7 +15,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
 class Faq extends Model
 {
     /** @use HasFactory<FaqFactory> */
-    use HasFactory, LogsActivity;
+    use GatedByReview, HasFactory, LogsActivity;
 
     /** @var list<string> */
     protected $fillable = ['audience', 'question', 'answer', 'sort', 'is_active', 'needs_review'];
@@ -35,12 +36,6 @@ class Faq extends Model
             ->logOnly(['audience', 'question', 'answer', 'sort', 'is_active', 'needs_review'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs();
-    }
-
-    /** @param Builder<Faq> $query */
-    public function scopeActive(Builder $query): void
-    {
-        $query->where('is_active', true);
     }
 
     /** @param Builder<Faq> $query */
