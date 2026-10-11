@@ -4,6 +4,7 @@ namespace App\Filament\Admin\Resources\Applications\Schemas;
 
 use App\Enums\ApplicationStatus;
 use App\Models\Application;
+use App\Models\ProofOfWork;
 use App\Models\SkillUser;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Section;
@@ -24,6 +25,10 @@ class ApplicationInfolist
                     TextEntry::make('motivation')->columnSpanFull(),
                     TextEntry::make('relevant_experience')->placeholder('Not given')->columnSpanFull(),
                     TextEntry::make('availability_note')->placeholder('Not given')->columnSpanFull(),
+                    TextEntry::make('proof')
+                        ->label('Attached proof of work')
+                        ->state(fn (Application $record): string => ProofOfWork::query()->whereIn('id', $record->proof_of_work_ids ?? [])->pluck('title')->implode('; ') ?: 'None attached')
+                        ->columnSpanFull(),
                     TextEntry::make('admin_note')->label('Internal note')->placeholder('None')->columnSpanFull(),
                 ]),
             Section::make('Applicant')
