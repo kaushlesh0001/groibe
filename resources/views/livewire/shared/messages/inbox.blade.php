@@ -27,7 +27,7 @@
                         <span class="truncate font-semibold">{{ $thread->subject }}</span>
                         <span class="text-sm text-zinc-600">
                             {{ $thread->type === \App\Enums\ThreadType::Project ? 'Project' : 'Support' }}
-                            @if ($thread->last_message_at) &middot; last message {{ $thread->last_message_at->diffForHumans() }} @endif
+                            @if ($thread->last_visible_message_at) &middot; last message {{ \Illuminate\Support\Carbon::parse($thread->last_visible_message_at)->diffForHumans() }} @endif
                         </span>
                     </span>
                     @if ($thread->unread_count > 0)
