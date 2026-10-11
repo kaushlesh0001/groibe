@@ -203,7 +203,7 @@ Proposed changes only. The spec is edited by the founder, between passes, and lo
 
 ## SCR-023: Notification preferences and the email log (spec sections 5, 7.8, 13, 14)
 
-- **Status:** PROPOSED 2026-10-11, built in Pass 7 item 2. The founder did not answer the Pass 7 opener question on where preferences live, so the recommendation was followed. Spec sections 5, 7.8 and 23 are not edited until approved.
+- **Status:** ACCEPTED 2026-10-11 by the founder, built in Pass 7 item 2, and written into the master spec (sections 5, 7.8, 14 and the section 23 change log). The founder had not answered the Pass 7 opener question on where preferences live, so the recommendation was followed, then accepted as proposed.
 - **Gap:** Section 14 asks for per-category preferences but 7.8 has no table for them. It also lists `email_log` columns without saying who may read it, and the permission matrix has no row for it.
 - **Proposal:**
   1. `notification_preferences`: id, user_id, category, database (bool), mail (bool), timestamps. Unique (user_id, category). No row means both channels are on. Categories come from `config('groibe.notifications.categories')`.
