@@ -216,7 +216,7 @@ Proposed changes only. The spec is edited by the founder, between passes, and lo
 
 ## SCR-024: Payouts and invoice references (spec sections 5, 6, 7.6, 11, 13, 14, 15.2)
 
-- **Status:** PROPOSED 2026-10-11, built in Pass 7 item 3. The founder answered "go with your recommendations" to the 15 questions put to them, so the points below are decided. The spec text is not edited until the founder accepts this request, as was done for SCR-023.
+- **Status:** ACCEPTED 2026-10-11 by the founder, built in Pass 7 item 3, and written into the master spec (sections 5, 6.12, 6.13, 7.6, 11, 13, 14, 15.2 and the section 23 change log). The founder had answered "go with your recommendations" to the 15 questions put to them.
 - **Gap:** Section 7.6 lists `payouts` and `invoice_refs` with statuses but no transitions. The permission matrix has a Payout row and none for invoice references. Nothing says where a payout amount comes from, what a contributor sees, or what an export contains.
 - **Proposal:**
   1. **Agreed amount.** The Team tab on a project gets a "Set amount" action for `delivery_manager` and `super_admin` (spec 7.4 `assignments.agreed_amount`). It cannot go below what is already planned or paid for the seat, and cannot be set on a declined or removed seat.

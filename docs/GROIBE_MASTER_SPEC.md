@@ -108,7 +108,8 @@ Legend: C create, R read, U update, D delete, A approve, own = own records only,
 | Application | - | CR own, withdraw | - | RUA | RUA | - | all |
 | Review | - | C own (after close), R about self | C (after acceptance) | RUA (moderate) | R | - | all |
 | Proof of Work | R published | RU own text, toggle visibility | consent toggle | CRUA | RUA | - | all |
-| Payout | - | R own | - | R | - | CRUD | all |
+| Payout | - | R own, from `approved` (SCR-024) | - | R | - | CRUD (approve, pay and cancel are update) | all |
+| Invoice reference | - | - | - | R | - | CRUD | all |
 | Thread (project conversation) | - | participant: active contributor with an active or completed seat | participant: org owner and manager | RU (moderate) | - | - | all |
 | Thread (support) | - | CR own | CR own | - | RU (answer) | - | all |
 | Agreements | - | accept | accept | R | R | R | CRUD |
@@ -190,6 +191,20 @@ Milestone: `planned -> in_progress -> in_qa -> shared -> client_accepted | clien
 - Admin-created clients: Admin creates Organization + owner user, sends invite email with signed activation link. Client sets password and accepts Client MSA.
 - Client cannot submit a Brief until Org is `org_verified` OR Admin sets `can_submit_briefs`.
 
+### 6.12 Payout (SCR-024)
+`planned -> approved -> paid` ; also `planned | approved -> cancelled`. `paid` and `cancelled` are final.
+- A payout is planned for an assignment that is `active` or `completed`, has an `agreed_amount`, and sits on a project that is not `draft`. The amount defaults to the agreed amount. It may link one milestone of the same project.
+- For a `fixed` seat, payouts that are not cancelled may not add up to more than the agreed amount. `hourly` seats have no cap.
+- Marking `paid` needs a transaction reference (6 to 30 letters and digits only, never bank account or card numbers, section 17.2) and a payment date that is not in the future. It may record TDS, which cannot exceed the amount.
+- Amount, assignment and project are locked once approved: a correction is a cancel and a new payout. Cancelling needs a reason, kept in the activity log. Only a `planned` payout can be edited or deleted.
+- Approving sets `approved_at`. The person who plans a payout may also approve it; every step is in the audit log.
+- The contributor is told when a payout is approved, paid, or cancelled after approval (section 14).
+
+### 6.13 Invoice reference (SCR-024)
+`draft -> sent -> paid` ; also `sent -> overdue -> paid`. There is no `cancelled` state.
+- Sending needs a due date and fills the issue date. A daily job (08:15) moves `sent` to `overdue` once the due date has passed and sends finance one digest. Only a `draft` can be deleted. A paid invoice cannot be edited.
+- Invoices adding up to more than the project's `contract_value` show a warning, never a block. `projects.zoho_invoice_ref` is left as it is: `invoice_refs` is the source of truth.
+
 ## 7. Data model
 
 Conventions:
@@ -250,8 +265,8 @@ Unique (project_id, user_id) where status in active states (enforce in code).
 
 ### 7.6 Money tracking (references only)
 
-**payouts**: id, assignment_id, user_id, project_id, amount, currency, status (`planned|approved|paid|cancelled`), milestone_id (nullable), reference (UTR / txn ref), tds_amount (nullable), paid_at, notes, created_by.
-**invoice_refs**: id, project_id, zoho_invoice_ref, amount, status (`draft|sent|paid|overdue`), issued_at, due_at.
+**payouts**: id, assignment_id, user_id, project_id, amount, currency, status (`planned|approved|paid|cancelled`), milestone_id (nullable), reference (UTR / txn ref), tds_amount (nullable), approved_at (nullable, set on approval, SCR-024), paid_at, notes, created_by. Net is worked out as amount minus TDS, never stored. `reference` holds a transaction reference only.
+**invoice_refs**: id, project_id, zoho_invoice_ref, amount, currency (char 3, default `INR`), status (`draft|sent|paid|overdue`), issued_at, due_at. Unique (project_id, zoho_invoice_ref). (SCR-024)
 
 ### 7.7 Agreements
 
@@ -378,7 +393,7 @@ Navigation: Dashboard, Discover (open roles), My Applications, My Work (assignme
 - **My Work**: project list, task board (todo/in progress/submitted/approved), task detail with comments and submission upload (files + note), version history.
 - **Portfolio**: proof-of-work drafts and published items, edit text, visibility toggle.
 - **Reputation**: facts and received reviews, plus "Review client" prompts after close.
-- **Payouts view**: read-only list of own payouts and statuses.
+- **Payouts view** (`/app/contributor/payouts`, SCR-024): read-only list of the contributor's own payouts from `approved` onward, including ones later paid or cancelled. Columns: project, milestone, amount, TDS, net, status, paid date, transaction reference. Never internal notes, who planned it, or anyone else's payouts. Active contributors only.
 
 ## 12. Client app (`/app/client`)
 
@@ -405,7 +420,7 @@ Navigation groups and resources:
 - **Community**: Open Roles, Applications, Proof of Work, Reviews (moderation).
 - **Website**: Homepage Sections, Featured Items, Testimonials, FAQs, Pages, Contact Messages.
 - **Taxonomy**: Categories, Skills, Project Types.
-- **Finance**: Payouts, Invoice References (exports).
+- **Finance**: Payouts, Invoice References (exports). Finance and super admin plan, approve, pay, cancel, edit and export; delivery managers read; nobody else sees them, and clients never do (SCR-024). The Team tab on a project has a "Set amount" action (delivery manager, super admin) for a seat's agreed amount, which payouts are planned against. Projects show read-only Payouts and Invoices tabs to staff who may read them.
 - **System**: Agreement Templates, Settings, Feature Flags, Audit Log (read-only), Email Log.
 
 Required admin capabilities:
@@ -425,7 +440,7 @@ Required admin capabilities:
 - Contributors cannot start threads with clients. Support thread (user <-> admin) is available to every contributor, whatever their review state, and to every client. Only the person who started it and admins holding `support.view` (community manager, super admin) can read it; admins answer support threads and do not start them. The `application` thread type is unused in v1.
 - A new-message notification carries no message text and no author name.
 - Notifications (database + email, user-configurable per category except security):
-  - Brief status changes, SOW sent/accepted, assignment invite, application status, task assigned/changed, submission QA result, deliverable shared, deliverable accepted/changes requested, review requested, new message, payout status change, onboarding status change.
+  - Brief status changes, SOW sent/accepted, assignment invite, application status, task assigned/changed, submission QA result, deliverable shared, deliverable accepted/changes requested, review requested, new message, payout status change (approved, paid, or cancelled after approval; the text names the project and status only, with no amount or reference), invoice references gone overdue (a daily digest to finance, no amounts), onboarding status change.
 - Bell icon with unread count, notifications page (`/notifications`, every signed-in role), mark read and mark all read. Preferences are at `/settings/notifications` (SCR-023).
 - Per-category preferences choose the database and email channels separately. Security categories are locked on: they always send both channels and cannot be saved as off. A category switched off on both channels sends nothing.
 - The email log (section 7.8) is read-only and super admin only (section 5).
@@ -447,7 +462,8 @@ Flow: upload CSV/XLSX -> map columns -> dry-run validation preview -> import -> 
 
 ### 15.2 Export
 
-CSV export for: contributors, organizations, clients, briefs, projects, applications, reviews, payouts, invoice refs. Respects permission matrix. Exports run synchronously up to 5,000 rows, else queued with email link.
+CSV export for: contributors, organizations, clients, briefs, projects, applications, reviews, payouts, invoice refs. Respects permission matrix. Exports run synchronously up to 5,000 rows, else queued with email link. (v1 builds the synchronous path only and asks the admin to narrow the filters above 5,000 rows.)
+Payout and invoice reference exports (SCR-024) need `import_export.payouts` (finance, super admin), respect the filters on screen, and are written to the audit log with their row count. Payout columns: id, project code and title, contributor name, milestone, amount, currency, TDS, net, status, transaction reference, paid date, created date. Invoice columns: project code and title, Zoho invoice, amount, currency, status, issue and due dates. No contributor email or phone and no notes. Text cells starting with `=`, `+`, `-`, `@`, tab or carriage return are prefixed with an apostrophe so spreadsheets cannot run them.
 
 ## 16. URL structure and route files
 
@@ -585,3 +601,4 @@ Stored in `feature_flags`, cached, toggled in Admin. Defaults:
 | 2026-10-10 | 6.5, 7.4, 22 | SCR-019: added `withdrawn -> submitted` (reapply reuses the same application row); rejected, declined and accepted applicants cannot reapply | Founder |
 | 2026-10-11 | 5, 7.8, 14 | SCR-023: added `notification_preferences`; `email_log` rules (one row per recipient, no body, failures logged, super admin read-only); preference and locked-category rules; notification centre and preferences pages | Founder |
 | 2026-10-11 | 5, 7.8, 14 | SCR-022: messaging access rules: `threads` and `support` permissions; conversation membership derived from live project data; project thread opens with the SOW and is read-only after close or cancel; admin-only internal messages; support thread privacy; unused `application` type; microsecond read markers | Founder |
+| 2026-10-11 | 5, 6.12, 6.13, 7.6, 11, 13, 14, 15.2 | SCR-024: payout and invoice reference state machines; `payouts.approved_at`, `invoice_refs.currency` and a unique invoice number per project; agreed amount cap and Set amount action; finance, delivery manager and contributor visibility; payout notifications without amounts; overdue invoice job; CSV export contents and formula protection | Founder |
