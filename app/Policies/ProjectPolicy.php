@@ -3,11 +3,13 @@
 namespace App\Policies;
 
 use App\Enums\AssignmentStatus;
+use App\Enums\FeatureFlag;
 use App\Enums\ProjectStatus;
 use App\Models\Assignment;
 use App\Models\Project;
 use App\Models\User;
 use App\Policies\Concerns\ChecksOrganizationAccess;
+use App\Services\FeatureFlags\FeatureFlags;
 
 /**
  * Spec 5 "Project": client R org, delivery_manager CRUA, community_manager and finance R.
@@ -71,6 +73,13 @@ class ProjectPolicy
                 ->where('user_id', $actor->getKey())
                 ->where('status', AssignmentStatus::Completed->value)
                 ->exists();
+    }
+
+    /** Opening the project's conversation (spec 14): the same people as `Thread::visibleTo`, while messaging is on. */
+    public function message(User $actor, Project $project): bool
+    {
+        return app(FeatureFlags::class)->enabled(FeatureFlag::Messaging)
+            && Project::query()->messageableBy($actor)->whereKey($project->getKey())->exists();
     }
 
     public function delete(User $actor, Project $project): bool

@@ -5,6 +5,8 @@ use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\DashboardRedirectController;
 use App\Http\Controllers\MediaDownloadController;
 use App\Livewire\Actions\Logout;
+use App\Livewire\Notifications\NotificationCentre;
+use App\Livewire\Settings\NotificationSettings;
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
 
@@ -48,6 +50,10 @@ Route::middleware('auth')->group(function () {
     Volt::route('settings/profile', 'settings.profile')->name('settings.profile');
     Volt::route('settings/password', 'settings.password')->name('settings.password');
     Volt::route('settings/appearance', 'settings.appearance')->name('settings.appearance');
+    Route::livewire('settings/notifications', NotificationSettings::class)->name('settings.notifications');
+
+    // The notification centre (spec 14) and its bell, for every signed-in role.
+    Route::livewire('notifications', NotificationCentre::class)->name('notifications.index');
 
     Route::post('impersonate/stop', StopImpersonationController::class)->name('impersonate.stop');
 

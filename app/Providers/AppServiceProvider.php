@@ -14,9 +14,11 @@ use App\Models\Category;
 use App\Models\CmsSection;
 use App\Models\ContactMessage;
 use App\Models\Deliverable;
+use App\Models\EmailLog;
 use App\Models\Faq;
 use App\Models\FeaturedItem;
 use App\Models\FeatureFlag;
+use App\Models\Message;
 use App\Models\Milestone;
 use App\Models\Organization;
 use App\Models\Page;
@@ -32,6 +34,7 @@ use App\Models\Submission;
 use App\Models\Task;
 use App\Models\TaskComment;
 use App\Models\Testimonial;
+use App\Models\Thread;
 use App\Models\User;
 use App\Policies\ActivityPolicy;
 use App\Policies\AgreementAcceptancePolicy;
@@ -41,8 +44,10 @@ use App\Policies\BriefPolicy;
 use App\Policies\CmsContentPolicy;
 use App\Policies\ContactMessagePolicy;
 use App\Policies\DeliverablePolicy;
+use App\Policies\EmailLogPolicy;
 use App\Policies\FeatureFlagPolicy;
 use App\Policies\MediaPolicy;
+use App\Policies\MessagePolicy;
 use App\Policies\MilestonePolicy;
 use App\Policies\OrganizationPolicy;
 use App\Policies\ProfilePolicy;
@@ -56,8 +61,10 @@ use App\Policies\SubmissionPolicy;
 use App\Policies\TaskCommentPolicy;
 use App\Policies\TaskPolicy;
 use App\Policies\TaxonomyPolicy;
+use App\Policies\ThreadPolicy;
 use App\Policies\UserPolicy;
 use App\Services\FeatureFlags\FeatureFlags;
+use App\Services\Notifications\EmailLogger;
 use App\Services\Projects\EloquentProjectTransitionGuards;
 use App\Services\Projects\ProjectTransitionGuards;
 use App\Services\Settings\Settings;
@@ -68,6 +75,8 @@ use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Middleware\TrustProxies;
 use Illuminate\Http\Request;
+use Illuminate\Mail\Events\MessageSent;
+use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
@@ -119,6 +128,10 @@ class AppServiceProvider extends ServiceProvider
 
         View::composer('components.layouts.public', fn ($view) => $view->with('nav', app(PublicNavigation::class)->links()));
 
+        // Spec 7.8, 14: every email outcome lands in `email_log`.
+        Event::listen(MessageSent::class, [EmailLogger::class, 'sent']);
+        Event::listen(JobFailed::class, [EmailLogger::class, 'queuedNotificationFailed']);
+
         Event::listen(Login::class, function (Login $event): void {
             if (! session()->has(StartImpersonation::SESSION_KEY) && $event->user instanceof User) {
                 $event->user->forceFill(['last_login_at' => now()])->saveQuietly();
@@ -153,6 +166,9 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Faq::class, CmsContentPolicy::class);
         Gate::policy(Page::class, CmsContentPolicy::class);
         Gate::policy(ContactMessage::class, ContactMessagePolicy::class);
+        Gate::policy(EmailLog::class, EmailLogPolicy::class);
+        Gate::policy(Thread::class, ThreadPolicy::class);
+        Gate::policy(Message::class, MessagePolicy::class);
         Gate::policy(Media::class, MediaPolicy::class);
 
         // Spec 17.2: minimum 10 characters, compromised-password check where available.

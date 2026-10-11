@@ -44,12 +44,17 @@ class PermissionMatrix
         'proof_of_work' => ['crua', 'rua', ''],
         'payouts' => ['r', '', 'crud'],
         'agreements' => ['r', 'r', 'r'],
+        // Pass 7 (SCR-022): moderating project threads, and answering support threads.
+        'threads' => ['ru', '', ''],
+        'support' => ['', 'ru', ''],
         'cms' => ['', 'crud', ''],
         // SCR-021: the contact form inbox. Read and update for community managers; delete is super admin only (personal data).
         'contact_messages' => ['', 'ru', ''],
         'admin_users' => ['', '', ''],
         'taxonomy' => ['r', 'crud', ''],
         'project_types' => ['r', '', ''],
+        // Pass 7 (SCR-023): the email log is evidence with recipient addresses, so super admin only.
+        'email_log' => ['', '', ''],
         'settings' => ['', '', ''],
         'feature_flags' => ['', '', ''],
     ];

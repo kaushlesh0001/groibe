@@ -3,6 +3,9 @@
         <a class="text-sm text-brand-blue underline" href="{{ route('contributor.work') }}" wire:navigate>All my work</a>
         <flux:heading size="xl" level="1">{{ $project->title }}</flux:heading>
         <flux:text>Your tasks on this project.</flux:text>
+        @if ($canMessage)
+            <div><flux:button size="sm" :href="route('contributor.messages.project', $project)">Project messages</flux:button></div>
+        @endif
     </div>
 
     <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">

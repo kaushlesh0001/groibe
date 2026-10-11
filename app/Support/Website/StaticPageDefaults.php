@@ -52,6 +52,7 @@ class StaticPageDefaults
                     'Groibe staffs the project and manages the team. You do not hire contributors directly.',
                     'Work is checked by Groibe first. You review each deliverable and accept it or ask for changes.',
                     'You see progress, and anything waiting for your action, in your client area.',
+                    'You can message the team in the project thread. Groibe staff keep the conversation in one place.',
                 ]],
                 ['heading' => 'When it is done', 'items' => [
                     'You can review the contributors who worked on your project.',

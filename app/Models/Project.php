@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\AssignmentStatus;
+use App\Enums\OrgRole;
 use App\Enums\ProjectStatus;
 use App\Enums\ShowcaseConsent;
 use App\Models\Concerns\HasUuid;
@@ -138,6 +140,12 @@ class Project extends Model implements HasMedia
         return $this->hasManyThrough(Deliverable::class, Milestone::class);
     }
 
+    /** @return HasMany<Thread, $this> */
+    public function threads(): HasMany
+    {
+        return $this->hasMany(Thread::class);
+    }
+
     /** @return HasMany<Task, $this> */
     public function tasks(): HasMany
     {
@@ -148,6 +156,31 @@ class Project extends Model implements HasMedia
     public function scopeForOrganization(Builder $query, Organization|int $organization): void
     {
         $query->where('organization_id', $organization instanceof Organization ? $organization->getKey() : $organization);
+    }
+
+    /**
+     * Projects whose conversation this person belongs to (spec 14, 22). Drafts are internal, so nobody has a thread there.
+     * Staff need `threads.view`; contributors an active or completed seat and an active account; clients the owner or
+     * manager role in the organization (viewers are read-only and have no seat in the conversation).
+     *
+     * @param  Builder<Project>  $query
+     */
+    public function scopeMessageableBy(Builder $query, User $user): void
+    {
+        $query->where('projects.status', '!=', ProjectStatus::Draft->value);
+
+        match (true) {
+            $user->isAdmin() => $user->can('threads.view') ? null : $query->whereRaw('1 = 0'),
+            $user->isActiveContributor() => $query->whereIn('projects.id', Assignment::query()
+                ->where('user_id', $user->getKey())
+                ->whereIn('status', [AssignmentStatus::Active->value, AssignmentStatus::Completed->value])
+                ->select('project_id')),
+            $user->isClient() => $query->whereIn('projects.organization_id', OrganizationUser::query()
+                ->where('user_id', $user->getKey())
+                ->whereIn('org_role', [OrgRole::Owner->value, OrgRole::Manager->value])
+                ->select('organization_id')),
+            default => $query->whereRaw('1 = 0'),
+        };
     }
 
     /** Latest SOW version that is not superseded. */

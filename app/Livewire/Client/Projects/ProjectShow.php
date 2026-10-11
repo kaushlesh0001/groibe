@@ -85,6 +85,7 @@ class ProjectShow extends Component
             'teamMembers' => $team->members($project),
             'shortlist' => app(ClientShortlist::class)->entries($project),
             'project' => $project,
+            'canMessage' => $user->can('message', $project),
             'sows' => $sows,
             'openSow' => $open,
             'canAccept' => $open instanceof Sow && $user->can('accept', $open),

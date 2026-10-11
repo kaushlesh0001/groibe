@@ -11,6 +11,7 @@ use App\Filament\Admin\Resources\Projects\RelationManagers\DeliverablesRelationM
 use App\Filament\Admin\Resources\Projects\RelationManagers\MilestonesRelationManager;
 use App\Filament\Admin\Resources\Projects\RelationManagers\SowsRelationManager;
 use App\Filament\Admin\Resources\Projects\RelationManagers\TasksRelationManager;
+use App\Filament\Admin\Resources\Projects\RelationManagers\ThreadsRelationManager;
 use App\Filament\Admin\Resources\Projects\Schemas\ProjectForm;
 use App\Filament\Admin\Resources\Projects\Tables\ProjectsTable;
 use App\Models\Project;
@@ -53,6 +54,7 @@ class ProjectResource extends Resource
             MilestonesRelationManager::class,
             TasksRelationManager::class,
             DeliverablesRelationManager::class,
+            ThreadsRelationManager::class,
         ];
     }
 

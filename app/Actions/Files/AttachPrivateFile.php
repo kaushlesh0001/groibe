@@ -3,6 +3,7 @@
 namespace App\Actions\Files;
 
 use App\Models\Brief;
+use App\Models\Message;
 use App\Models\Project;
 use App\Models\Submission;
 use App\Models\User;
@@ -34,7 +35,7 @@ class AttachPrivateFile
      *
      * @throws ValidationException
      */
-    public function store(Brief|Project|Submission $model, UploadedFile $file, User $actor, string $collection, int $maxKb): Media
+    public function store(Brief|Message|Project|Submission $model, UploadedFile $file, User $actor, string $collection, int $maxKb): Media
     {
         $this->validate($file, $maxKb);
 

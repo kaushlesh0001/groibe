@@ -184,3 +184,32 @@ Proposed changes only. The spec is edited by the founder, between passes, and lo
   5. A `needs_review` row can never be active (enforced when the model is saved and in the `active` scope), and admins clear the flag with an "Approve wording" action before switching the row on.
 - **Decided by the founder in the same session:** the contact form sends to `CONTACT_EMAIL` (config/groibe.php, `contact@groibe.com` in `.env.example`); `/terms` and `/privacy` come from the active agreement template of that type and return 404 until one is published; stats overrides live in the stats section's content; "projects delivered" means projects in `accepted` or `closed`.
 - **Code status:** Pass 8.
+
+## SCR-022: Messaging access rules (spec sections 5, 7.8, 14)
+
+- **Status:** PROPOSED 2026-10-11, built in Pass 7 item 1. The founder gave the privacy rules (participants see only their threads, internal messages never reach clients or contributors, support threads are private to the person and the admin team) and told the Pass 7 session to proceed. The remaining points below were not answered one by one, so they follow the recommendations from the Pass 7 opener. Spec sections 5, 7.8 and 23 are not edited until approved.
+- **Gap:** Section 14 names the participants of a project thread but the permission matrix has no Threads row, `thread_participants` has only `last_read_at`, `threads.type` lists `application` with no use, and nothing says who answers support threads or when a project thread starts.
+- **Proposal:**
+  1. Two permission groups (view, update): `threads` for project conversations, `delivery_manager` `ru` and `super_admin` all; `support` for support threads, `community_manager` `ru` and `super_admin` all. Nobody else, so `finance_ops` has no access to either.
+  2. Membership is derived, never stored. A project thread is readable by: admins holding `threads.view`; active contributors with an `active` or `completed` assignment on the project; client `owner` and `manager` of the project's organization (viewers are read-only and have no seat in the conversation). A support thread is readable by the person who started it and admins holding `support.view`. `thread_participants` only keeps each person's `last_read_at`, and a removed contributor loses access at once.
+  3. A project thread is created when the SOW is sent (clients do not see a project before then, section 22) and on first use for older projects. One per project. Nothing exists for a `draft` project.
+  4. A project thread is read-only for clients and contributors once the project is `closed` or `cancelled`. Admins can always post.
+  5. Only admins may post `is_internal` messages. Internal messages are never returned to anyone else by any query, page, notification or file link.
+  6. Support threads are started by contributors (in any review state) and clients. Admins answer them and do not start them.
+  7. `threads.type = application` is kept and unused in v1, like `rejected` on SOWs (SCR-006).
+  8. `messages.created_at` and `thread_participants.last_read_at` store microseconds, so "unread" is exact. `threads.last_message_at` is added for list order.
+  9. The `message` notification category is added. The notification carries no message text and no author name.
+- **Code status:** Pass 7 item 1.
+
+## SCR-023: Notification preferences and the email log (spec sections 5, 7.8, 13, 14)
+
+- **Status:** PROPOSED 2026-10-11, built in Pass 7 item 2. The founder did not answer the Pass 7 opener question on where preferences live, so the recommendation was followed. Spec sections 5, 7.8 and 23 are not edited until approved.
+- **Gap:** Section 14 asks for per-category preferences but 7.8 has no table for them. It also lists `email_log` columns without saying who may read it, and the permission matrix has no row for it.
+- **Proposal:**
+  1. `notification_preferences`: id, user_id, category, database (bool), mail (bool), timestamps. Unique (user_id, category). No row means both channels are on. Categories come from `config('groibe.notifications.categories')`.
+  2. Locked categories (`security`) always send both channels. A stored row for them is ignored and the screen and the service refuse to save one as off.
+  3. A category switched off on both channels sends nothing.
+  4. `email_log` as in 7.8 (user_id nullable, template, to, status `sent|failed`, error, sent_at, timestamps). One row per recipient address. It stores the template (class) name, the address and a trimmed error (500 characters), never the body or subject. A row is written for every message the mailer sends, and for a queued notification email or the contact inbox email that fails after its last try.
+  5. A permission group `email_log` (view only), super admin only. Nobody can create, edit or delete a row from the admin.
+  6. The bell links to a notification centre at `/notifications` for every signed-in role, and preferences live at `/settings/notifications`.
+- **Code status:** Pass 7 item 2.

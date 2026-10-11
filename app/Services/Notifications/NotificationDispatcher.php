@@ -11,11 +11,13 @@ use Illuminate\Database\Eloquent\Collection;
 
 /**
  * Single entry point for platform notifications (spec 14) so the delivery provider can change later.
- * Per-category preferences are a placeholder: every active user gets database and mail, and
- * locked categories (security) can never be turned off.
+ * Each recipient's per-category choices come from NotificationPreferences. Locked categories (security) always
+ * get both channels, and a category switched off on both sends nothing.
  */
 class NotificationDispatcher
 {
+    public function __construct(private NotificationPreferences $preferences) {}
+
     /** @param  iterable<User>|User  $recipients */
     public function send(iterable|User $recipients, GroibeNotification $notification): void
     {
@@ -26,8 +28,15 @@ class NotificationDispatcher
                 continue;
             }
 
+            $channels = $this->preferences->channelsFor($user, $notification->category());
+
+            // Everything switched off for this category: nothing to send.
+            if ($channels === []) {
+                continue;
+            }
+
             $copy = clone $notification;
-            $copy->channels = $this->channelsFor($user, $notification->category());
+            $copy->channels = $channels;
             $user->notify($copy);
         }
     }
@@ -71,12 +80,5 @@ class NotificationDispatcher
         return User::permission($permission)
             ->where('status', UserStatus::Active->value)
             ->get();
-    }
-
-    /** @return list<string> */
-    private function channelsFor(User $user, string $category): array
-    {
-        // Placeholder until Pass 7 stores preferences. Locked categories ignore any preference.
-        return ['database', 'mail'];
     }
 }
