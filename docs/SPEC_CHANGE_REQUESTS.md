@@ -278,3 +278,10 @@ Proposed changes only. The spec is edited by the founder, between passes, and lo
 - **Gap:** The permission matrix lists exports for each role but not who may import clients.
 - **Decision:** New permission `import_export.import_clients`, granted to `super_admin` and `delivery_manager` only. Contributor imports follow the existing Import/Export row.
 - **Code status:** Not built yet.
+
+## SCR-032: Email log retention (spec sections 5, 14, 17.1)
+
+- **Status:** ACCEPTED 2026-10-12 by the founder, to be built in Pass 9 item 6, and written into the master spec (sections 5, 14, 17.1 and the section 23 change log).
+- **Gap:** The email log holds recipient addresses and grows with every message, and the spec says nobody edits or deletes its rows. It has no retention rule.
+- **Decision:** A daily scheduled job deletes `sent` rows older than 90 days and `failed` rows older than 180 days, judged by `created_at`. Nobody can edit or delete a row from the admin; the job is the only deleter. Each run writes the number of rows removed to the audit log.
+- **Code status:** Not built yet.

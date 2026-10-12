@@ -117,7 +117,7 @@ Legend: C create, R read, U update, D delete, A approve, own = own records only,
 | Contact messages | - | - | - | - | RU | - | all (delete: super admin only) |
 | Settings, flags | - | - | - | - | - | - | CRUD |
 | Audit log | - | - | - | R own actions | R own actions | R own | R all |
-| Email log | - | - | - | - | - | - | R (read-only, nobody edits or deletes) |
+| Email log | - | - | - | - | - | - | R (read-only, nobody edits; only the retention job deletes, SCR-032) |
 | Import/Export | - | - | - | contributors+projects, and import of clients (SCR-031) | contributors | payouts | all |
 
 Enforcement: Laravel Policies for every model. Filament resources must call the same policies. No authorization in controllers by role-name string checks; use `can()` abilities.
@@ -452,7 +452,7 @@ Required admin capabilities:
   - Brief status changes, SOW sent/accepted, assignment invite, application status, task assigned/changed, submission QA result, deliverable shared, deliverable accepted/changes requested, review requested, new message, payout status change (approved, paid, or cancelled after approval; the text names the project and status only, with no amount or reference), invoice references gone overdue (a daily digest to finance, no amounts), onboarding status change.
 - Bell icon with unread count, notifications page (`/notifications`, every signed-in role), mark read and mark all read. Preferences are at `/settings/notifications` (SCR-023).
 - Per-category preferences choose the database and email channels separately. Security categories are locked on: they always send both channels and cannot be saved as off. A category switched off on both channels sends nothing.
-- The email log (section 7.8) is read-only and super admin only (section 5).
+- The email log (section 7.8) is read-only and super admin only (section 5). A daily job deletes `sent` rows older than 90 days and `failed` rows older than 180 days (SCR-032).
 - Messages as built: up to 5,000 characters, up to 5 attached files of 20 MB each (the document allowlist, section 17.2), and 20 messages a minute per person. Threads refresh every 20 seconds while the page is visible. Unread counts show per conversation and as a badge in the sidebar. Names: a client sees a contributor by first name, or as "Project team" when the project hides its team (section 12); a contributor sees a client person by first name and organization; people outside Groibe see staff as "First name (Groibe)"; admins see full names. An inbox shows the time of the latest message the person may see, so internal notes leave no trace for outsiders.
 - Notification categories as built: `brief`, `sow`, `project`, `assignment`, `application`, `task`, `submission`, `deliverable`, `message`, `payout`, `review`, `portfolio`, `onboarding`, `security` (locked). Besides the events listed above, notifications also go out for: an assignment answered or removed, work received for QA, a milestone ready to share and the client's answer, a project delivered, accepted and closed, a daily overdue task digest to the delivery manager, an open role invitation, proof-of-work changes, and a review waiting in the moderation queue (to admins).
 - Email via Laravel Mail with markdown templates; templates editable only in code in v1 (listed in `resources/views/emails`). Use a `NotificationDispatcher` service so providers can change later.
@@ -493,7 +493,7 @@ Route files: `routes/public.php`, `routes/contributor.php`, `routes/client.php`,
 - Target: PHP 8.3, MySQL/MariaDB, no persistent processes, no Node at runtime, no Redis, no websockets.
 - Queue driver `database`, drained by cron: `schedule:run` every minute, which runs `queue:work --stop-when-empty --max-time=50`.
 - Cache driver `file` (switch to `database` if file perms are an issue). Sessions `database`.
-- Scheduled jobs: reputation recompute, stale-invite cleanup, sitemap refresh, daily DB-size check, notification digests. As built: the queue drain (every minute), the overdue task digest (daily 08:00) and the overdue invoice marking with its digest to finance (daily 08:15), in the application time zone.
+- Scheduled jobs: email log retention (daily, SCR-032), reputation recompute, stale-invite cleanup, sitemap refresh, daily DB-size check, notification digests. As built: the queue drain (every minute), the overdue task digest (daily 08:00) and the overdue invoice marking with its digest to finance (daily 08:15), in the application time zone.
 - Assets built locally with Vite and committed or uploaded (`public/build`). The server never runs npm.
 - Do not rely on `storage:link` symlinks working. Public media goes to a dedicated public disk under `public/` or is served through a controller. Private files served only via authorized controller routes.
 - Keep memory use modest (<256MB per request). Paginate everything. Avoid N+1 (use eager loading; add `Model::preventLazyLoading()` in non-production).
@@ -622,4 +622,5 @@ Stored in `feature_flags`, cached, toggled in Admin. Defaults:
 | 2026-10-12 | 7.1, 17.2, 18 | SCR-029: TOTP 2FA via Filament app authentication, secret and recovery codes on `users`, always on for super admin, flag governs other admins, artisan reset command | Founder |
 | 2026-10-12 | 17.2 | SCR-030: showcase consent changes are written to the activity log | Founder |
 | 2026-10-12 | 5, 15.1 | SCR-031: permission `import_export.import_clients` for delivery manager and super admin | Founder |
+| 2026-10-12 | 5, 14, 17.1 | SCR-032: daily retention job for the email log, `sent` rows after 90 days and `failed` rows after 180 days | Founder |
 | 2026-10-12 | 9, 10.2, 10.4, 11, 13, 14, 17.1 | Recorded as built, no new behaviour: proof of work state moves and contributor rights; header and footer menus and built-in pages; `FAQPage` data; Payouts in contributor navigation; the admin Messages screen; message limits and who sees which name; notification categories and the extra events; the scheduled jobs that exist | Founder |
