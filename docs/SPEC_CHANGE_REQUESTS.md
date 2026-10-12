@@ -229,3 +229,52 @@ Proposed changes only. The spec is edited by the founder, between passes, and lo
   8. **Notifications.** A `payout` category (can be switched off). The contributor is told when a payout is approved, paid, or cancelled after approval; a plan cancelled before approval is silent. Messages name the project and the status only, with no amount or reference. Finance is told by the daily digest of invoices that just became overdue (project code and invoice number, no amounts).
   9. **CSV export** from the two Finance screens, respecting the filters on screen, up to 5,000 rows (above that the admin is asked to narrow the filters; the queued, emailed-link route of 15.2 is not built). Payout columns: id, project code and title, contributor name, milestone, amount, currency, TDS, net, status, UTR reference, paid date, created date. Invoice columns: project code and title, Zoho invoice, amount, currency, status, issue and due dates. No contributor email or phone and no notes. Text cells that begin with `=`, `+`, `-`, `@`, tab or carriage return get an apostrophe prefix. Each export is written to the audit log with its row count.
 - **Code status:** Pass 7 item 3.
+
+## SCR-025: Imports are CSV only in v1 (spec section 15.1)
+
+- **Status:** ACCEPTED 2026-10-12 by the founder, to be built in Pass 9 item 2, and written into the master spec (section 15.1 and the section 23 change log).
+- **Gap:** Section 15.1 says "CSV/XLSX", but the stack has no spreadsheet library and the spec names none.
+- **Decision:** Imports accept CSV only. XLSX is deferred to a later release and is logged in `docs/SUGGESTIONS.md`. Exported CSV files start with a UTF-8 byte order mark so Excel reads names correctly.
+- **Code status:** Not built yet.
+
+## SCR-026: Exports above 5,000 rows are refused (spec section 15.2)
+
+- **Status:** ACCEPTED 2026-10-12 by the founder, to be built in Pass 9 item 3, and written into the master spec (section 15.2 and the section 23 change log).
+- **Gap:** Section 15.2 promised a queued export with an emailed link above 5,000 rows, then noted that v1 builds the synchronous path only. The prompt pack asks for queued exports.
+- **Decision:** The queued path is not built. Above 5,000 rows an export is refused with a message asking the admin to narrow the filters. This applies to every export, payouts and invoice references included.
+- **Code status:** Payout and invoice exports already behave this way (SCR-024). The other exports follow in Pass 9 item 3.
+
+## SCR-027: Import bookkeeping columns (spec sections 7.9, 15.1)
+
+- **Status:** ACCEPTED 2026-10-12 by the founder, to be built in Pass 9 item 2, and written into the master spec (sections 7.9, 15.1 and the section 23 change log).
+- **Gap:** `imports` has no place for the column mapping, the dry-run result or the rows skipped.
+- **Decision:** `imports` also gets `mapping` (json), `dry_run` (bool) and `skipped_rows` (int). `status` is a backed enum: `uploaded`, `validated`, `queued`, `running`, `completed`, `failed`. Transitions are one Action each; an illegal one throws `IllegalTransition`.
+- **Code status:** Not built yet.
+
+## SCR-028: Data requests (spec sections 7.9, 17.2)
+
+- **Status:** ACCEPTED 2026-10-12 by the founder, to be built in Pass 9 item 5, and written into the master spec (sections 7.9, 17.2 and the section 23 change log).
+- **Gap:** Section 17.2 asks for user data export and deletion requests, processed by an admin, with no table, states or permission.
+- **Decision:** New table `data_requests`: id, uuid, user_id, type (`export|deletion`), status (`open|in_progress|completed|rejected`), note, handled_by (nullable), handled_at (nullable), timestamps. Deletion means anonymise and soft delete, never a hard delete, so payouts and the audit trail stay intact. Only `super_admin` may process requests. Every state change is in the audit log.
+- **Code status:** Not built yet.
+
+## SCR-029: Two-factor authentication for admins (spec sections 7.1, 17.2, 18)
+
+- **Status:** ACCEPTED 2026-10-12 by the founder, to be built in Pass 9 item 4, and written into the master spec (sections 7.1, 17.2 and the section 23 change log).
+- **Gap:** Section 17.2 says "Filament-compatible package or custom" and no storage exists.
+- **Decision:** Filament's built-in app authentication (TOTP). `users` gets an encrypted secret and encrypted recovery codes. 2FA is always required for `super_admin`, whatever the `two_factor_admin` flag says. The flag enforces it for every other admin role. An artisan command resets 2FA for one user by email, so a locked-out admin can be recovered from the server; the reset is written to the audit log.
+- **Code status:** Not built yet.
+
+## SCR-030: Showcase consent changes are audited (spec section 17.2)
+
+- **Status:** ACCEPTED 2026-10-12 by the founder, to be checked in Pass 9 item 5, and written into the master spec (section 17.2 and the section 23 change log).
+- **Gap:** Consent timestamps are stored for agreements. Showcase consent (`projects.showcase_consent`) has no stated audit rule.
+- **Decision:** `agreement_acceptances` is enough for agreements. A change to `showcase_consent` is recorded in the activity log. No data model change. A test is added if one is missing.
+- **Code status:** To be verified.
+
+## SCR-031: Permission to import clients (spec sections 5, 15.1)
+
+- **Status:** ACCEPTED 2026-10-12 by the founder, to be built in Pass 9 item 2, and written into the master spec (section 5 and the section 23 change log).
+- **Gap:** The permission matrix lists exports for each role but not who may import clients.
+- **Decision:** New permission `import_export.import_clients`, granted to `super_admin` and `delivery_manager` only. Contributor imports follow the existing Import/Export row.
+- **Code status:** Not built yet.

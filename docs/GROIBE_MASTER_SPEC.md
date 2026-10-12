@@ -118,7 +118,7 @@ Legend: C create, R read, U update, D delete, A approve, own = own records only,
 | Settings, flags | - | - | - | - | - | - | CRUD |
 | Audit log | - | - | - | R own actions | R own actions | R own | R all |
 | Email log | - | - | - | - | - | - | R (read-only, nobody edits or deletes) |
-| Import/Export | - | - | - | contributors+projects | contributors | payouts | all |
+| Import/Export | - | - | - | contributors+projects, and import of clients (SCR-031) | contributors | payouts | all |
 
 Enforcement: Laravel Policies for every model. Filament resources must call the same policies. No authorization in controllers by role-name string checks; use `can()` abilities.
 
@@ -217,7 +217,7 @@ Conventions:
 
 ### 7.1 Identity and organizations
 
-**users**: id, uuid, name, email (unique), password, role (`admin|contributor|client`), status (`active|pending|suspended`), email_verified_at, last_login_at, timezone, remember_token, deleted_at.
+**users**: id, uuid, name, email (unique), password, role (`admin|contributor|client`), status (`active|pending|suspended`), email_verified_at, last_login_at, timezone, remember_token, two_factor_secret (encrypted, nullable), two_factor_recovery_codes (encrypted, nullable), two_factor_confirmed_at (nullable), deleted_at. (SCR-029)
 
 **profiles** (contributor and client user profile, 1:1 users): user_id, headline, bio, phone, city, state, country, photo_path, linkedin_url, portfolio_url, availability (`available|limited|unavailable`), hours_per_week, work_modes (json: remote/hybrid/onsite), experience_years, languages (json), is_public (bool), slug (unique, nullable), onboarding_state, completed_at.
 
@@ -294,7 +294,8 @@ Unique (project_id, user_id) where status in active states (enforce in code).
 **settings**: key/value (typed) store with cache.
 **feature_flags**: key, enabled, notes. Keys listed in section 18.
 **activity_log**: from spatie/laravel-activitylog (admin audit trail; includes impersonation events).
-**imports**: id, type, file_path, status, total_rows, success_rows, failed_rows, error_report_path, created_by.
+**imports**: id, type, file_path, status (`uploaded|validated|queued|running|completed|failed`), mapping (json), dry_run (bool), total_rows, success_rows, failed_rows, skipped_rows, error_report_path, created_by. (SCR-027)
+**data_requests** (SCR-028): id, uuid, user_id, type (`export|deletion`), status (`open|in_progress|completed|rejected`), note, handled_by (nullable), handled_at (nullable), timestamps. Deletion means anonymise and soft delete, never a hard delete. Only a super admin processes requests.
 
 ### 7.10 Required indexes (minimum)
 
@@ -461,7 +462,7 @@ Required admin capabilities:
 
 ### 15.1 Import (Admin, Filament import actions)
 
-Flow: upload CSV/XLSX -> map columns -> dry-run validation preview -> import -> downloadable error report. Imports run queued in chunks of 200 rows. Idempotent by email (users) and by name+website or gstin (organizations).
+Flow: upload CSV (XLSX is deferred, SCR-025) -> map columns -> dry-run validation preview -> import -> downloadable error report. Imports run queued in chunks of 200 rows. Idempotent by email (users) and by name+website or gstin (organizations). Importing clients needs `import_export.import_clients` (delivery manager, super admin, SCR-031).
 
 **Contributors CSV**: name, email, phone, city, state, headline, bio, skills (semicolon-separated names), experience_years, linkedin_url, availability, status (default `pending`).
 **Clients CSV**: organization_name, website, industry, size_band, city, state, gstin, contact_name, contact_email, contact_phone, designation, org_role (default `owner` for the first contact, `manager` for others), zoho_crm_id (optional).
@@ -472,7 +473,7 @@ Flow: upload CSV/XLSX -> map columns -> dry-run validation preview -> import -> 
 
 ### 15.2 Export
 
-CSV export for: contributors, organizations, clients, briefs, projects, applications, reviews, payouts, invoice refs. Respects permission matrix. Exports run synchronously up to 5,000 rows, else queued with email link. (v1 builds the synchronous path only and asks the admin to narrow the filters above 5,000 rows.)
+CSV export for: contributors, organizations, clients, briefs, projects, applications, reviews, payouts, invoice refs. Respects permission matrix. Exports run synchronously up to 5,000 rows. Above that the export is refused with a message asking the admin to narrow the filters; the queued path is not built (SCR-026). Every CSV starts with a UTF-8 byte order mark (SCR-025).
 Payout and invoice reference exports (SCR-024) need `import_export.payouts` (finance, super admin), respect the filters on screen, and are written to the audit log with their row count. Payout columns: id, project code and title, contributor name, milestone, amount, currency, TDS, net, status, transaction reference, paid date, created date. Invoice columns: project code and title, Zoho invoice, amount, currency, status, issue and due dates. No contributor email or phone and no notes. Text cells starting with `=`, `+`, `-`, `@`, tab or carriage return are prefixed with an apostrophe so spreadsheets cannot run them.
 
 ## 16. URL structure and route files
@@ -505,9 +506,9 @@ Route files: `routes/public.php`, `routes/contributor.php`, `routes/client.php`,
 - File uploads: allowlist extensions and MIME, size caps (profile photo 2 MB, logo 2 MB, portfolio image 5 MB, documents 20 MB, submissions 25 MB), randomized storage names, no executable types, images re-encoded where possible.
 - Private files: `private` disk only; access via signed, authorized routes; never guessable paths.
 - Security headers via middleware (HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, a conservative CSP).
-- Admin: optional TOTP 2FA for admin roles (Filament-compatible package or custom), enforced for `super_admin`.
+- Admin: TOTP 2FA through Filament's app authentication, always enforced for `super_admin` and, while `two_factor_admin` is on, for every other admin role. An artisan command resets 2FA for one user by email (SCR-029).
 - Sensitive data: do not collect government IDs, bank accounts, or card numbers in v1. Payout `reference` stores only a transaction reference.
-- Audit: activity log on all admin writes, role changes, impersonation, agreement acceptances, exports.
+- Audit: activity log on all admin writes, role changes, impersonation, agreement acceptances, showcase consent changes, exports. (SCR-030)
 - DPDP-oriented privacy: collect minimum data, state purpose, allow user data export and deletion request (admin-processed), consent timestamps stored.
 
 ### 17.3 Performance
@@ -614,4 +615,11 @@ Stored in `feature_flags`, cached, toggled in Admin. Defaults:
 | 2026-10-11 | 5, 6.12, 6.13, 7.6, 11, 13, 14, 15.2 | SCR-024: payout and invoice reference state machines; `payouts.approved_at`, `invoice_refs.currency` and a unique invoice number per project; agreed amount cap and Set amount action; finance, delivery manager and contributor visibility; payout notifications without amounts; overdue invoice job; CSV export contents and formula protection | Founder |
 | 2026-10-12 | 7.5 | SCR-020: `proof_of_work.slug` (unique, immutable) and unique (user_id, project_id); `organization_stats` columns and the five organization review criteria; `reputation_facts.tasks_with_due_date` | Founder |
 | 2026-10-12 | 5, 7.9, 10.2, 13 | SCR-021: `contact_messages` table; `needs_review` on `cms_sections`, `testimonials`, `faqs` and `pages` (never active until approved); unique (type, item_id) on `featured_items`; `contact_messages` permission group (community manager `ru`, delete super admin only) | Founder |
+| 2026-10-12 | 15.1 | SCR-025: imports are CSV only in v1, XLSX deferred; exported CSV starts with a UTF-8 BOM | Founder |
+| 2026-10-12 | 15.2 | SCR-026: exports above 5,000 rows are refused, the queued path is not built | Founder |
+| 2026-10-12 | 7.9, 15.1 | SCR-027: `imports` gains `mapping`, `dry_run`, `skipped_rows` and a status enum | Founder |
+| 2026-10-12 | 7.9, 17.2 | SCR-028: `data_requests` table; deletion is anonymise and soft delete; super admin only | Founder |
+| 2026-10-12 | 7.1, 17.2, 18 | SCR-029: TOTP 2FA via Filament app authentication, secret and recovery codes on `users`, always on for super admin, flag governs other admins, artisan reset command | Founder |
+| 2026-10-12 | 17.2 | SCR-030: showcase consent changes are written to the activity log | Founder |
+| 2026-10-12 | 5, 15.1 | SCR-031: permission `import_export.import_clients` for delivery manager and super admin | Founder |
 | 2026-10-12 | 9, 10.2, 10.4, 11, 13, 14, 17.1 | Recorded as built, no new behaviour: proof of work state moves and contributor rights; header and footer menus and built-in pages; `FAQPage` data; Payouts in contributor navigation; the admin Messages screen; message limits and who sees which name; notification categories and the extra events; the scheduled jobs that exist | Founder |
