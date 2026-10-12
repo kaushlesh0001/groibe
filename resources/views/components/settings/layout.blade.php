@@ -4,6 +4,9 @@
             <flux:navlist.item href="{{ route('settings.profile') }}" wire:navigate>Profile</flux:navlist.item>
             <flux:navlist.item href="{{ route('settings.password') }}" wire:navigate>Password</flux:navlist.item>
             <flux:navlist.item href="{{ route('settings.notifications') }}" wire:navigate>Notifications</flux:navlist.item>
+            @can('create', App\Models\DataRequest::class)
+                <flux:navlist.item href="{{ route('settings.privacy') }}" wire:navigate>Privacy</flux:navlist.item>
+            @endcan
             <flux:navlist.item href="{{ route('settings.appearance') }}" wire:navigate>Appearance</flux:navlist.item>
         </flux:navlist>
     </div>

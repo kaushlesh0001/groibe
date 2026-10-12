@@ -7,6 +7,7 @@ use App\Http\Controllers\MediaDownloadController;
 use App\Livewire\Actions\Logout;
 use App\Livewire\Notifications\NotificationCentre;
 use App\Livewire\Settings\NotificationSettings;
+use App\Livewire\Settings\Privacy;
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
 
@@ -51,6 +52,7 @@ Route::middleware('auth')->group(function () {
     Volt::route('settings/password', 'settings.password')->name('settings.password');
     Volt::route('settings/appearance', 'settings.appearance')->name('settings.appearance');
     Route::livewire('settings/notifications', NotificationSettings::class)->name('settings.notifications');
+    Route::livewire('settings/privacy', Privacy::class)->name('settings.privacy');
 
     // The notification centre (spec 14) and its bell, for every signed-in role.
     Route::livewire('notifications', NotificationCentre::class)->name('notifications.index');
