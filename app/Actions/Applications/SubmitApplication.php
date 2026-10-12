@@ -14,7 +14,9 @@ use App\Models\User;
 use App\Notifications\ApplicationUpdated;
 use App\Services\FeatureFlags\FeatureFlags;
 use App\Services\Notifications\NotificationDispatcher;
+use Closure;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 
@@ -57,7 +59,7 @@ class SubmitApplication
             'proof_of_work_ids' => $this->ownProofIds($contributor, $data['proof_of_work_ids'] ?? []),
         ];
 
-        $application = DB::transaction(function () use ($role, $contributor, $answers): Application {
+        $application = $this->settingRaces(fn (): Application => DB::transaction(function () use ($role, $contributor, $answers): Application {
             $existing = Application::query()
                 ->where('open_role_id', $role->getKey())
                 ->forUser($contributor)
@@ -94,11 +96,26 @@ class SubmitApplication
                 'decided_by' => null,
                 'admin_note' => null,
             ], ['reapplied' => true, 'earlier_motivation' => $existing->motivation]);
-        });
+        }));
 
         $this->dispatcher->toAdmins('applications.update', new ApplicationUpdated($application, 'received', toAdmin: true));
 
         return $application;
+    }
+
+    /**
+     * Two requests from the same contributor (two browser tabs) can both pass the check and reach the unique index on
+     * (open role, user). The database keeps one of them; the other gets the same message as a plain second application.
+     *
+     * @param  Closure(): Application  $attempt
+     */
+    private function settingRaces(Closure $attempt): Application
+    {
+        try {
+            return $attempt();
+        } catch (UniqueConstraintViolationException) {
+            throw ActionBlocked::guardFailed('You have already applied to this role.');
+        }
     }
 
     /**
