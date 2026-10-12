@@ -296,3 +296,14 @@ Proposed changes only. The spec is edited by the founder, between passes, and lo
   3. Every export respects the filters and tab on screen, is refused above 5,000 rows (SCR-026), starts with a UTF-8 byte order mark (SCR-025), protects formula-looking cells, and is written to the audit log with its row count.
   4. Lists of people (contributors, clients, applicants) carry name and email, never phone. No export carries internal notes, bios, review comments or other free text. Admin users are never exported.
 - **Code status:** Not built yet.
+
+## SCR-034: Housekeeping jobs (spec sections 17.1, 17.4)
+
+- **Status:** ACCEPTED 2026-10-12 by the founder, to be built in Pass 9 item 6, and written into the master spec (sections 17.1, 17.4 and the section 23 change log).
+- **Gap:** Section 17.1 lists a stale-invite cleanup, a daily database-size check and a sitemap refresh without saying what each does. Invites are signed links with no rows to clean up. The database limit of the host plan is not in the repo. Uploaded import files hold personal data and were kept forever (SUGGESTIONS 250).
+- **Decision:**
+  1. **Stale invites are reported, never deleted.** Each day, delivery managers get one in-app notice listing people created by an admin or an import who have no password and were created more than 14 days ago, with a count and the first few names, so they can resend. The same job clears expired password-reset tokens (Laravel's own `auth:clear-resets`). No person is ever deleted by it.
+  2. **The database-size check** reads the size of the database each day, writes it to the log, and shows it on the System status widget. When it passes 80% of `DB_SIZE_LIMIT_MB` (default 1024, set to the host plan's limit), super admins get one in-app and email notice a day while it stays above.
+  3. **The sitemap refresh** clears the public caches (homepage, stats, menu and sitemap) once a day, so changes that happen with the passing of time, such as a role past its deadline, show up without waiting for an edit.
+  4. **Import files are removed 30 days after upload:** the stored CSV and its report are deleted and the report path is cleared; the import row, its counts and its status stay. Temporary uploads left unused for a day are deleted.
+- **Code status:** Not built yet.
