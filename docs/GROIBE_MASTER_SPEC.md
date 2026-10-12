@@ -327,6 +327,7 @@ Unique (project_id, user_id) where status in active states (enforce in code).
   - Create a draft ProofOfWork per assigned contributor with `project`, `role_title`, skills from tasks.
   - Contributor edits `contribution_text` and outcome metrics.
   - Admin approves. Publication also requires project `showcase_consent` of `anonymous` or `named`.
+  - States as built: `draft -> pending_approval` (the contributor asks for publication), then `pending_approval -> published` (admin approves) or back to `draft` with a note, and `published <-> hidden` (admin). The contributor edits wording only while the item is a draft, and can switch visibility (`private`, `members`, `public`) on their own item at any time unless it is hidden. Choosing `public` does not publish; an admin still approves.
   - `client_display` follows consent: `anonymous` shows "Confidential client, <industry>".
 - Reviews:
   - Client reviews each contributor (quality, communication, reliability, timeliness, comment) after project `accepted`.
@@ -367,6 +368,8 @@ Tech: Blade + Livewire + Alpine + Tailwind. Server-rendered, SEO-friendly, fast.
 - `/skills/{slug}`
 - `/terms`, `/privacy`, `/{cms-page-slug}`
 - `/sitemap.xml`, `/robots.txt`
+- Header and footer menus list only pages that exist for visitors, so a menu link never leads to a 404: Opportunities, Contributors, Organizations and Our work follow their feature flags; About appears once an admin publishes it; Terms and Privacy appear once an active template of that type is published. The menu is cached with the homepage and cleared with it.
+- `/how-it-works`, `/for-contributors` and `/for-clients` have built-in text. A Page published in Admin with the same address replaces it. `/about` answers 404 until an admin publishes it.
 - Contact form stores to DB (`contact_messages`, section 7.9) and emails admin at `CONTACT_EMAIL` (config `groibe.contact_email`). Spam protection: honeypot + throttle. (SCR-021)
 
 ### 10.3 Brand and design
@@ -384,11 +387,12 @@ Tech: Blade + Livewire + Alpine + Tailwind. Server-rendered, SEO-friendly, fast.
 ### 10.4 SEO
 
 - Unique title and meta description per page, canonical URLs, Open Graph tags, JSON-LD (`Organization`, `JobPosting`-style data only if applicable, `BreadcrumbList`).
+- `/faq` also carries `FAQPage` structured data.
 - Private profiles and organizations are `noindex` and not in sitemap.
 
 ## 11. Contributor app (`/app/contributor`)
 
-Navigation: Dashboard, Discover (open roles), My Applications, My Work (assignments, tasks), Portfolio (proof of work), Reputation, Messages, Notifications, Profile, Settings.
+Navigation: Dashboard, Discover (open roles), My Applications, My Work (assignments, tasks), Portfolio (proof of work), Reputation, Payouts, Messages, Notifications (the bell and `/notifications`), Profile, Settings. Discover and My Applications show only while the `open_roles` flag is on; Portfolio, Reputation and Payouts are for active contributors.
 
 - **Registration**: step 1 name/email/password + interests; step 2 profile; step 3 skills (with level) and availability; step 4 accept Member Agreement; step 5 submitted for review.
 - **Dashboard**: onboarding status, active assignments, tasks due, applications status, recommended open roles (rule-based: skill overlap + availability), reputation facts.
@@ -420,7 +424,7 @@ Navigation groups and resources:
 
 - **Dashboard**: widgets for counts (contributors by state, organizations, briefs by status, projects by status), pipeline funnel, tasks overdue, QA queue, applications awaiting action, reviews awaiting moderation.
 - **People**: Contributors (with review queue, verify skills), Clients (users), Organizations, Admin Users, Imports.
-- **Delivery**: Briefs, Projects (with relation managers: SOWs, Milestones, Tasks, Assignments, Payouts, Invoices, Threads), QA Queue (submissions awaiting review), Deliverables.
+- **Delivery**: Briefs, Projects (with relation managers: SOWs, Milestones, Tasks, Assignments, Payouts, Invoices, Threads), QA Queue (submissions awaiting review), Deliverables, Messages (project conversations and support threads, each admin seeing only what their permission allows, SCR-022).
 - **Community**: Open Roles, Applications, Proof of Work, Reviews (moderation).
 - **Website**: Homepage Sections, Featured Items, Testimonials, FAQs, Pages, Contact Messages. Contact Messages are read and updated by community managers and super admins; only a super admin can delete one, because it holds a visitor's personal data (SCR-021).
 - **Taxonomy**: Categories, Skills, Project Types.
@@ -448,6 +452,8 @@ Required admin capabilities:
 - Bell icon with unread count, notifications page (`/notifications`, every signed-in role), mark read and mark all read. Preferences are at `/settings/notifications` (SCR-023).
 - Per-category preferences choose the database and email channels separately. Security categories are locked on: they always send both channels and cannot be saved as off. A category switched off on both channels sends nothing.
 - The email log (section 7.8) is read-only and super admin only (section 5).
+- Messages as built: up to 5,000 characters, up to 5 attached files of 20 MB each (the document allowlist, section 17.2), and 20 messages a minute per person. Threads refresh every 20 seconds while the page is visible. Unread counts show per conversation and as a badge in the sidebar. Names: a client sees a contributor by first name, or as "Project team" when the project hides its team (section 12); a contributor sees a client person by first name and organization; people outside Groibe see staff as "First name (Groibe)"; admins see full names. An inbox shows the time of the latest message the person may see, so internal notes leave no trace for outsiders.
+- Notification categories as built: `brief`, `sow`, `project`, `assignment`, `application`, `task`, `submission`, `deliverable`, `message`, `payout`, `review`, `portfolio`, `onboarding`, `security` (locked). Besides the events listed above, notifications also go out for: an assignment answered or removed, work received for QA, a milestone ready to share and the client's answer, a project delivered, accepted and closed, a daily overdue task digest to the delivery manager, an open role invitation, proof-of-work changes, and a review waiting in the moderation queue (to admins).
 - Email via Laravel Mail with markdown templates; templates editable only in code in v1 (listed in `resources/views/emails`). Use a `NotificationDispatcher` service so providers can change later.
 - Emails sent through the queue (database driver). Failures logged to `email_log`.
 
@@ -486,7 +492,7 @@ Route files: `routes/public.php`, `routes/contributor.php`, `routes/client.php`,
 - Target: PHP 8.3, MySQL/MariaDB, no persistent processes, no Node at runtime, no Redis, no websockets.
 - Queue driver `database`, drained by cron: `schedule:run` every minute, which runs `queue:work --stop-when-empty --max-time=50`.
 - Cache driver `file` (switch to `database` if file perms are an issue). Sessions `database`.
-- Scheduled jobs: reputation recompute, stale-invite cleanup, sitemap refresh, daily DB-size check, notification digests.
+- Scheduled jobs: reputation recompute, stale-invite cleanup, sitemap refresh, daily DB-size check, notification digests. As built: the queue drain (every minute), the overdue task digest (daily 08:00) and the overdue invoice marking with its digest to finance (daily 08:15), in the application time zone.
 - Assets built locally with Vite and committed or uploaded (`public/build`). The server never runs npm.
 - Do not rely on `storage:link` symlinks working. Public media goes to a dedicated public disk under `public/` or is served through a controller. Private files served only via authorized controller routes.
 - Keep memory use modest (<256MB per request). Paginate everything. Avoid N+1 (use eager loading; add `Model::preventLazyLoading()` in non-production).
@@ -608,3 +614,4 @@ Stored in `feature_flags`, cached, toggled in Admin. Defaults:
 | 2026-10-11 | 5, 6.12, 6.13, 7.6, 11, 13, 14, 15.2 | SCR-024: payout and invoice reference state machines; `payouts.approved_at`, `invoice_refs.currency` and a unique invoice number per project; agreed amount cap and Set amount action; finance, delivery manager and contributor visibility; payout notifications without amounts; overdue invoice job; CSV export contents and formula protection | Founder |
 | 2026-10-12 | 7.5 | SCR-020: `proof_of_work.slug` (unique, immutable) and unique (user_id, project_id); `organization_stats` columns and the five organization review criteria; `reputation_facts.tasks_with_due_date` | Founder |
 | 2026-10-12 | 5, 7.9, 10.2, 13 | SCR-021: `contact_messages` table; `needs_review` on `cms_sections`, `testimonials`, `faqs` and `pages` (never active until approved); unique (type, item_id) on `featured_items`; `contact_messages` permission group (community manager `ru`, delete super admin only) | Founder |
+| 2026-10-12 | 9, 10.2, 10.4, 11, 13, 14, 17.1 | Recorded as built, no new behaviour: proof of work state moves and contributor rights; header and footer menus and built-in pages; `FAQPage` data; Payouts in contributor navigation; the admin Messages screen; message limits and who sees which name; notification categories and the extra events; the scheduled jobs that exist | Founder |
