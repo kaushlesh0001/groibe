@@ -62,9 +62,18 @@ class UserFactory extends Factory
         return $this->state(fn () => ['role' => UserRole::Client]);
     }
 
+    /** An admin who has finished two-factor set-up, as the admin panel requires (SCR-029). Use `withoutTwoFactor()` to test the set-up path. */
     public function admin(AdminRole $adminRole = AdminRole::SuperAdmin): static
     {
-        return $this->state(fn () => ['role' => UserRole::Admin])
-            ->afterCreating(fn (User $user) => $user->assignRole($adminRole->value));
+        return $this->state(fn () => [
+            'role' => UserRole::Admin,
+            'two_factor_secret' => 'JBSWY3DPEHPK3PXP',
+            'two_factor_confirmed_at' => now(),
+        ])->afterCreating(fn (User $user) => $user->assignRole($adminRole->value));
+    }
+
+    public function withoutTwoFactor(): static
+    {
+        return $this->state(fn () => ['two_factor_secret' => null, 'two_factor_recovery_codes' => null, 'two_factor_confirmed_at' => null]);
     }
 }
