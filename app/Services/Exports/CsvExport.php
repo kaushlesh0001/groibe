@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\Finance;
+namespace App\Services\Exports;
 
 use App\Exceptions\ActionBlocked;
 use App\Models\User;
@@ -9,9 +9,9 @@ use Illuminate\Database\Eloquent\Model;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * CSV downloads for finance (spec 15.2, SCR-024). Synchronous up to 5,000 rows; above that the admin is asked to narrow
- * the filters (the queued, emailed-link path is logged as a follow-up). Every export is written to the audit log. Text cells that
- * a spreadsheet could read as a formula are prefixed with an apostrophe.
+ * CSV downloads (spec 15.2, SCR-024, SCR-025, SCR-026). Synchronous up to 5,000 rows; above that the admin is asked to narrow
+ * the filters, since the queued, emailed-link path is not built. The file starts with a UTF-8 byte order mark. Every export is
+ * written to the audit log. Text cells that a spreadsheet could read as a formula are prefixed with an apostrophe.
  */
 class CsvExport
 {
@@ -41,6 +41,8 @@ class CsvExport
 
         return response()->streamDownload(function () use ($query, $headings, $row): void {
             $out = fopen('php://output', 'w');
+            // The byte order mark lets Excel read names with accents as UTF-8 (SCR-025).
+            fwrite($out, "\xEF\xBB\xBF");
             fputcsv($out, $headings);
 
             foreach ($query->lazyById(500) as $model) {

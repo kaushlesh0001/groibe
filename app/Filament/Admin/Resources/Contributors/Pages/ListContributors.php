@@ -4,6 +4,8 @@ namespace App\Filament\Admin\Resources\Contributors\Pages;
 
 use App\Enums\OnboardingState;
 use App\Filament\Admin\Resources\Contributors\ContributorResource;
+use App\Filament\Admin\Support\ExportAction;
+use App\Services\Exports\Definitions\ContributorExport;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Schemas\Components\Tabs\Tab;
 use Illuminate\Database\Eloquent\Builder;
@@ -11,6 +13,11 @@ use Illuminate\Database\Eloquent\Builder;
 class ListContributors extends ListRecords
 {
     protected static string $resource = ContributorResource::class;
+
+    protected function getHeaderActions(): array
+    {
+        return [ExportAction::make(new ContributorExport, fn () => $this->getFilteredTableQuery())];
+    }
 
     /** The review queue is the default tab (spec 13). */
     public function getDefaultActiveTab(): string|int|null

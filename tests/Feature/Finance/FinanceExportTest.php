@@ -12,7 +12,7 @@ use App\Models\Assignment;
 use App\Models\InvoiceRef;
 use App\Models\Payout;
 use App\Models\Project;
-use App\Services\Finance\CsvExport;
+use App\Services\Exports\CsvExport;
 use Illuminate\Database\Eloquent\Builder;
 use Livewire\Livewire;
 use Spatie\Activitylog\Models\Activity;
@@ -25,13 +25,13 @@ beforeEach(function () {
     $this->seat->user->update(['name' => 'Meera Nair', 'email' => 'meera.private@example.test']);
 });
 
-/** Runs a streamed download and returns its CSV rows. */
+/** Runs a streamed download and returns its CSV rows, without the UTF-8 byte order mark every export starts with (SCR-025). */
 function csvRows(StreamedResponse $response): array
 {
     ob_start();
     $response->sendContent();
 
-    return array_map('str_getcsv', array_filter(explode("\n", ob_get_clean())));
+    return array_map('str_getcsv', array_filter(explode("\n", ltrim((string) ob_get_clean(), "\xEF\xBB\xBF"))));
 }
 
 it('exports the agreed payout columns and nothing about contact details or notes', function () {

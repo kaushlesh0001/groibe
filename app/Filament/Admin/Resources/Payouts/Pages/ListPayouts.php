@@ -11,7 +11,7 @@ use App\Filament\Admin\Support\DomainActionRunner;
 use App\Models\Assignment;
 use App\Models\Milestone;
 use App\Models\Payout;
-use App\Services\Finance\CsvExport;
+use App\Services\Exports\CsvExport;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -139,6 +139,6 @@ class ListPayouts extends ListRecords
 
     private function label(?Assignment $seat): ?string
     {
-        return $seat === null ? null : "{$seat->project->code} · {$seat->user->name} · {$seat->role_title}";
+        return $seat === null ? null : "{$seat->project->code} Â· {$seat->user->name} Â· {$seat->role_title}";
     }
 }

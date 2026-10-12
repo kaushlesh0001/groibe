@@ -9,7 +9,7 @@ use App\Filament\Admin\Resources\InvoiceRefs\Tables\InvoiceRefsTable;
 use App\Filament\Admin\Support\DomainActionRunner;
 use App\Models\InvoiceRef;
 use App\Models\Project;
-use App\Services\Finance\CsvExport;
+use App\Services\Exports\CsvExport;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Select;
 use Filament\Notifications\Notification;
@@ -37,8 +37,8 @@ class ListInvoiceRefs extends ListRecords
                         ->getSearchResultsUsing(fn (string $search): array => Project::query()
                             ->where(fn (Builder $q) => $q->where('code', 'like', "%{$search}%")->orWhere('title', 'like', "%{$search}%"))
                             ->orderByDesc('id')->limit(50)->get(['id', 'code', 'title'])
-                            ->mapWithKeys(fn (Project $p): array => [$p->id => "{$p->code} · {$p->title}"])->all())
-                        ->getOptionLabelUsing(fn ($value): ?string => ($p = Project::query()->find($value, ['id', 'code', 'title'])) ? "{$p->code} · {$p->title}" : null),
+                            ->mapWithKeys(fn (Project $p): array => [$p->id => "{$p->code} Â· {$p->title}"])->all())
+                        ->getOptionLabelUsing(fn ($value): ?string => ($p = Project::query()->find($value, ['id', 'code', 'title'])) ? "{$p->code} Â· {$p->title}" : null),
                     ...InvoiceRefsTable::fields(),
                 ])
                 ->action(function (array $data): void {
