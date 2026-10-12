@@ -66,7 +66,7 @@ class Sow extends Model
     /** @return BelongsTo<User, $this> */
     public function accepter(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'accepted_by');
+        return $this->belongsTo(User::class, 'accepted_by')->withTrashed();
     }
 
     /** @return BelongsTo<Sow, $this> */

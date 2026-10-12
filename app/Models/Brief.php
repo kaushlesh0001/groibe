@@ -84,7 +84,7 @@ class Brief extends Model implements HasMedia
     /** @return BelongsTo<User, $this> */
     public function submitter(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'submitted_by');
+        return $this->belongsTo(User::class, 'submitted_by')->withTrashed();
     }
 
     /** @return BelongsTo<User, $this> */
