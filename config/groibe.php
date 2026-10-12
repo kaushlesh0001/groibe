@@ -19,6 +19,13 @@ return [
         'per_minute' => 30,
     ],
 
+    // Spec 17.2: security headers. HSTS is sent only on HTTPS; set the max age to 0 to switch it off while testing a new host.
+    // Report-only mode shows what the Content-Security-Policy would block, in the browser console, without blocking it.
+    'security' => [
+        'hsts_max_age' => (int) env('HSTS_MAX_AGE', 31536000),
+        'csp_report_only' => (bool) env('CSP_REPORT_ONLY', false),
+    ],
+
     // Spec 15.1 and SCR-025: CSV only, run in chunks so a shared host's time limit is never reached.
     'imports' => [
         'max_file_kb' => 5120,

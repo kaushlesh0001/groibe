@@ -3,7 +3,7 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
     <head>
-        @include('partials.head', ['title' => $title ? $title.' | '.config('app.name') : config('app.name')])
+        @include('partials.head', ['title' => $title ? $title.' | '.config('app.name') : config('app.name'), 'appearance' => false])
     </head>
     <body class="flex min-h-screen flex-col bg-white text-brand-navy antialiased">
         {{-- Lets keyboard and screen reader users jump past the menu. It shows only while it has focus. --}}
@@ -61,6 +61,8 @@
             </div>
         </footer>
 
-        @fluxScripts
+        {{-- No scripts. The public pages are server-rendered, and the tabs and FAQ use CSS and <details>, so the
+             Flux and Alpine bundle (about 650 KiB, SUGGESTIONS 197) is not sent here. The strict Content-Security-Policy
+             relies on it: a script added to this layout would be blocked. --}}
     </body>
 </html>
