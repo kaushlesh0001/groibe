@@ -2,6 +2,8 @@
 
 namespace App\Providers\Filament;
 
+use App\Http\Middleware\EnsureAdminTwoFactor;
+use Filament\Auth\MultiFactor\App\AppAuthentication;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -29,6 +31,15 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
+            // Spec 17.2, SCR-029: authenticator-app 2FA with recovery codes. The panel marks it required so every page carries the
+            // check, and EnsureAdminTwoFactor decides who must have it: super admins always, other admins while the flag is on.
+            // The profile page is where an admin sets it up and manages it.
+            ->profile()
+            ->multiFactorAuthentication(
+                [AppAuthentication::make()->recoverable()->brandName('Groibe')],
+                isRequired: true,
+            )
+            ->multiFactorAuthenticationRequiredMiddlewareName(EnsureAdminTwoFactor::class)
             ->brandName('Groibe Admin')
             // The supplied logo files, at their own ratio (spec 10.3): white on the dark theme, standard on light.
             ->brandLogo(asset('brand/groibe-logo.svg'))

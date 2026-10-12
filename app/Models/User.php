@@ -9,6 +9,8 @@ use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use App\Models\Concerns\HasUuid;
 use Database\Factories\UserFactory;
+use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthentication;
+use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthenticationRecovery;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -23,7 +25,7 @@ use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Permission\Traits\HasRoles;
 
-class User extends Authenticatable implements FilamentUser, MustVerifyEmail
+class User extends Authenticatable implements FilamentUser, HasAppAuthentication, HasAppAuthenticationRecovery, MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, HasRoles, HasUuid, LogsActivity, Notifiable, SoftDeletes;
@@ -44,6 +46,8 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
     protected $hidden = [
         'password',
         'remember_token',
+        'two_factor_secret',
+        'two_factor_recovery_codes',
     ];
 
     protected function casts(): array
@@ -52,6 +56,9 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
             'email_verified_at' => 'datetime',
             'last_login_at' => 'datetime',
             'password' => 'hashed',
+            'two_factor_secret' => 'encrypted',
+            'two_factor_recovery_codes' => 'encrypted:array',
+            'two_factor_confirmed_at' => 'datetime',
             'role' => UserRole::class,
             'status' => UserStatus::class,
         ];
@@ -148,6 +155,50 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
     public function isSuperAdmin(): bool
     {
         return $this->isAdmin() && $this->hasRole(AdminRole::SuperAdmin->value);
+    }
+
+    public function hasTwoFactor(): bool
+    {
+        return $this->two_factor_secret !== null;
+    }
+
+    public function getAppAuthenticationSecret(): ?string
+    {
+        return $this->two_factor_secret;
+    }
+
+    /**
+     * Saves or clears the authenticator secret (SCR-029). Turning it off also removes the recovery codes, so a stale set can
+     * never be used to skip a later setup. The change goes to the audit log; the secret and the codes never do.
+     */
+    public function saveAppAuthenticationSecret(#[\SensitiveParameter] ?string $secret): void
+    {
+        $this->forceFill([
+            'two_factor_secret' => $secret,
+            'two_factor_confirmed_at' => $secret === null ? null : now(),
+            ...($secret === null ? ['two_factor_recovery_codes' => null] : []),
+        ])->saveQuietly();
+
+        activity('auth')->causedBy($this)->performedOn($this)
+            ->event($secret === null ? 'two_factor_disabled' : 'two_factor_enabled')
+            ->log($secret === null ? 'Two-factor authentication turned off' : 'Two-factor authentication turned on');
+    }
+
+    public function getAppAuthenticationHolderName(): string
+    {
+        return $this->email;
+    }
+
+    /** @return array<int, string>|null */
+    public function getAppAuthenticationRecoveryCodes(): ?array
+    {
+        return $this->two_factor_recovery_codes;
+    }
+
+    /** @param  array<int, string>|null  $codes */
+    public function saveAppAuthenticationRecoveryCodes(#[\SensitiveParameter] ?array $codes): void
+    {
+        $this->forceFill(['two_factor_recovery_codes' => $codes])->saveQuietly();
     }
 
     public function initials(): string
