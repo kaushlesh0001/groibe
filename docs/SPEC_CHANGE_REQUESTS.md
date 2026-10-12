@@ -162,7 +162,7 @@ Proposed changes only. The spec is edited by the founder, between passes, and lo
 
 ## SCR-020: Proof of work, reviews and reputation gaps (spec sections 7.5, 9, 10.2, 16)
 
-- **Status:** PROPOSED 2026-10-11, built in Pass 6 on the assumption it is approved. The `organization_stats` columns (item 2) were chosen by the founder in the Pass 6 session ("mirror, via SCR"). Items 1, 3 and 4 are additions made to keep the build working and need a yes or a different answer. Spec sections 7.5 and 23 are not edited until approved.
+- **Status:** ACCEPTED 2026-10-12 by the founder (recommendation accepted), built in Pass 6, and written into the master spec (section 7.5 and the section 23 change log). The `organization_stats` columns (item 2) were chosen by the founder in the Pass 6 session ("mirror, via SCR").
 - **Gap:** Section 7.5 leaves four things open that the build cannot do without.
 - **Proposal:**
   1. `proof_of_work.slug` (string, unique, nullable). Section 10.2 gives `/work/{slug}` and section 16 says public models get immutable slugs, but 7.5 lists no slug column. The slug is generated once, on first publication, as the title plus a random suffix, and never changes.
@@ -174,7 +174,7 @@ Proposed changes only. The spec is edited by the founder, between passes, and lo
 
 ## SCR-021: Website CMS columns and contact messages (spec sections 7.9, 10.1, 10.2, 13)
 
-- **Status:** PROPOSED 2026-10-11, built in Pass 8 on the assumption it is approved. The founder chose the contact message columns and the "needs review" handling in the Pass 8 session. Spec sections 7.9 and 23 are not edited until approved.
+- **Status:** ACCEPTED 2026-10-12 by the founder (recommendation accepted), built in Pass 8, and written into the master spec (sections 5, 7.9, 10.2, 13 and the section 23 change log). The founder chose the contact message columns and the "needs review" handling in the Pass 8 session.
 - **Gap:** Section 7.9 lists the CMS tables but gives `contact_messages` no definition, although 10.2 says the contact form stores to the database and 13 lists a Contact Messages screen. It also has no way to mark seeded copy whose wording is not approved yet.
 - **Proposal:**
   1. `contact_messages`: id, name, email, subject (nullable), message, ip, user_agent, status (`new|read|handled`, default `new`), handled_by (nullable user), handled_at, email_sent_at (nullable), timestamps. Any move between the three statuses is allowed. The activity log records status moves only, never the message text or sender.
