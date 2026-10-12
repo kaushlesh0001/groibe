@@ -8,5 +8,8 @@
 <meta name="theme-color" content="#042B65">
 
 @vite(['resources/css/app.css', 'resources/js/app.js'])
-@fluxAppearance
+{{-- The appearance script is inline, so the public pages (strict Content-Security-Policy) leave it out. --}}
+@if ($appearance ?? true)
+    @fluxAppearance
+@endif
 @stack('meta')
