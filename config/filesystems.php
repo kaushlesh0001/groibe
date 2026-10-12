@@ -33,7 +33,9 @@ return [
         'local' => [
             'driver' => 'local',
             'root' => storage_path('app/private'),
-            'serve' => true,
+            // Spec 17.2: private files are read only through the authorized `files.show` route. Laravel's own `storage/{path}`
+            // route for this disk (signed temporary URLs) is not used anywhere, so it is switched off.
+            'serve' => false,
             'throw' => false,
         ],
 

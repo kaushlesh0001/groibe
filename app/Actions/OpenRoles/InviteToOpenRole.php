@@ -9,6 +9,8 @@ use App\Models\OpenRole;
 use App\Models\User;
 use App\Notifications\OpenRoleInvited;
 use App\Services\Notifications\NotificationDispatcher;
+use Closure;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 
@@ -35,7 +37,7 @@ class InviteToOpenRole
             throw ActionBlocked::guardFailed('Only active contributors can be invited.');
         }
 
-        $added = DB::transaction(function () use ($role, $contributor, $actor): bool {
+        $added = $this->settingRaces(fn (): bool => DB::transaction(function () use ($role, $contributor, $actor): bool {
             if ($role->invitedUsers()->whereKey($contributor->getKey())->exists()) {
                 return false;
             }
@@ -50,7 +52,7 @@ class InviteToOpenRole
                 ->log('Contributor added to the invite list');
 
             return true;
-        });
+        }));
 
         // The contributor is only told once the role is live, because they cannot see a draft.
         if ($added && $role->status === OpenRoleStatus::Published) {
@@ -58,5 +60,20 @@ class InviteToOpenRole
         }
 
         return $added;
+    }
+
+    /**
+     * Two admins adding the same person at once can both pass the check and reach the unique index on (role, user). Either way
+     * the person ends up on the list once, so the one that lost reports that nothing was added.
+     *
+     * @param  Closure(): bool  $attempt
+     */
+    private function settingRaces(Closure $attempt): bool
+    {
+        try {
+            return $attempt();
+        } catch (UniqueConstraintViolationException) {
+            return false;
+        }
     }
 }

@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Actions\Admin\StartImpersonation;
 use App\Http\Middleware\EnsureActiveContributor;
+use App\Http\Middleware\EnsureAdminTwoFactor;
 use App\Http\Middleware\EnsureFeatureEnabled;
 use App\Http\Middleware\EnsureUserRole;
 use App\Models\AgreementAcceptance;
@@ -86,6 +87,7 @@ use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
@@ -111,7 +113,7 @@ class AppServiceProvider extends ServiceProvider
         // Livewire sends later actions and refreshes to its own endpoint and re-applies only a short list of the
         // page's middleware there. Role and active-contributor checks must be on that list (spec 4, 16), or a
         // contributor suspended while a page is open could keep using it.
-        Livewire::addPersistentMiddleware([EnsureUserRole::class, EnsureActiveContributor::class, EnsureFeatureEnabled::class]);
+        Livewire::addPersistentMiddleware([EnsureUserRole::class, EnsureActiveContributor::class, EnsureFeatureEnabled::class, EnsureAdminTwoFactor::class]);
 
         // Behind Cloudflare the visitor's address arrives in X-Forwarded-For, so rate limits and stored addresses need it.
         $trusted = trim((string) config('groibe.trusted_proxies'));
@@ -122,6 +124,17 @@ class AppServiceProvider extends ServiceProvider
 
         // Spec 17.2: throttle invite redemption.
         RateLimiter::for('invite', fn (Request $request) => Limit::perMinute(10)->by($request->ip()));
+
+        // Filament ships download routes for its own import and export features. This app builds its own (spec 15), and Filament's
+        // `Import` model would read this app's `imports` table with columns it does not have, so both routes answer 404 for everyone.
+        Route::bind('export', fn () => abort(404));
+        Route::bind('import', fn () => abort(404));
+
+        // Spec 17.2: every Livewire action and refresh goes through one endpoint, so one limit there covers every screen. It is
+        // generous for normal use (several polling panels and a busy person) and stops a script. Counted per signed-in user, or
+        // per address for a visitor.
+        RateLimiter::for('livewire', fn (Request $request) => Limit::perMinute(240)->by($request->user()?->getAuthIdentifier() ?? $request->ip()));
+        Livewire::setUpdateRoute(fn ($handle, $path) => Route::post($path, $handle)->middleware(['web', 'throttle:livewire']));
 
         // Spec 17.2: throttle the public contact form, per visitor address.
         RateLimiter::for('contact', fn (Request $request) => [

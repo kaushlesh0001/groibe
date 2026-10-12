@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnsureAccountNotSuspended;
 use App\Http\Middleware\EnsureActiveContributor;
 use App\Http\Middleware\EnsureFeatureEnabled;
 use App\Http\Middleware\EnsureUserRole;
@@ -35,6 +36,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // Spec 17.2: security headers on every response, including redirects and errors. It is global, not part of the web
         // group, because Laravel runs `auth` ahead of group middleware and a redirect it throws would otherwise skip the headers.
         $middleware->append(SecurityHeaders::class);
+
+        // Spec 4, 14: a suspended person loses access at once, even with a session that is already open.
+        $middleware->appendToGroup('web', EnsureAccountNotSuspended::class);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //
