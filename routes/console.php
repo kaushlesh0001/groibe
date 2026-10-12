@@ -1,6 +1,12 @@
 <?php
 
+use App\Services\Ops\CronHeartbeat;
 use Illuminate\Support\Facades\Schedule;
+
+// Proof that cron is calling `schedule:run`; the admin System status widget reads it (spec 17.4).
+Schedule::call(fn () => app(CronHeartbeat::class)->record())
+    ->everyMinute()
+    ->name('cron-heartbeat');
 
 // Shared hosting: no persistent workers. Cron runs `schedule:run` every minute (spec 17.1).
 Schedule::command('queue:work --stop-when-empty --max-time=50 --tries=3')
