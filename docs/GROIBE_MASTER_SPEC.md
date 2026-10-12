@@ -114,6 +114,7 @@ Legend: C create, R read, U update, D delete, A approve, own = own records only,
 | Thread (support) | - | CR own | CR own | - | RU (answer) | - | all |
 | Agreements | - | accept | accept | R | R | R | CRUD |
 | Website CMS | - | - | - | - | CRUD | - | all |
+| Contact messages | - | - | - | - | RU | - | all (delete: super admin only) |
 | Settings, flags | - | - | - | - | - | - | CRUD |
 | Audit log | - | - | - | R own actions | R own actions | R own | R all |
 | Email log | - | - | - | - | - | - | R (read-only, nobody edits or deletes) |
@@ -258,10 +259,11 @@ Unique (project_id, user_id) where status in active states (enforce in code).
 
 ### 7.5 Proof, reviews, reputation
 
-**proof_of_work**: id, uuid, user_id, project_id (nullable), title, role_title, summary, contribution_text, skills_demonstrated (via pivot), outcome_metrics (json), visibility (`private|members|public`), status (`draft|pending_approval|published|hidden`), client_display (`anonymous|named`), approved_by, published_at.
+**proof_of_work**: id, uuid, user_id, project_id (nullable), title, role_title, summary, contribution_text, skills_demonstrated (via pivot), outcome_metrics (json), visibility (`private|members|public`), status (`draft|pending_approval|published|hidden`), client_display (`anonymous|named`), approved_by, published_at, slug (string, unique, nullable). The slug is generated once, on first publication, as the title plus a random suffix, and never changes (SCR-020). Unique (user_id, project_id), so closing a project cannot create two drafts for one contributor.
 **proof_of_work_skill**: proof_of_work_id, skill_id.
 **reviews**: id, project_id, reviewer_id, reviewee_type (`user|organization`), reviewee_id, direction (`client_to_contributor|contributor_to_client|admin_to_contributor`), quality, communication, reliability, timeliness (1-5 each, nullable for org direction use the org criteria fields), clarity, professionalism, feedback_time, fairness, comment, status (`pending_moderation|published|hidden`), published_at. Unique (project_id, reviewer_id, reviewee_type, reviewee_id).
-**reputation_facts** (per contributor, recomputed by job): user_id, projects_completed, tasks_approved_first_pass, tasks_total, on_time_tasks, reviews_count, avg_rating, verified_skills_count, recomputed_at. Org equivalent in **organization_stats**.
+**reputation_facts** (per contributor, recomputed by job): user_id, projects_completed, tasks_approved_first_pass, tasks_total, on_time_tasks, reviews_count, avg_rating, verified_skills_count, tasks_with_due_date, recomputed_at. `tasks_with_due_date` is the denominator of the on-time percentage: approved tasks without a due date are left out of it (SCR-020).
+**organization_stats** (per client organization, recomputed by the same job, admin-only in v1): organization_id (unique), projects_completed, reviews_count, avg_rating, avg_clarity, avg_communication, avg_professionalism, avg_feedback_time, avg_fairness, recomputed_at. An organization review uses five criteria: clarity, communication, professionalism, feedback time, fairness (SCR-020).
 
 ### 7.6 Money tracking (references only)
 
@@ -283,10 +285,12 @@ Unique (project_id, user_id) where status in active states (enforce in code).
 ### 7.9 Website CMS and ops
 
 **cms_sections**: id, key (e.g. `hero`, `how_it_works`), title, content (json), sort, is_active.
-**featured_items**: id, type (`open_role|contributor|organization|proof_of_work|testimonial|project`), item_id, sort, is_active.
+**featured_items**: id, type (`open_role|contributor|organization|proof_of_work|testimonial|project`), item_id, sort, is_active. Unique (type, item_id), so one item cannot be featured twice. `item_id` has no foreign key: the public read resolves it every time and skips anything missing or no longer public (SCR-021).
 **testimonials**: id, author_name, author_title, organization_name, quote, photo_path, is_active, sort.
 **faqs**: id, audience (`general|contributor|client`), question, answer, sort, is_active.
 **pages**: id, slug, title, body_html, meta_title, meta_description, is_active.
+**needs_review** (bool, default false) is also kept on `cms_sections`, `testimonials`, `faqs` and `pages` (SCR-021). Content seeded from copy whose wording is not approved yet is stored inactive with this flag, and the admin screens label it "needs review". A `needs_review` row can never be active (enforced when the model is saved and in the `active` scope), and an admin clears the flag with an "Approve wording" action before switching the row on. Nothing flagged is ever public.
+**contact_messages** (SCR-021): id, name, email, subject (nullable), message, ip, user_agent, status (`new|read|handled`, default `new`), handled_by (nullable user), handled_at, email_sent_at (nullable), timestamps. Any move between the three statuses is allowed. The activity log records status moves only, never the message text or sender. The message is stored first and emailed after; `email_sent_at` shows whether the team was told.
 **settings**: key/value (typed) store with cache.
 **feature_flags**: key, enabled, notes. Keys listed in section 18.
 **activity_log**: from spatie/laravel-activitylog (admin audit trail; includes impersonation events).
@@ -363,7 +367,7 @@ Tech: Blade + Livewire + Alpine + Tailwind. Server-rendered, SEO-friendly, fast.
 - `/skills/{slug}`
 - `/terms`, `/privacy`, `/{cms-page-slug}`
 - `/sitemap.xml`, `/robots.txt`
-- Contact form stores to DB and emails admin. Spam protection: honeypot + throttle.
+- Contact form stores to DB (`contact_messages`, section 7.9) and emails admin at `CONTACT_EMAIL` (config `groibe.contact_email`). Spam protection: honeypot + throttle. (SCR-021)
 
 ### 10.3 Brand and design
 
@@ -418,7 +422,7 @@ Navigation groups and resources:
 - **People**: Contributors (with review queue, verify skills), Clients (users), Organizations, Admin Users, Imports.
 - **Delivery**: Briefs, Projects (with relation managers: SOWs, Milestones, Tasks, Assignments, Payouts, Invoices, Threads), QA Queue (submissions awaiting review), Deliverables.
 - **Community**: Open Roles, Applications, Proof of Work, Reviews (moderation).
-- **Website**: Homepage Sections, Featured Items, Testimonials, FAQs, Pages, Contact Messages.
+- **Website**: Homepage Sections, Featured Items, Testimonials, FAQs, Pages, Contact Messages. Contact Messages are read and updated by community managers and super admins; only a super admin can delete one, because it holds a visitor's personal data (SCR-021).
 - **Taxonomy**: Categories, Skills, Project Types.
 - **Finance**: Payouts, Invoice References (exports). Finance and super admin plan, approve, pay, cancel, edit and export; delivery managers read; nobody else sees them, and clients never do (SCR-024). The Team tab on a project has a "Set amount" action (delivery manager, super admin) for a seat's agreed amount, which payouts are planned against. Projects show read-only Payouts and Invoices tabs to staff who may read them.
 - **System**: Agreement Templates, Settings, Feature Flags, Audit Log (read-only), Email Log.
@@ -602,3 +606,5 @@ Stored in `feature_flags`, cached, toggled in Admin. Defaults:
 | 2026-10-11 | 5, 7.8, 14 | SCR-023: added `notification_preferences`; `email_log` rules (one row per recipient, no body, failures logged, super admin read-only); preference and locked-category rules; notification centre and preferences pages | Founder |
 | 2026-10-11 | 5, 7.8, 14 | SCR-022: messaging access rules: `threads` and `support` permissions; conversation membership derived from live project data; project thread opens with the SOW and is read-only after close or cancel; admin-only internal messages; support thread privacy; unused `application` type; microsecond read markers | Founder |
 | 2026-10-11 | 5, 6.12, 6.13, 7.6, 11, 13, 14, 15.2 | SCR-024: payout and invoice reference state machines; `payouts.approved_at`, `invoice_refs.currency` and a unique invoice number per project; agreed amount cap and Set amount action; finance, delivery manager and contributor visibility; payout notifications without amounts; overdue invoice job; CSV export contents and formula protection | Founder |
+| 2026-10-12 | 7.5 | SCR-020: `proof_of_work.slug` (unique, immutable) and unique (user_id, project_id); `organization_stats` columns and the five organization review criteria; `reputation_facts.tasks_with_due_date` | Founder |
+| 2026-10-12 | 5, 7.9, 10.2, 13 | SCR-021: `contact_messages` table; `needs_review` on `cms_sections`, `testimonials`, `faqs` and `pages` (never active until approved); unique (type, item_id) on `featured_items`; `contact_messages` permission group (community manager `ru`, delete super admin only) | Founder |
