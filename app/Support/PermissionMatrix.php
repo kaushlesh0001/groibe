@@ -57,6 +57,8 @@ class PermissionMatrix
         'project_types' => ['r', '', ''],
         // Pass 7 (SCR-023): the email log is evidence with recipient addresses, so super admin only.
         'email_log' => ['', '', ''],
+        // SCR-028: a data request names a person and what they want erased, so only a super admin reads and processes them.
+        'data_requests' => ['', '', ''],
         'settings' => ['', '', ''],
         'feature_flags' => ['', '', ''],
     ];
