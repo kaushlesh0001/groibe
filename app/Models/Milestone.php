@@ -62,7 +62,7 @@ class Milestone extends Model
     /** @return BelongsTo<User, $this> */
     public function clientAccepter(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'client_accepted_by');
+        return $this->belongsTo(User::class, 'client_accepted_by')->withTrashed();
     }
 
     /** @return HasMany<Task, $this> */
