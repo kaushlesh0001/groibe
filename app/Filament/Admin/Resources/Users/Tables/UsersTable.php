@@ -3,11 +3,13 @@
 namespace App\Filament\Admin\Resources\Users\Tables;
 
 use App\Actions\Admin\StartImpersonation;
+use App\Actions\Onboarding\QueueInvites;
 use App\Actions\Onboarding\SendInvite;
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use App\Models\User;
 use Filament\Actions\Action;
+use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -17,6 +19,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Collection;
 
 class UsersTable
 {
@@ -93,6 +96,21 @@ class UsersTable
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
+                    BulkAction::make('sendInvites')
+                        ->label('Send invites')
+                        ->icon('heroicon-o-envelope')
+                        ->requiresConfirmation()
+                        ->modalDescription('Queues an activation link for each selected person who has not signed up yet. Emails are spread out over time.')
+                        ->deselectRecordsAfterCompletion()
+                        ->action(function (Collection $records): void {
+                            $result = app(QueueInvites::class)(User::query()->whereKey($records->modelKeys())->get(), auth()->user());
+
+                            Notification::make()
+                                ->title($result['queued'].' invites queued'.($result['skipped'] > 0 ? ', '.$result['skipped'].' skipped' : ''))
+                                ->body($result['skipped'] > 0 ? 'Skipped people have already signed up, or you may not invite them.' : null)
+                                ->color($result['skipped'] > 0 ? 'warning' : 'success')
+                                ->send();
+                        }),
                     DeleteBulkAction::make(),
                     RestoreBulkAction::make(),
                 ]),

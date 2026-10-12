@@ -69,6 +69,8 @@ class PermissionMatrix
         'import_export.contributors',
         'import_export.projects',
         'import_export.payouts',
+        // SCR-031: importing clients, beside the contributor import that follows the existing Import/Export row.
+        'import_export.import_clients',
     ];
 
     /** MATRIX column index per non-super admin role. */
@@ -80,7 +82,7 @@ class PermissionMatrix
 
     /** @var array<string, list<string>> */
     private const EXTRA_BY_ROLE = [
-        'delivery_manager' => ['audit_log.view', 'import_export.contributors', 'import_export.projects'],
+        'delivery_manager' => ['audit_log.view', 'import_export.contributors', 'import_export.projects', 'import_export.import_clients'],
         'community_manager' => ['audit_log.view', 'import_export.contributors'],
         'finance_ops' => ['audit_log.view', 'import_export.payouts'],
     ];
