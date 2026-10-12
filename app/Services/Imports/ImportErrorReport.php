@@ -3,7 +3,7 @@
 namespace App\Services\Imports;
 
 use App\Models\Import;
-use App\Services\Finance\CsvExport;
+use App\Services\Exports\CsvExport;
 use Illuminate\Support\Facades\Storage;
 
 /**
