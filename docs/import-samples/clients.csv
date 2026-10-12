@@ -1,0 +1,4 @@
+organization_name,website,industry,size_band,city,state,gstin,contact_name,contact_email,contact_phone,designation,org_role,zoho_crm_id
+Acme Foods,https://www.acmefoods.example,Food and beverage,51-200,Kolkata,West Bengal,,Meera Sen,meera@acmefoods.example,9830000001,Founder,,
+Acme Foods,https://www.acmefoods.example,Food and beverage,51-200,Kolkata,West Bengal,,Dev Roy,dev@acmefoods.example,9830000002,Head of Operations,manager,
+Beta Tools,,Manufacturing,11-50,Pune,Maharashtra,27ABCDE1234F1Z5,Ken Lal,ken@betatools.example,,Director of Sales,,

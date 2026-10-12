@@ -1,21 +1,28 @@
 <?php
 
 use App\Actions\Agreements\AcceptClientMsa;
+use App\Actions\Imports\RunImportDryRun;
+use App\Actions\Imports\StartImport;
+use App\Actions\Imports\StoreImportUpload;
 use App\Enums\AdminRole;
 use App\Enums\AssignmentStatus;
+use App\Enums\ImportType;
 use App\Enums\OnboardingState;
 use App\Enums\OrgRole;
 use App\Enums\ProjectStatus;
 use App\Enums\UserStatus;
 use App\Models\Assignment;
+use App\Models\Import;
 use App\Models\Organization;
 use App\Models\Profile;
 use App\Models\Project;
 use App\Models\Skill;
 use App\Models\User;
+use App\Services\Imports\CsvReader;
 use Database\Seeders\AgreementTemplateSeeder;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 pest()->extend(TestCase::class)
@@ -137,4 +144,48 @@ function projectWithCompletedSeat(ProjectStatus $status = ProjectStatus::Accepte
     ]);
 
     return compact('project', 'organization', 'owner', 'contributor', 'assignment');
+}
+
+/** CSV text from a header row and data rows, as a spreadsheet would write it. @param list<string> $headers @param list<list<string>> $rows */
+function importCsv(array $headers, array $rows, bool $bom = false): string
+{
+    $out = fopen('php://memory', 'w+');
+    fputcsv($out, $headers, ',', '"', '');
+
+    foreach ($rows as $row) {
+        fputcsv($out, $row, ',', '"', '');
+    }
+
+    rewind($out);
+    $csv = (string) stream_get_contents($out);
+    fclose($out);
+
+    return ($bom ? "\xEF\xBB\xBF" : '').$csv;
+}
+
+/** Upload CSV text as an import, the way the admin screen hands it to the Action. */
+function uploadImport(User $actor, ImportType $type, string $csv, string $name = 'people.csv'): Import
+{
+    Storage::fake('local');
+    Storage::disk('local')->put('import-uploads/upload.csv', $csv);
+
+    return app(StoreImportUpload::class)($actor, $type, 'import-uploads/upload.csv', $name);
+}
+
+/** Check the file, then run it for real (the test queue runs jobs at once). */
+function runImport(Import $import, User $actor): Import
+{
+    app(RunImportDryRun::class)($import, $actor);
+    app(StartImport::class)($import->refresh(), $actor);
+
+    return $import->refresh();
+}
+
+/** Rows of an import's report, keyed by header. @return list<array<string, string>> */
+function importReport(Import $import): array
+{
+    $path = Storage::disk('local')->path((string) $import->error_report_path);
+    $reader = new CsvReader($path);
+
+    return array_values(iterator_to_array($reader->rows()));
 }

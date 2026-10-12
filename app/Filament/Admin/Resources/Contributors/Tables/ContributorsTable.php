@@ -4,11 +4,13 @@ namespace App\Filament\Admin\Resources\Contributors\Tables;
 
 use App\Actions\Contributors\ReinstateContributor;
 use App\Actions\Contributors\SuspendContributor;
+use App\Actions\Onboarding\QueueInvites;
 use App\Enums\OnboardingState;
 use App\Exceptions\ActionBlocked;
 use App\Exceptions\IllegalTransition;
 use App\Filament\Admin\Resources\Contributors\Actions\ContributorActions;
 use App\Models\Profile;
+use App\Models\User;
 use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\ViewAction;
@@ -68,6 +70,7 @@ class ContributorsTable
                 BulkActionGroup::make([
                     self::bulkSuspend(),
                     self::bulkReinstate(),
+                    self::bulkInvite(),
                 ]),
             ]);
     }
@@ -81,6 +84,24 @@ class ContributorsTable
             ->schema([Textarea::make('reason')->label('Reason (internal)')->required()->rows(3)->maxLength(1000)])
             ->deselectRecordsAfterCompletion()
             ->action(fn (Collection $records, array $data) => self::runBulk($records, 'suspended', fn (Profile $profile) => app(SuspendContributor::class)($profile, auth()->user(), $data['reason'])));
+    }
+
+    private static function bulkInvite(): BulkAction
+    {
+        return BulkAction::make('sendInvites')
+            ->label('Send invites')
+            ->requiresConfirmation()
+            ->modalDescription('Queues an activation link for each selected contributor who has not signed up yet. Emails are spread out over time.')
+            ->deselectRecordsAfterCompletion()
+            ->action(function (Collection $records): void {
+                $result = app(QueueInvites::class)(User::query()->whereIn('id', $records->pluck('user_id'))->get(), auth()->user());
+
+                Notification::make()
+                    ->title($result['queued'].' invites queued'.($result['skipped'] > 0 ? ', '.$result['skipped'].' skipped' : ''))
+                    ->body($result['skipped'] > 0 ? 'Skipped contributors have already signed up, or you may not invite them.' : null)
+                    ->color($result['skipped'] > 0 ? 'warning' : 'success')
+                    ->send();
+            });
     }
 
     private static function bulkReinstate(): BulkAction

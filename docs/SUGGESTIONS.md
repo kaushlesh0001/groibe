@@ -425,3 +425,21 @@ Built in one pass, after a stop for four data-model and permission questions tha
 242. **Funnel rule.** A project counts at the furthest stage it reached; one on hold counts at the stage it was held from; cancelled ones are left out. Projects made without a brief start at "Projects created", so a later stage can be larger than an earlier one.
 243. **Cron heartbeat is kept in the cache,** not the database. After `cache:clear` or a deploy the widget says "No run recorded yet" until the next minute's run. If the file cache is ever unreliable on the host, move it to the `settings` table.
 244. **Low: widget markup uses a few inline `style` attributes** (row layout). Item 4's CSP must allow inline styles for the admin panel (Filament itself needs them), or these move into a Filament theme.
+
+**Pass 9 item 2 (imports, spec 15.1, SCR-025, 027, 031)**
+245. **Built: contributor and client CSV imports.** Upload, match columns, check without saving, queued run in chunks of 200, downloadable report, and "Send invites" (bulk, queued, spread out at `groibe.invites.per_minute`, 30 by default). Sample files are in `docs/import-samples/`. Imports are CSV only; a file saved as Excel (.xlsx) is refused with a message on how to save as CSV UTF-8. An older Excel CSV (Windows-1252) is read correctly.
+246. **Later: XLSX import (SCR-025).** Needs a spreadsheet library (openspout would stream and suit the memory limit). Not built.
+247. **Decisions made inside gaps in spec 15.1. Reverse any of them by telling me.**
+  1. **An existing email is skipped, never updated.** A second run of the same file creates nothing and overwrites nothing, so an admin's edits and a contributor's own profile survive. Updating existing records would need a rule for which side wins.
+  2. **The `status` column accepts only `pending` (or empty).** Section 15.1 says both "status (default pending)" and "imported users get status=pending, no password". An `active` user with no password would be a user nobody can sign in as, so anything else is refused on its row.
+  3. **Clients need a contact name and email.** A row with only an organization is refused; an organization always arrives with someone to invite.
+  4. **A client belongs to one organization (spec 4).** A contact whose email already belongs to another organization is refused, not attached a second time.
+  5. **Imported skills attach at level `intermediate`, unverified,** the table's default. Unknown skills are created inactive and attached, so activating one later keeps the link. Each is reported once, on the row that introduced it.
+  6. **`imports.dry_run` is true until the real run is queued,** then false. After a dry run `total_rows`, `success_rows`, `skipped_rows` and `failed_rows` are what would happen; after the run they are what did.
+  7. **Row numbers in the report count non-blank data rows plus the header row.** They match a spreadsheet when the file has no blank lines.
+  8. **An import is visible to the admin who uploaded it, and to a super admin.** The stored file and report hold names and emails, so a delivery manager does not see a community manager's imports. Anyone may import only the kinds they hold the permission for.
+  9. **A file that would create nothing cannot be started** (the dry run already shows zero). Re-uploading a finished file is therefore harmless.
+  10. **File limit 5 MB, no row limit,** set in `config/groibe.php`. The run is chunked, so size is bounded by the file, not the host's time limit.
+248. **Invites are found again through the audit log.** `imports` has no column listing the people it created, so each created person has an `import` / `imported` audit entry carrying the import id, and "Send invites" on the import page reads those. Deleting audit rows would break it, which the audit log never allows.
+249. **Low: the dry run holds only email and organization keys in memory** (not rows), so a 5 MB file stays small. A very large file would still run through a single request on the check step; chunking the check is a possible later change if files grow.
+250. **Low: report rows repeat the file's own cells, including phone and email.** The report is on the private disk, served only through an authorized action, and each download is written to the audit log. Delete old reports in the item 6 housekeeping.

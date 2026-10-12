@@ -15,6 +15,15 @@ return [
 
     'invites' => [
         'expire_days' => 7,
+        // Bulk invites (spec 15.1) are queued and spread out: this many emails a minute at most.
+        'per_minute' => 30,
+    ],
+
+    // Spec 15.1 and SCR-025: CSV only, run in chunks so a shared host's time limit is never reached.
+    'imports' => [
+        'max_file_kb' => 5120,
+        'chunk_size' => 200,
+        'preview_rows' => 20,
     ],
 
     'dashboards' => [
