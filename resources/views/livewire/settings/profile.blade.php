@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use App\Support\Throttle;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\Rule;
@@ -25,6 +26,9 @@ new class extends Component {
     public function updateProfileInformation(): void
     {
         $user = Auth::user();
+
+        // Spec 17.2: changing an email address restarts verification and can be used to probe which addresses exist.
+        Throttle::guard('profile-update', (string) $user->id, 10, 3600, 'email');
 
         $validated = $this->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -63,7 +67,9 @@ new class extends Component {
             return;
         }
 
-        $user->sendEmailVerificationNotification();
+        if (Throttle::allow('verification-resend', (string) $user->id, 3, 600)) {
+            $user->sendEmailVerificationNotification();
+        }
 
         Session::flash('status', 'verification-link-sent');
     }

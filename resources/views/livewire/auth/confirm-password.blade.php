@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\Throttle;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Layout;
@@ -17,6 +18,9 @@ new #[Layout('components.layouts.auth')] class extends Component {
             'password' => ['required', 'string'],
         ]);
 
+        // Spec 17.2: a signed-in session must not be a way to guess the password.
+        Throttle::guard('confirm-password', (string) Auth::id(), 5, 60, 'password');
+
         if (! Auth::guard('web')->validate([
             'email' => Auth::user()->email,
             'password' => $this->password,
@@ -25,6 +29,8 @@ new #[Layout('components.layouts.auth')] class extends Component {
                 'password' => __('auth.password'),
             ]);
         }
+
+        Throttle::clear('confirm-password', (string) Auth::id());
 
         session(['auth.password_confirmed_at' => time()]);
 

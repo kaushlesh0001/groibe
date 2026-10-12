@@ -1,6 +1,7 @@
 <?php
 
 use App\Livewire\Actions\Logout;
+use App\Support\Throttle;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 use Livewire\Attributes\Layout;
@@ -18,7 +19,10 @@ new #[Layout('components.layouts.auth')] class extends Component {
             return;
         }
 
-        Auth::user()->sendEmailVerificationNotification();
+        // Spec 17.2: a few resends, then the same confirmation without another email, so the button cannot be used to flood a mailbox.
+        if (Throttle::allow('verification-resend', (string) Auth::id(), 3, 600)) {
+            Auth::user()->sendEmailVerificationNotification();
+        }
 
         Session::flash('status', 'verification-link-sent');
     }

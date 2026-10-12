@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\Throttle;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
@@ -37,6 +38,9 @@ new #[Layout('components.layouts.auth')] class extends Component {
             'email' => ['required', 'string', 'email'],
             'password' => ['required', 'string', 'confirmed', Rules\Password::defaults()],
         ]);
+
+        // Spec 17.2: throttle password reset, so a reset token cannot be guessed by trying many.
+        Throttle::guard('reset-password', (string) request()->ip(), 10, 600, 'email');
 
         // Here we will attempt to reset the user's password. If it is successful we
         // will update the password on an actual user model and persist it to the

@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\Throttle;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
@@ -16,6 +17,9 @@ new class extends Component {
      */
     public function updatePassword(): void
     {
+        // Spec 17.2: the current password is checked here, so this form must not be a way to guess it.
+        Throttle::guard('change-password', (string) Auth::id(), 5, 600, 'current_password');
+
         try {
             $validated = $this->validate([
                 'current_password' => ['required', 'string', 'current_password'],
@@ -30,6 +34,8 @@ new class extends Component {
         Auth::user()->update([
             'password' => Hash::make($validated['password']),
         ]);
+
+        Throttle::clear('change-password', (string) Auth::id());
 
         $this->reset('current_password', 'password', 'password_confirmation');
 
