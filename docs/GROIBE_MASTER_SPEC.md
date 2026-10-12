@@ -118,7 +118,7 @@ Legend: C create, R read, U update, D delete, A approve, own = own records only,
 | Settings, flags | - | - | - | - | - | - | CRUD |
 | Audit log | - | - | - | R own actions | R own actions | R own | R all |
 | Email log | - | - | - | - | - | - | R (read-only, nobody edits; only the retention job deletes, SCR-032) |
-| Import/Export | - | - | - | contributors+projects, and import of clients (SCR-031) | contributors | payouts | all |
+| Import/Export | - | - | - | contributors+projects, plus organizations, clients, briefs, applications and reviews with projects (SCR-033), and import of clients (SCR-031) | contributors | payouts | all |
 
 Enforcement: Laravel Policies for every model. Filament resources must call the same policies. No authorization in controllers by role-name string checks; use `can()` abilities.
 
@@ -473,7 +473,7 @@ Flow: upload CSV (XLSX is deferred, SCR-025) -> map columns -> dry-run validatio
 
 ### 15.2 Export
 
-CSV export for: contributors, organizations, clients, briefs, projects, applications, reviews, payouts, invoice refs. Respects permission matrix. Exports run synchronously up to 5,000 rows. Above that the export is refused with a message asking the admin to narrow the filters; the queued path is not built (SCR-026). Every CSV starts with a UTF-8 byte order mark (SCR-025).
+CSV export for: contributors, organizations, clients, briefs, projects, applications, reviews, payouts, invoice refs. Respects permission matrix. Exports run synchronously up to 5,000 rows. Above that the export is refused with a message asking the admin to narrow the filters; the queued path is not built (SCR-026). Every CSV starts with a UTF-8 byte order mark (SCR-025). Exports of organizations, clients, briefs, applications and reviews need `import_export.projects` (delivery manager, super admin), contributors need `import_export.contributors`, payouts and invoice references need `import_export.payouts`. Exports respect the filters on screen and are written to the audit log with their row count. Lists of people carry name and email but never phone, and no export carries notes or free text (SCR-033).
 Payout and invoice reference exports (SCR-024) need `import_export.payouts` (finance, super admin), respect the filters on screen, and are written to the audit log with their row count. Payout columns: id, project code and title, contributor name, milestone, amount, currency, TDS, net, status, transaction reference, paid date, created date. Invoice columns: project code and title, Zoho invoice, amount, currency, status, issue and due dates. No contributor email or phone and no notes. Text cells starting with `=`, `+`, `-`, `@`, tab or carriage return are prefixed with an apostrophe so spreadsheets cannot run them.
 
 ## 16. URL structure and route files
@@ -622,5 +622,6 @@ Stored in `feature_flags`, cached, toggled in Admin. Defaults:
 | 2026-10-12 | 7.1, 17.2, 18 | SCR-029: TOTP 2FA via Filament app authentication, secret and recovery codes on `users`, always on for super admin, flag governs other admins, artisan reset command | Founder |
 | 2026-10-12 | 17.2 | SCR-030: showcase consent changes are written to the activity log | Founder |
 | 2026-10-12 | 5, 15.1 | SCR-031: permission `import_export.import_clients` for delivery manager and super admin | Founder |
+| 2026-10-12 | 5, 15.2 | SCR-033: which permission each export needs, and that people lists carry name and email, never phone, and no notes or free text | Founder |
 | 2026-10-12 | 5, 14, 17.1 | SCR-032: daily retention job for the email log, `sent` rows after 90 days and `failed` rows after 180 days | Founder |
 | 2026-10-12 | 9, 10.2, 10.4, 11, 13, 14, 17.1 | Recorded as built, no new behaviour: proof of work state moves and contributor rights; header and footer menus and built-in pages; `FAQPage` data; Payouts in contributor navigation; the admin Messages screen; message limits and who sees which name; notification categories and the extra events; the scheduled jobs that exist | Founder |

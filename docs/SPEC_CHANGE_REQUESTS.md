@@ -285,3 +285,14 @@ Proposed changes only. The spec is edited by the founder, between passes, and lo
 - **Gap:** The email log holds recipient addresses and grows with every message, and the spec says nobody edits or deletes its rows. It has no retention rule.
 - **Decision:** A daily scheduled job deletes `sent` rows older than 90 days and `failed` rows older than 180 days, judged by `created_at`. Nobody can edit or delete a row from the admin; the job is the only deleter. Each run writes the number of rows removed to the audit log.
 - **Code status:** Not built yet.
+
+## SCR-033: Export permissions and columns (spec sections 5, 15.2)
+
+- **Status:** ACCEPTED 2026-10-12 by the founder, to be built in Pass 9 item 3, and written into the master spec (sections 5, 15.2 and the section 23 change log).
+- **Gap:** The Import/Export row of the permission matrix names only contributors, projects and payouts. Section 15.2 also lists organizations, clients, briefs, applications and reviews, with no role holding the right to export them. The columns of a people export were not stated either.
+- **Decision:**
+  1. No new permissions. Exports of organizations, clients, briefs, applications and reviews need `import_export.projects` (delivery manager, super admin). Contributors need `import_export.contributors` (delivery manager, community manager, super admin). Payouts and invoice references keep `import_export.payouts` (SCR-024).
+  2. The permission is checked when the export runs, not only when the button shows.
+  3. Every export respects the filters and tab on screen, is refused above 5,000 rows (SCR-026), starts with a UTF-8 byte order mark (SCR-025), protects formula-looking cells, and is written to the audit log with its row count.
+  4. Lists of people (contributors, clients, applicants) carry name and email, never phone. No export carries internal notes, bios, review comments or other free text. Admin users are never exported.
+- **Code status:** Not built yet.
