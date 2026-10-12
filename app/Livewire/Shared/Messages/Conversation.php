@@ -38,6 +38,8 @@ class Conversation extends Component
 
     public bool $internal = false;
 
+    /** How many messages to show. Locked: only `showEarlier` may raise it, so a browser cannot ask for a whole thread at once. */
+    #[Locked]
     public int $limit = 0;
 
     public function mount(Thread $thread): void
