@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\Throttle;
 use Illuminate\Support\Facades\Password;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
@@ -15,6 +16,11 @@ new #[Layout('components.layouts.auth')] class extends Component {
         $this->validate([
             'email' => ['required', 'string', 'email'],
         ]);
+
+        // Spec 17.2: throttle password reset. Per address and email, and per address overall, so one visitor cannot flood
+        // inboxes. The answer below is the same whether or not the account exists.
+        Throttle::guard('forgot-password', request()->ip().'|'.$this->email, 5, 600, 'email');
+        Throttle::guard('forgot-password-ip', (string) request()->ip(), 20, 3600, 'email');
 
         Password::sendResetLink($this->only('email'));
 
