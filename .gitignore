@@ -29,3 +29,5 @@ yarn-error.log
 /storage/framework/phpstan/
 
 /docs/site-content/
+/storage/backups
+/storage/fonts

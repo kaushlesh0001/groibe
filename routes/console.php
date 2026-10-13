@@ -23,3 +23,6 @@ Schedule::command('groibe:notify-overdue-tasks')
 Schedule::command('groibe:mark-overdue-invoices')
     ->dailyAt('08:15')
     ->withoutOverlapping(30);
+
+// Weekly database dump outside the web root (spec 17.4), on top of the host own daily backups.
+Schedule::command('groibe:backup-db')->weeklyOn(0, '02:30')->withoutOverlapping(60);
