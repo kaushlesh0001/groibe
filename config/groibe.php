@@ -33,6 +33,35 @@ return [
         'preview_rows' => 20,
     ],
 
+    // Spec 17.4 and SCR-032, SCR-034: logs, exception emails, backups and the daily housekeeping jobs.
+    'ops' => [
+        // Who gets the exception email. Empty sends none. No address is hard-coded: set it in `.env` on the host.
+        'exception_email' => env('GROIBE_EXCEPTION_EMAIL'),
+        // The same exception (class, file and line) is mailed once in this many minutes, and no more than the cap an hour in all.
+        'exception_throttle_minutes' => 60,
+        'exception_max_per_hour' => 10,
+
+        // The host plan's database limit in MB; super admins are warned when the database passes `db_size_warn_percent` of it.
+        'db_size_limit_mb' => (int) env('DB_SIZE_LIMIT_MB', 1024),
+        'db_size_warn_percent' => 80,
+
+        // Invited but not activated for this many days: reported to delivery managers, never deleted.
+        'stale_invite_days' => 14,
+
+        // An import's stored CSV and report are removed this many days after upload (the row and its counts stay).
+        'import_file_days' => 30,
+
+        // Email log retention by `created_at` (SCR-032).
+        'email_log_sent_days' => 90,
+        'email_log_failed_days' => 180,
+
+        // The weekly database dump. Written outside the web root: the command refuses a folder under `public`.
+        'backup' => [
+            'path' => env('GROIBE_BACKUP_PATH'),
+            'keep' => (int) env('GROIBE_BACKUP_KEEP', 4),
+        ],
+    ],
+
     'dashboards' => [
         'contributor' => '/app/contributor',
         'client' => '/app/client',
