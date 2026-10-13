@@ -20,6 +20,17 @@ abstract class GroibeNotification extends Notification implements ShouldQueue
     /** One of config('groibe.notifications.categories'). */
     abstract public function category(): string;
 
+    /**
+     * The channels this notification may use at all. A report meant only for the bell, such as the stale invite notice
+     * (SCR-034), narrows this to `database`; the dispatcher never sends on a channel outside it.
+     *
+     * @return list<string>
+     */
+    public function availableChannels(): array
+    {
+        return ['database', 'mail'];
+    }
+
     /** @return list<string> */
     public function via(object $notifiable): array
     {

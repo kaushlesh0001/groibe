@@ -30,6 +30,10 @@ class SaveImportMapping
             throw IllegalTransition::for('import mapping', $import->status->value, 'changed');
         }
 
+        if (! $import->hasStoredFile()) {
+            throw ActionBlocked::guardFailed('The uploaded file was removed after 30 days. Upload it again.');
+        }
+
         $definition = ImportDefinition::for($import->type, false);
         $headers = (new CsvReader(Storage::disk(ImportErrorReport::DISK)->path($import->file_path)))->headers();
         $clean = [];

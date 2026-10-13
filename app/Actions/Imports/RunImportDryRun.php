@@ -32,6 +32,10 @@ class RunImportDryRun
             throw IllegalTransition::for('import', $import->status->value, ImportStatus::Validated->value);
         }
 
+        if (! $import->hasStoredFile()) {
+            throw ActionBlocked::guardFailed('The uploaded file was removed after 30 days. Upload it again.');
+        }
+
         $mapping = $import->mapping ?? [];
 
         foreach (ImportDefinition::for($import->type, false)->fields() as $field => $settings) {

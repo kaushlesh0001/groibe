@@ -9,6 +9,7 @@ use Database\Factories\ImportFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Storage;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
@@ -60,6 +61,12 @@ class Import extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /** False once the housekeeping job has removed the uploaded CSV (SCR-034); the row, counts and status stay. */
+    public function hasStoredFile(): bool
+    {
+        return Storage::disk('local')->exists($this->file_path);
     }
 
     /** Moves to a new status, or throws when the state machine does not allow it. */
