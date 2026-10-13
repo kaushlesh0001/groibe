@@ -4,10 +4,11 @@ namespace App\Filament\Admin\Widgets;
 
 use App\Services\Admin\DashboardMetrics;
 use App\Services\Ops\CronHeartbeat;
+use App\Services\Ops\DatabaseSize;
 use Filament\Widgets\Widget;
 
 /**
- * Spec 17.4 "System status": queue backlog, failed jobs and the last cron run. It shows only to admins who
+ * Spec 17.4 "System status": queue backlog, failed jobs, the last cron run and the database size (SCR-034). It shows only to admins who
  * can read settings (super admin), because failed jobs and cron health are operator information.
  */
 class SystemStatusWidget extends Widget
@@ -36,6 +37,8 @@ class SystemStatusWidget extends Widget
             'cronHealthy' => $heartbeat->isHealthy(),
             'lastRun' => $lastRun?->diffForHumans(),
             'queue' => $queue,
+            // The last daily measurement (SCR-034); the page never runs the size query itself.
+            'database' => app(DatabaseSize::class)->lastCheck(),
         ];
     }
 }

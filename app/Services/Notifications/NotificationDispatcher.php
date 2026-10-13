@@ -28,9 +28,12 @@ class NotificationDispatcher
                 continue;
             }
 
-            $channels = $this->preferences->channelsFor($user, $notification->category());
+            $channels = array_values(array_intersect(
+                $this->preferences->channelsFor($user, $notification->category()),
+                $notification->availableChannels(),
+            ));
 
-            // Everything switched off for this category: nothing to send.
+            // Everything switched off for this category, or off on the only channel this notification may use: nothing to send.
             if ($channels === []) {
                 continue;
             }

@@ -24,5 +24,13 @@ Schedule::command('groibe:mark-overdue-invoices')
     ->dailyAt('08:15')
     ->withoutOverlapping(30);
 
-// Weekly database dump outside the web root (spec 17.4), on top of the host own daily backups.
+// Spec 17.4 and SCR-032, SCR-034: daily housekeeping, in the application time zone. Overnight jobs are spaced out so they
+// never compete for a shared host's memory; the stale invite report goes out in working hours, when someone can act on it.
+Schedule::command('groibe:prune-email-log')->dailyAt('03:00')->withoutOverlapping(30);
+Schedule::command('groibe:clean-import-files')->dailyAt('03:10')->withoutOverlapping(30);
+Schedule::command('groibe:check-database-size')->dailyAt('03:20')->withoutOverlapping(30);
+Schedule::command('groibe:refresh-public-caches')->dailyAt('03:30')->withoutOverlapping(30);
+Schedule::command('groibe:report-stale-invites')->dailyAt('08:30')->withoutOverlapping(30);
+
+// Weekly database dump outside the web root (spec 17.4), on top of the host's own daily backups.
 Schedule::command('groibe:backup-db')->weeklyOn(0, '02:30')->withoutOverlapping(60);
