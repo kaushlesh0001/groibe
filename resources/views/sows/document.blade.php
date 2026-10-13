@@ -4,7 +4,10 @@
     <meta charset="utf-8">
     <title>{{ $sow->project->code }} Statement of Work v{{ $sow->version }}</title>
     <style>
-        body { font-family: DejaVu Sans, Helvetica, Arial, sans-serif; color: #042B65; font-size: 12px; line-height: 1.5; margin: 0; padding: 24px; }
+        @if ($forPdf ?? false)
+            @include('pdf.fonts')
+        @endif
+        body { font-family: Inter, DejaVu Sans, Helvetica, Arial, sans-serif; color: #042B65; font-size: 12px; line-height: 1.5; margin: 0; padding: 24px; }
         h1 { font-size: 20px; margin: 0 0 8px; }
         h2 { font-size: 15px; margin: 18px 0 6px; }
         table { border-collapse: collapse; width: 100%; }
