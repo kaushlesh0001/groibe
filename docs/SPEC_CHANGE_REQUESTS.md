@@ -284,7 +284,7 @@ Proposed changes only. The spec is edited by the founder, between passes, and lo
 - **Status:** ACCEPTED 2026-10-12 by the founder, to be built in Pass 9 item 6, and written into the master spec (sections 5, 14, 17.1 and the section 23 change log).
 - **Gap:** The email log holds recipient addresses and grows with every message, and the spec says nobody edits or deletes its rows. It has no retention rule.
 - **Decision:** A daily scheduled job deletes `sent` rows older than 90 days and `failed` rows older than 180 days, judged by `created_at`. Nobody can edit or delete a row from the admin; the job is the only deleter. Each run writes the number of rows removed to the audit log.
-- **Code status:** Not built yet.
+- **Code status:** Built in Pass 9 item 6 (`groibe:prune-email-log`, daily 03:00).
 
 ## SCR-033: Export permissions and columns (spec sections 5, 15.2)
 
@@ -306,4 +306,4 @@ Proposed changes only. The spec is edited by the founder, between passes, and lo
   2. **The database-size check** reads the size of the database each day, writes it to the log, and shows it on the System status widget. When it passes 80% of `DB_SIZE_LIMIT_MB` (default 1024, set to the host plan's limit), super admins get one in-app and email notice a day while it stays above.
   3. **The sitemap refresh** clears the public caches (homepage, stats, menu and sitemap) once a day, so changes that happen with the passing of time, such as a role past its deadline, show up without waiting for an edit.
   4. **Import files are removed 30 days after upload:** the stored CSV and its report are deleted and the report path is cleared; the import row, its counts and its status stay. Temporary uploads left unused for a day are deleted.
-- **Code status:** Not built yet.
+- **Code status:** Built in Pass 9 item 6: `groibe:report-stale-invites` (08:30), `groibe:check-database-size` (03:20), `groibe:refresh-public-caches` (03:30) and `groibe:clean-import-files` (03:10), daily.
