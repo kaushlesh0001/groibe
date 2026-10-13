@@ -6,6 +6,7 @@ use App\Http\Middleware\EnsureFeatureEnabled;
 use App\Http\Middleware\EnsureUserRole;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\StrictContentSecurityPolicy;
+use App\Services\Ops\ExceptionReporter;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -41,5 +42,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->appendToGroup('web', EnsureAccountNotSuspended::class);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
+        // Spec 17.4: an unhandled exception is also emailed to the ops address, throttled. The log entry is written as usual.
+        $exceptions->report(function (Throwable $e): void {
+            app(ExceptionReporter::class)->report($e);
+        });
     })->create();
