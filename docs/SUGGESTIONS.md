@@ -498,3 +498,10 @@ Built in one pass, after a stop for four data-model and permission questions tha
 281. **Built: Inter in the PDFs.** The official Inter 4.1 Regular and Bold static files and the SIL Open Font Licence text are in `resources/fonts/pdf` (marked binary in `.gitattributes`). The SOW PDF loads them through `@font-face` from disk, embeds only the glyphs it uses, and a test checks both weights are embedded and the file stays small. **Two things to know for the host:** dompdf caches font metrics in `storage/fonts` on first use, so that folder must be writable (the code creates it; it is not in Git); and the browser Print view of a SOW still uses the fonts on the reader's computer, because it is not a PDF. Only the SOW has a PDF today.
 282. **Low: spec 17.1 also lists "reputation recompute" and "notification digests" as scheduled jobs.** Reputation is recomputed by a queued job on project close and review publish (spec 9), so there is no schedule for it; the digests that exist (overdue tasks, overdue invoices, stale invites) are scheduled. Say if you want a nightly full recompute as a safety net.
 283. **Note: the Admin test folder takes about 18 minutes** (87 tests, Filament boots slowly). Run it in the background or by file.
+
+**Pass 10 checklist** (carried from Pass 9 item 6; write each into `docs/DEPLOY.md`)
+- [ ] `GROIBE_BACKUP_PATH` points outside the document root (for example a folder beside the app, never inside `public_html`). `groibe:backup-db` refuses a folder under `public`.
+- [ ] `storage/fonts` is writable by PHP, so dompdf can cache the Inter font metrics on the first SOW PDF.
+- [ ] The cron entry runs `php artisan schedule:run` every minute. Without it nothing scheduled runs: the queue, the digests, the housekeeping jobs and the weekly backup. System status shows the last cron run.
+- [ ] `DB_SIZE_LIMIT_MB` is set a little under the hosting plan's real database limit (default 1024).
+- [ ] `GROIBE_EXCEPTION_EMAIL` is set, so unhandled errors are emailed.
