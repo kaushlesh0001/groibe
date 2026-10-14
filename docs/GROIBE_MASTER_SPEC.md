@@ -493,7 +493,7 @@ Route files: `routes/public.php`, `routes/contributor.php`, `routes/client.php`,
 - Target: PHP 8.3, MySQL/MariaDB, no persistent processes, no Node at runtime, no Redis, no websockets.
 - Queue driver `database`, drained by cron: `schedule:run` every minute, which runs `queue:work --stop-when-empty --max-time=50`.
 - Cache driver `file` (switch to `database` if file perms are an issue). Sessions `database`.
-- Scheduled jobs (what each one does is in SCR-032 and SCR-034): email log retention (daily, SCR-032), reputation recompute, stale-invite cleanup, sitemap refresh, daily DB-size check, notification digests. As built: the queue drain (every minute), the overdue task digest (daily 08:00) and the overdue invoice marking with its digest to finance (daily 08:15), in the application time zone.
+- Scheduled jobs (what each one does is in SCR-032 and SCR-034): email log retention (daily, SCR-032), reputation recompute, stale-invite cleanup, sitemap refresh, daily DB-size check, notification digests. As built: the reputation recompute is not scheduled; it runs as a queued job on project close and on review publish (section 9). Also as built: the queue drain (every minute), the overdue task digest (daily 08:00) and the overdue invoice marking with its digest to finance (daily 08:15), in the application time zone.
 - Assets built locally with Vite and committed or uploaded (`public/build`). The server never runs npm.
 - Do not rely on `storage:link` symlinks working. Public media goes to a dedicated public disk under `public/` or is served through a controller. Private files served only via authorized controller routes.
 - Keep memory use modest (<256MB per request). Paginate everything. Avoid N+1 (use eager loading; add `Model::preventLazyLoading()` in non-production).
@@ -627,3 +627,4 @@ Stored in `feature_flags`, cached, toggled in Admin. Defaults:
 | 2026-10-12 | 5, 15.2 | SCR-033: which permission each export needs, and that people lists carry name and email, never phone, and no notes or free text | Founder |
 | 2026-10-12 | 5, 14, 17.1 | SCR-032: daily retention job for the email log, `sent` rows after 90 days and `failed` rows after 180 days | Founder |
 | 2026-10-12 | 9, 10.2, 10.4, 11, 13, 14, 17.1 | Recorded as built, no new behaviour: proof of work state moves and contributor rights; header and footer menus and built-in pages; `FAQPage` data; Payouts in contributor navigation; the admin Messages screen; message limits and who sees which name; notification categories and the extra events; the scheduled jobs that exist | Founder |
+| 2026-10-14 | 17.1 | Recorded as built, no new behaviour: the reputation recompute has no schedule; it runs as a queued job on project close and review publish | Founder |
