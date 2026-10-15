@@ -1,0 +1,372 @@
+# Deploying Groibe to a shared cPanel host
+
+Status: written in Pass 10. This is a procedure, not policy. Anything marked CONFIRM depends on the host (MilesWeb at the time of writing): check it with their support or in cPanel before relying on it.
+
+Groibe is one Laravel app. It needs PHP, MySQL, a cron job and an outbound mail server. It needs no Node, no Redis and no background process on the server (spec 17.1).
+
+**Contents**
+
+1. [What you need before you start](#1-what-you-need-before-you-start)
+2. [PHP 8.3 and its settings](#2-php-83-and-its-settings)
+3. [Where the files go (document root)](#3-where-the-files-go-document-root)
+4. [First install, step by step](#4-first-install-step-by-step)
+5. [The production .env](#5-the-production-env)
+6. [Built assets](#6-built-assets)
+7. [Cron](#7-cron)
+8. [File permissions](#8-file-permissions)
+9. [Private files, and the test that proves they are private](#9-private-files-and-the-test-that-proves-they-are-private)
+10. [Mail: SMTP, SPF, DKIM, DMARC](#10-mail-smtp-spf-dkim-dmarc)
+11. [Cloudflare](#11-cloudflare)
+12. [Every later deploy](#12-every-later-deploy)
+13. [Rollback](#13-rollback)
+14. [Backups and the restore drill](#14-backups-and-the-restore-drill)
+15. [Post-deploy smoke test](#15-post-deploy-smoke-test)
+16. [Order of work, staging first](#16-order-of-work-staging-first)
+17. [Things to confirm with the host](#17-things-to-confirm-with-the-host)
+
+---
+
+## 1. What you need before you start
+
+- A cPanel account with SSH (terminal) access, Git, and Cron Jobs. CONFIRM SSH is switched on for the account.
+- The domain, with its DNS under your control (at the registrar, at cPanel or at Cloudflare).
+- A MySQL database and a user for it (cPanel, MySQL Databases). cPanel adds the account name in front of both names, for example `cpuser_groibe`. Give the user all privileges on that one database only.
+- An SMTP mailbox on the sending domain (cPanel, Email Accounts).
+- A computer with PHP 8.3, Composer and Node, to build the assets (section 6). The server never runs Node.
+- Read access from the server to the Git repository. Use a read-only deploy key, not a personal password.
+- The real legal texts (Member Agreement, Client MSA, SOW template, Terms, Privacy) ready to paste into Admin after the first deploy. They are never put in code.
+
+Keep **two sites**: a staging subdomain first (its own folder, database and `.env`), then production. Section 16 gives the order.
+
+## 2. PHP 8.3 and its settings
+
+1. cPanel, **MultiPHP Manager**: choose PHP 8.3 for the domain. The `php` that a plain SSH login runs is often older. Find the path of the 8.3 binary (usually `/opt/cpanel/ea-php83/root/usr/bin/php`, CONFIRM) and use it for everything below, in the deploy script as `PHP_BIN`, and in cron.
+2. cPanel, **Select PHP Version, Extensions**: switch on `ctype`, `curl`, `dom`, `exif`, `fileinfo`, `filter`, `gd` (with JPEG, PNG and WebP), `iconv`, `intl`, `json`, `mbstring`, `openssl`, `pdo_mysql`, `phar`, `session`, `simplexml`, `tokenizer`, `xml`, `xmlreader`, `xmlwriter`, `zip`, `zlib`. Check them with `php -m` on the 8.3 binary.
+3. cPanel, **MultiPHP INI Editor**:
+
+   | Setting | Value | Why |
+   |---|---|---|
+   | `memory_limit` | `256M` | The app is built to stay under this (spec 17.1). |
+   | `upload_max_filesize` | `26M` | Submissions may be 25 MB (spec 17.2). |
+   | `post_max_size` | `30M` | Must be at least the upload size. |
+   | `max_execution_time` | `60` | Imports and PDF files. |
+   | `opcache.validate_timestamps` | `1` | New code is noticed after a deploy without a restart (section 12). |
+   | `disable_functions` | must **not** contain `proc_open` | The scheduler starts every job as a PHP process (see below). |
+
+4. **`proc_open` matters.** Laravel's scheduler runs each scheduled job (the queue drain, the digests, the weekly backup) as a separate PHP process. If the host disables `proc_open` for web PHP, queued email and notifications never go out and nothing is reported. Check it on the web side, not just on the command line: after the first deploy, the System status widget must show the cron as running and the queue as empty (section 15). CONFIRM with the host.
+
+## 3. Where the files go (document root)
+
+The app lives **outside** the web folder, so `.env`, `vendor`, `storage` and the code are never reachable from a browser. Put it beside `public_html`, for example `/home/CPUSER/groibe`.
+
+**Option A (recommended): point the domain at `groibe/public`.**
+cPanel, **Domains, Manage, Document Root**: set it to `groibe/public`. This works for a subdomain such as `staging`. For the primary domain cPanel may lock the document root to `public_html`; if so, use option B or ask the host to change it. Nothing else is needed: `public/.htaccess` already routes requests to `index.php`.
+
+**Option B: copy `public` into `public_html`.**
+Use this only if A is not possible.
+
+1. After each deploy, `scripts/deploy.sh` copies `groibe/public/` into `public_html/` when you set `PUBLIC_DIR=/home/CPUSER/public_html` (it needs `rsync`). It never touches `public_html/index.php`.
+2. Replace `public_html/index.php` once, so it finds the app and tells Laravel where the public folder is:
+
+   ```php
+   <?php
+
+   use Illuminate\Http\Request;
+
+   define('LARAVEL_START', microtime(true));
+
+   if (file_exists($maintenance = __DIR__.'/../groibe/storage/framework/maintenance.php')) {
+       require $maintenance;
+   }
+
+   require __DIR__.'/../groibe/vendor/autoload.php';
+
+   $app = require_once __DIR__.'/../groibe/bootstrap/app.php';
+   $app->usePublicPath(__DIR__);
+
+   $app->handleRequest(Request::capture());
+   ```
+
+3. Nothing else of the app goes in `public_html`. The weekly backup command refuses to write below the public folder, so the default backup folder is safe in both options.
+
+**Never** run `php artisan storage:link`. The app does not use a `public/storage` link, and private files are not served that way (section 9).
+
+## 4. First install, step by step
+
+Do this on staging first. Replace `CPUSER`, the repository address and the paths.
+
+1. **Database.** Create it and its user in cPanel (section 1). Write down the full names.
+2. **Code.** Over SSH:
+
+   ```bash
+   cd ~
+   git clone git@github.com:YOUR-ORG/groibe.git groibe
+   cd groibe
+   git checkout main
+   ```
+
+3. **Settings file.** `cp .env.production.example .env`, then fill in every line marked CHANGE (section 5). Use `nano .env`. Do not paste the real file anywhere else.
+4. **PHP packages.** Composer must run on the PHP 8.3 binary:
+
+   ```bash
+   PHP=/opt/cpanel/ea-php83/root/usr/bin/php
+   $PHP $(command -v composer) install --no-dev --optimize-autoloader --no-interaction
+   ```
+
+   If `composer` is not installed on the account, download `composer.phar` into your home folder once and use `$PHP ~/composer.phar install ...`. If the host cannot run Composer at all, run it on your computer with `--no-dev` and upload `vendor/` (slow, last resort).
+5. **App key.** Once, on this server: `$PHP artisan key:generate --force`. Back the key up in your password manager. Losing it makes saved data unreadable (two-factor secrets, for one).
+6. **Built assets.** Upload `public/build` (section 6).
+7. **Deploy script.** It does the rest in a safe order:
+
+   ```bash
+   PHP_BIN=$PHP COMPOSER_BIN="$PHP $(command -v composer)" scripts/deploy.sh check   # only checks, changes nothing
+   PHP_BIN=$PHP COMPOSER_BIN="$PHP $(command -v composer)" scripts/deploy.sh
+   ```
+
+8. **First data, once.** The seeders in `DatabaseSeeder` are the production-safe ones: roles and permissions, the super admin from `ADMIN_EMAIL` and `ADMIN_PASSWORD`, skills and project types, feature flags, agreement placeholders and the website content (stored inactive, flagged "needs review"):
+
+   ```bash
+   $PHP artisan db:seed --force
+   ```
+
+   Then open `.env`, **delete the value of `ADMIN_PASSWORD`**, and run `$PHP artisan config:cache`. The password is only read when the account is first created.
+   `DemoSeeder` (fake people and projects) is refused outside the `local`, `staging` and `testing` environments. Run it on staging only if you want demo data: `$PHP artisan migrate:fresh --seed --seeder=DemoSeeder` wipes that database.
+9. **Document root** (section 3), **cron** (section 7), **permissions** (section 8).
+10. **Sign in** at `/admin/login` as the super admin. Two-factor set-up is compulsory for the super admin: scan the code with an authenticator app and store the recovery codes safely. If you are ever locked out, the server can reset it: `$PHP artisan groibe:two-factor-reset someone@example.com`.
+11. **Admin, once:** System, Agreement Templates: paste and publish the real legal texts. Website: approve the wording of the seeded pages and sections ("Approve wording"), then switch on what should be public. Nothing marked "needs review" is ever public.
+12. Run the smoke test (section 15).
+
+## 5. The production .env
+
+`.env.production.example` is the template and explains each line. The ones that cause trouble:
+
+| Setting | Rule |
+|---|---|
+| `APP_ENV` | `production`. `staging` on the staging site. The deploy script refuses anything else. |
+| `APP_DEBUG` | `false`. A debug page prints secrets. The deploy script refuses `true`. |
+| `APP_KEY` | Made on the server (step 5). Never reuse a development key. |
+| `APP_URL` | The public `https://` address, no trailing slash. Links in emails and signed links use it. |
+| `DB_CONNECTION` | `mysql`, even if the host runs MariaDB. The search indexes are only created for that name (SUGGESTIONS 299). |
+| `DB_SIZE_LIMIT_MB` | A little under the hosting plan's real database limit. Super admins are warned at 80%. |
+| `QUEUE_CONNECTION`, `SESSION_DRIVER`, `CACHE_STORE` | `database`, `database`, `file`. No Redis exists (spec 17.1). |
+| `MAIL_*` | The cPanel mailbox (section 10). |
+| `GROIBE_EXCEPTION_EMAIL` | Where unhandled errors are mailed, once an hour for each. Leave empty and none are sent. |
+| `GROIBE_BACKUP_PATH` | A folder **outside** the web root, for example `/home/CPUSER/groibe-backups`. |
+| `TRUSTED_PROXIES` | Cloudflare's address ranges (section 11). |
+| `CSP_REPORT_ONLY` | `true` for the very first deploy if you want to see what the Content-Security-Policy would block without blocking it. Set it back to `false` after. |
+| `ADMIN_PASSWORD` | Present for the first seed only. Delete the value afterwards. |
+
+After any change to `.env` on a running site: `$PHP artisan config:cache`. A cached config ignores later edits to `.env`.
+
+## 6. Built assets
+
+The page styles and scripts (Vite) are built on a computer and uploaded. They are not in Git (`public/build` is ignored), and the deploy script stops if `public/build/manifest.json` is missing.
+
+On your computer, from the repo, on the commit you are deploying:
+
+```bash
+npm ci
+npm run build
+rsync -az --delete public/build/ CPUSER@HOST:groibe/public/build/
+```
+
+No `rsync`? Zip `public/build`, upload it with cPanel File Manager or SFTP to `groibe/public/`, and unzip over the old folder. The admin panel's own assets are not uploaded: the deploy script publishes them on the server with `php artisan filament:assets`.
+
+Upload the build **before** running `scripts/deploy.sh`, so the new pages never meet old assets. Do it for every release that changes anything in `resources/css`, `resources/js` or the views' classes.
+
+## 7. Cron
+
+One cron entry runs the whole schedule. In cPanel, **Cron Jobs**, add, every minute (`* * * * *`):
+
+```
+cd /home/CPUSER/groibe && /opt/cpanel/ea-php83/root/usr/bin/php artisan schedule:run >> /dev/null 2>&1
+```
+
+It must use the PHP 8.3 binary and `cd` into the app first. That one line runs: the queue drain every minute (emails and notifications leave within about a minute), the overdue task digest (08:00), overdue invoices (08:15), the stale invite report (08:30), email log retention (03:00), import file clean-up (03:10), the database size check (03:20), the public cache refresh (03:30) and the weekly database backup (Sunday 02:30). Times are in the app time zone, `Asia/Kolkata`.
+
+Check it: `php artisan schedule:list` shows the jobs, and Admin's **System status** shows "Running (last run … ago)" within two minutes. If it says "No run recorded yet" or "Stopped", cron is not reaching the app: wrong PHP path, wrong folder, or `proc_open` disabled (section 2).
+
+## 8. File permissions
+
+- Folders 755 and files 644 is normal. `storage` and `bootstrap/cache` need to be writable by the account: the deploy script runs `chmod -R ug+rwX` on them. Never use 777.
+- `storage/fonts` must be writable. The SOW PDF caches the Inter font metrics there on first use, and the PDF fails without it. The script creates the folder.
+- `.env` should be readable by the account only: `chmod 600 .env`.
+- Do not edit files by hand on the server. The deploy script refuses to run if tracked files have changed.
+
+## 9. Private files, and the test that proves they are private
+
+Brief files, submissions, message attachments, project files, import uploads, error reports and profile photos live in `storage/app/private`. That folder is outside the web root, and there is no link from `public` to it. The only way to read one is through the app: a signed link, to a signed-in person, who passes the file's policy (spec 17.2). Backups go to `GROIBE_BACKUP_PATH`, also outside the web root.
+
+**Test it, on staging and again on production.** Replace the address.
+
+```bash
+SITE=https://staging.example.com
+
+# 1. None of these may return 200. 403 or 404 is right. (With option A they are not even inside the document root.)
+for path in /.env /.git/config /composer.json /artisan /vendor/autoload.php /storage/logs/laravel.log /storage/app/private /storage/app/public /public/storage /backups; do
+  printf '%-34s %s\n' "$path" "$(curl -s -o /dev/null -w '%{http_code}' "$SITE$path")"
+done
+
+# 2. A private file cannot be fetched by guessing or by its stored path.
+```
+
+Then, by hand:
+
+1. Sign in as a client, create a brief and attach a file.
+2. On the server find the stored name: `find ~/groibe/storage/app/private -type f -newer ~/groibe/.env | head`.
+3. Request `$SITE/storage/app/private/<that path>` and `$SITE/<that file name>`: both must be 404.
+4. Open the file from the brief page: it downloads. Copy the link, open it in a private window where nobody is signed in: it must send you to the sign-in page. Change one letter in the link: it must be refused. Wait for it to expire (10 minutes): it must be refused.
+5. Sign in as a **different** client and open the first client's link: refused.
+
+If step 1 returns 200 for anything, **stop**: the document root is wrong (section 3).
+
+## 10. Mail: SMTP, SPF, DKIM, DMARC
+
+Groibe sends from the address in `MAIL_FROM_ADDRESS` through the mailbox in `MAIL_USERNAME`. Without proper DNS records, activation links and notifications land in spam, which stops people from joining.
+
+1. Use an address on **your own domain** as the sender, made as a mailbox in cPanel. Use the host's SMTP server name and port 587 (or 465 with `MAIL_SCHEME=smtps`). CONFIRM the values in cPanel, Email Accounts, Connect Devices.
+2. **SPF and DKIM.** cPanel, **Email Deliverability**, for the domain: it shows whether each record is valid and offers to install the suggested ones. If your DNS is at Cloudflare or the registrar rather than cPanel, copy the suggested records from that page into your DNS as `TXT` records. Do not write them by hand from memory: the SPF record must name the host's mail servers.
+3. **DMARC.** Add a `TXT` record at `_dmarc.yourdomain`:
+
+   ```
+   v=DMARC1; p=none; rua=mailto:dmarc-reports@yourdomain; fo=1
+   ```
+
+   `p=none` only reports. After two to four weeks of clean reports, move to `p=quarantine`, and later `p=reject`. Use a mailbox someone reads for `rua`.
+4. In Cloudflare, mail-related records (`MX`, `mail.` and the like) must be **DNS only** (grey cloud), never proxied.
+5. **Test.** Contact form, then register a test contributor. In Gmail open the message, **Show original**, and check `SPF: PASS`, `DKIM: PASS` and `DMARC: PASS`. Also send one to a Microsoft address and check the spam folder.
+6. Check the host's **hourly sending limit** (CONFIRM). Invitations are queued at 30 a minute, which is faster than many shared hosts allow per hour. Send invitations in small batches, and watch Admin, System, Email Log for failures (failed rows are kept 180 days).
+
+## 11. Cloudflare
+
+Put the site behind Cloudflare once DNS, mail and the smoke test are working.
+
+| Setting | Value |
+|---|---|
+| DNS record for the site | Proxied (orange cloud). |
+| SSL/TLS mode | **Full (strict)**. Install a valid certificate on the host first (cPanel AutoSSL). Never "Flexible": it causes redirect loops and sends traffic to the host in clear. |
+| Always Use HTTPS | On. The app also sends HSTS on HTTPS. |
+| Rocket Loader, Auto Minify (JavaScript), and any automatic script or analytics injection | **Off.** The public pages send a strict Content-Security-Policy with no inline script, and anything Cloudflare injects is blocked and breaks the page. |
+| Caching | Standard. Do **not** use "Cache Everything" on pages: pages carry forms and sign-in state. Static files (`/build`, `/brand`, `/fonts`, `/css`, `/js`) are cached by default. |
+| Cache bypass rules | `/admin*`, `/app*`, `/livewire*`, `/login`, `/register*`, `/invite*`, `/files*`, `/notifications*`, `/settings*`. |
+| WAF | Managed rules on. A rate-limit rule on `/login` and `/forgot-password` is a good second layer; the app already limits them (spec 17.2). |
+
+**Real visitor addresses.** The app takes the visitor's address from `X-Forwarded-For` for rate limits and stored acceptance records, and only trusts it from addresses listed in `TRUSTED_PROXIES`. Put Cloudflare's published ranges there (`https://www.cloudflare.com/ips-v4` and `/ips-v6`), comma separated. They change rarely; re-check them twice a year and after any Cloudflare announcement. `TRUSTED_PROXIES=*` trusts every sender, so a person who finds the server's own address can pretend to be anyone: use it only if the host accepts web traffic from Cloudflare alone.
+
+## 12. Every later deploy
+
+1. On your computer: merge to `main`, tag the release (`git tag release-2026-11-03 && git push --tags`), build and **upload the assets** (section 6).
+2. Over SSH:
+
+   ```bash
+   cd ~/groibe
+   PHP_BIN=/opt/cpanel/ea-php83/root/usr/bin/php COMPOSER_BIN="/opt/cpanel/ea-php83/root/usr/bin/php $(command -v composer)" scripts/deploy.sh
+   ```
+
+   It: checks the setup, records the current release, puts the site in maintenance mode, pulls `main` (fast-forward only), installs packages without dev tools, runs migrations, publishes admin assets, creates and secures the folders, rebuilds the caches (`config:cache`, `route:cache`, `view:cache` and `event:cache`, after clearing the old ones), restarts queue workers, brings the site back, and calls `/up`.
+3. If it stops part way, **the site stays in maintenance mode on purpose**: the code and the database may not match. Read the error, fix it, run the script again, or roll back (section 13).
+4. Run the smoke test (section 15).
+
+**After a deploy.** `scripts/deploy.sh` clears the command-line opcache only. The web server keeps its own, and no command can reach it. With `opcache.validate_timestamps = 1` (section 2) it notices the new files within a few seconds by itself. If a page still behaves as the old release a minute later, ask the host to restart PHP for the account, or toggle the PHP version once in MultiPHP Manager.
+
+Options for the script, as environment variables: `PHP_BIN`, `COMPOSER_BIN`, `DEPLOY_BRANCH` (default `main`), `DEPLOY_REMOTE` (default `origin`) and `PUBLIC_DIR` (option B only). Run `scripts/deploy.sh check` to run only the safety checks.
+
+## 13. Rollback
+
+**Code only** (nothing in the database changed, or the old code still works with it):
+
+```bash
+cd ~/groibe
+PHP_BIN=... COMPOSER_BIN=... scripts/deploy.sh rollback
+```
+
+It goes back to the commit recorded before the last deploy, reinstalls its packages, rebuilds the caches and brings the site up. It does not undo migrations. The next normal deploy returns to `main` by itself. Upload the matching `public/build` first if the assets differ.
+
+**Code and database.** If the bad release added or changed tables and the old code cannot run on them: roll the code back as above, put the site in maintenance mode (`php artisan down`), restore the last good dump (section 14), run `php artisan up`. You lose what was saved after that dump, so take a fresh dump **before** every deploy that contains migrations: `php artisan groibe:backup-db`.
+
+Migrations are forward-only here. Do not run `migrate:rollback` on production.
+
+## 14. Backups and the restore drill
+
+Two copies exist: the host's own daily backups, and the weekly dump from `php artisan groibe:backup-db` (Sunday 02:30, the newest `GROIBE_BACKUP_KEEP` are kept). The dump is a gzipped SQL file in `GROIBE_BACKUP_PATH`. It holds personal data and is written with owner-only permissions. It leaves out the rows of `sessions`, `cache` and password-reset tokens, so after a restore everyone has to sign in again.
+
+Both copies sit on the same server. **Download the dump off the server** regularly (SFTP to a safe place), and also take a copy of `.env` and `APP_KEY` into the password manager. Files in `storage/app/private` are **not** in the dump: they are covered by the host's backups only, so download `storage/app/private` too, at least monthly.
+
+**Restore drill: do it on staging before go-live, then every quarter.** It proves the dump works.
+
+1. Take a fresh dump: `php artisan groibe:backup-db`. Note the file name it prints.
+2. In cPanel, MySQL Databases, make a **scratch** database and a user for it (`cpuser_scratch`). Never use the live database for a drill.
+3. Restore into it. The password is asked for, never typed on the command line:
+
+   ```bash
+   gunzip -c ~/groibe-backups/groibe-db-YYYYMMDD-HHMMSS.sql.gz | mysql -u cpuser_scratchuser -p cpuser_scratch
+   ```
+
+4. Check it: `mysql -u cpuser_scratchuser -p cpuser_scratch -e "SELECT COUNT(*) FROM users; SELECT COUNT(*) FROM projects; SELECT COUNT(*) FROM migrations;"`. The counts must match the live site (a little lower is fine if people signed up since the dump).
+5. Optionally point a copy of the app at it: a throwaway `.env` with `DB_DATABASE=cpuser_scratch`, then `php artisan migrate --force --pretend` must report nothing to run.
+6. Delete the scratch database and its user. Write the date and the result in the team's log.
+
+**A real restore** is the same command into the real database, with the site in maintenance mode, after a fresh dump of the broken state is taken and kept. `mysql` replaces each table (`DROP TABLE IF EXISTS`), so it overwrites everything it names.
+
+## 15. Post-deploy smoke test
+
+Run this after the first deploy and after every release. Tick each line.
+
+**The site**
+- [ ] `curl -s -o /dev/null -w '%{http_code}' https://SITE/up` returns 200.
+- [ ] `https://SITE/` opens over HTTPS, in a private window, with no red errors in the browser console (a Content-Security-Policy error means something is injecting scripts: section 11).
+- [ ] `http://SITE/` redirects to `https://`.
+- [ ] Headers: `curl -sI https://SITE/` shows `strict-transport-security`, `x-frame-options: DENY`, `x-content-type-options: nosniff`, `referrer-policy` and a `content-security-policy`.
+- [ ] A page that does not exist shows the 404 page, not a stack trace.
+- [ ] `/sitemap.xml` and `/robots.txt` open. Private people and organizations are not in the sitemap.
+- [ ] The private-file test in section 9 passes.
+- [ ] Session cookie is `Secure`, `HttpOnly`, `SameSite=Lax` (browser dev tools, Application, Cookies).
+
+**Sign-in and admin**
+- [ ] `/admin/login` works for the super admin with two-factor; a wrong code is refused.
+- [ ] System status shows cron **Running**, 0 jobs waiting, 0 failed jobs, and a database size line (it shows "Not checked yet" until 03:20 or `php artisan groibe:check-database-size`).
+- [ ] An open Admin page for a delivery manager does not show System status.
+- [ ] `/login` is rate limited: six wrong passwords in a minute are refused.
+
+**Email and queue**
+- [ ] Contact form: the message arrives at `GROIBE_CONTACT_EMAIL` within two minutes, and shows under Website, Contact Messages.
+- [ ] Register a test contributor: the verification email arrives, not in spam, with SPF, DKIM and DMARC passing (section 10).
+- [ ] The visitor address is recorded correctly. After sending the contact form from your own computer, run `php artisan tinker --execute="echo \App\Models\ContactMessage::latest('id')->value('ip');"` on the server. It must be **your** address (compare with a "what is my IP" page), not a Cloudflare one. A Cloudflare address means `TRUSTED_PROXIES` is wrong, and every visitor would share one rate limit (section 11).
+- [ ] Admin, System, Email Log lists those emails as `sent`.
+- [ ] `php artisan tinker --execute="report(new Exception('Deploy test'));"` (on the server) sends one email to `GROIBE_EXCEPTION_EMAIL`. Running it again within the hour sends none.
+
+**Files, PDF and imports**
+- [ ] A SOW opened as a PDF downloads and is set in Inter (needs `storage/fonts` writable).
+- [ ] A contributor photo uploads and shows.
+- [ ] Import a small sample CSV: the check runs, the report downloads, nothing is created until you start it.
+
+**Operations**
+- [ ] `php artisan groibe:backup-db` writes a file into `GROIBE_BACKUP_PATH` and not into the web root, and the restore drill (section 14) has been done once.
+- [ ] `storage/logs/laravel-DATE.log` is being written, and it contains no passwords or tokens.
+- [ ] `php artisan schedule:list` shows ten jobs.
+
+## 16. Order of work, staging first
+
+1. Staging subdomain on the host: its own folder, database, `.env` (`APP_ENV=staging`) and mailbox. Install (section 4). Run the smoke test.
+2. Confirm cron is running (System status), send test emails, check spam placement, fix SPF, DKIM and DMARC.
+3. Do the restore drill on a scratch database.
+4. Paste the real legal templates into Admin and publish them. Approve the website wording.
+5. Import contributors and clients on staging. Read the error report. Fix the file.
+6. Production: same steps, `APP_ENV=production`, then the Cloudflare settings (section 11).
+7. Import to production. Send invitations in **small batches**, watching the Email Log.
+8. Seed the first real open roles, and approve the first proof-of-work items, before opening public sign-up.
+
+## 17. Things to confirm with the host
+
+These cannot be checked from the code. Ask once, in writing, and keep the answers with this file.
+
+| Question | Why it matters |
+|---|---|
+| PHP 8.3 with `gd` (JPEG, PNG, WebP), `intl`, `zip` and `pdo_mysql` available? | The app and the photo upload need them. |
+| Is `proc_open` allowed for web PHP and for cron? | The scheduler needs it. Without it no queued email is ever sent. |
+| Can a cron job run every minute? Is SSH on? | The queue is drained by cron (spec 17.1). |
+| The real database size limit, the maximum connections, and the file quota (inodes and disk). | `DB_SIZE_LIMIT_MB`; four weekly dumps also take disk. |
+| The hourly and daily outgoing email limit. | Invitations and notifications are throttled by the host, not by Groibe. |
+| Can the document root of the domain be set to `groibe/public`? | Option A in section 3. |
+| Is the connection MySQL or MariaDB, and its version? | Use `DB_CONNECTION=mysql` either way. FULLTEXT search needs InnoDB. |
+| What do the host's daily backups cover, and for how long? | The dump does not hold files in `storage/app/private`. |
