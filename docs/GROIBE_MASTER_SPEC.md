@@ -185,7 +185,7 @@ Milestone: `planned -> in_progress -> in_qa -> shared -> client_accepted | clien
 `registered -> profile_complete -> pending_review -> active | rejected` ; `active -> suspended` ; `suspended -> active` (reinstate)
 - `rejected` is terminal in v1.
 - Admin reviews and activates. Email verification required before `pending_review`.
-- Member Agreement acceptance required before `active`.
+- Member Agreement acceptance required before `active`. A Member Agreement that still carries the placeholder marker counts as not published and cannot be accepted (SCR-036, section 8).
 
 ### 6.11 Client onboarding
 - Self-registration: `registered -> verified_email -> org_pending -> org_verified`.
@@ -315,6 +315,7 @@ Unique (project_id, user_id) where status in active states (enforce in code).
 
 - Templates are stored in DB, versioned, editable by Super Admin.
 - Seed with placeholder bodies for: Member Agreement, Client MSA, SOW template, Terms, Privacy. The real legal text is pasted in by the founder; the code must not hard-code legal text.
+- Every seeded placeholder carries the same placeholder marker. A template whose body still carries it counts as not published: Terms and Privacy answer 404, and the Member Agreement, Client MSA and SOW template cannot be accepted or used, with the existing "not published yet" messages shown instead. The Agreement Templates screen labels such a template as still a placeholder and can still open it for replacement (SCR-036).
 - SOW template supports variables: `{{client_name}}`, `{{project_title}}`, `{{scope}}`, `{{milestones_table}}`, `{{total_value}}`, `{{payment_terms}}`, `{{start_date}}`, `{{due_date}}`. A renderer substitutes and stores the rendered HTML in `sows.body_html`.
 - Gating:
   - Contributor cannot become `active` without accepting the current Member Agreement.
@@ -390,6 +391,7 @@ Tech: Blade + Livewire + Alpine + Tailwind. Server-rendered, SEO-friendly, fast.
 - Unique title and meta description per page, canonical URLs, Open Graph tags, JSON-LD (`Organization`, `JobPosting`-style data only if applicable, `BreadcrumbList`).
 - `/faq` also carries `FAQPage` structured data.
 - Private profiles and organizations are `noindex` and not in sitemap.
+- A copy of the site that runs with `APP_ENV=staging` is never indexed: `robots.txt` answers `Disallow: /` with no sitemap line, `/sitemap.xml` answers 404, and every web response carries `X-Robots-Tag: noindex, nofollow`, replacing any other value. Production and local are unchanged (SCR-035).
 
 ## 11. Contributor app (`/app/contributor`)
 
@@ -408,7 +410,7 @@ Navigation: Dashboard, Discover (open roles), My Applications, My Work (assignme
 
 Navigation: Dashboard, Briefs, Projects, Deliverables, Messages, Notifications, Organization, Settings.
 
-- **Registration**: account, organization details. The organization owner accepts the Client MSA on its own page (`/app/client/agreements/client-msa`) before the first brief or SOW acceptance (spec 8).
+- **Registration**: account, organization details. The organization owner accepts the Client MSA on its own page (`/app/client/agreements/client-msa`) before the first brief or SOW acceptance (spec 8). A Client MSA that still carries the placeholder marker counts as not published: the page says so and the gate stays closed (SCR-036, section 8).
 - **Dashboard**: active projects with progress, awaiting-your-action items (SOW to accept, deliverables to review), briefs status.
 - **Briefs**: create (guided steps: problem, desired outcome, type, skills, budget band, timeline, confidentiality, files), list, view status and admin questions (`needs_info`).
 - **Projects**: list, detail (milestones, progress, team shown by first name + role + headline once the SOW is accepted and unless `hide_team` is set), SOW view/accept, change requests.
@@ -497,6 +499,8 @@ Route files: `routes/public.php`, `routes/contributor.php`, `routes/client.php`,
 - Assets built locally with Vite and committed or uploaded (`public/build`). The server never runs npm.
 - Do not rely on `storage:link` symlinks working. Public media goes to a dedicated public disk under `public/` or is served through a controller. Private files served only via authorized controller routes.
 - Keep memory use modest (<256MB per request). Paginate everything. Avoid N+1 (use eager loading; add `Model::preventLazyLoading()` in non-production).
+- A staging copy runs on its own subdomain, database and `.env` with `APP_ENV=staging`, and is never indexed (section 10.4, SCR-035).
+- `public/.htaccess` redirects plain HTTP to HTTPS, so hosts without Cloudflare also redirect (SCR-038).
 
 ### 17.2 Security
 
@@ -506,6 +510,7 @@ Route files: `routes/public.php`, `routes/contributor.php`, `routes/client.php`,
 - File uploads: allowlist extensions and MIME, size caps (profile photo 2 MB, logo 2 MB, portfolio image 5 MB, documents 20 MB, submissions 25 MB), randomized storage names, no executable types, images re-encoded where possible.
 - Private files: `private` disk only; access via signed, authorized routes; never guessable paths.
 - Security headers via middleware (HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, a conservative CSP).
+- Transport: a request that is not HTTPS is redirected with a 301 to the same address on HTTPS by a rule at the top of `public/.htaccess`. The rule honours `X-Forwarded-Proto: https`, so it cannot loop behind Cloudflare. HSTS is sent only on requests that are already secure (SCR-038).
 - Admin: TOTP 2FA through Filament's app authentication, always enforced for `super_admin` and, while `two_factor_admin` is on, for every other admin role. An artisan command resets 2FA for one user by email (SCR-029).
 - Sensitive data: do not collect government IDs, bank accounts, or card numbers in v1. Payout `reference` stores only a transaction reference.
 - Audit: activity log on all admin writes, role changes, impersonation, agreement acceptances, showcase consent changes, exports. (SCR-030)
@@ -522,6 +527,7 @@ Route files: `routes/public.php`, `routes/contributor.php`, `routes/client.php`,
 - Log channel `daily`, retention 14 days. Exceptions emailed to admin address (throttled).
 - Health route `/up` (Laravel default) and an admin "System status" widget (queue backlog, failed jobs, last cron run, database size).
 - Backups: host daily backups plus a weekly DB dump command (`php artisan groibe:backup-db`) written outside web root.
+- Before a deploy that finds an existing database, `scripts/deploy.sh` writes a pre-deploy dump, named `groibe-predeploy-YYYYMMDD-HHMMSS.sql.gz`, with its own retention (newest `GROIBE_PREDEPLOY_BACKUP_KEEP`, default 5) so it never evicts the weekly dumps. It runs before the site goes into maintenance mode and stops the deploy if the command fails or the dump is missing, empty or under 10 KB. On a first deploy, with no database yet, it is skipped (SCR-037).
 - Daily housekeeping (SCR-034): a report to delivery managers of people invited but not activated after 14 days, which deletes nobody, together with removal of expired password-reset tokens; a database-size check that warns super admins at 80% of `DB_SIZE_LIMIT_MB` (default 1024); a refresh of the public caches and sitemap; and removal of the stored file and report of an import 30 days after its upload, and of unused temporary uploads after a day.
 
 ### 17.5 Quality bar
@@ -554,7 +560,7 @@ Stored in `feature_flags`, cached, toggled in Admin. Defaults:
 - Super admin user from `.env` (`ADMIN_EMAIL`, `ADMIN_PASSWORD` set at deploy; never committed).
 - Categories and 40+ skills across: Research, Marketing, Content, Design, Data & Analytics, Technology, Operations, Finance, Sales.
 - Project types: Market Research, Dashboard/Reporting, Content & Social, Process Automation, Website/App Build, Financial Modelling, Operations Support.
-- Agreement templates (placeholders), FAQs (10 general, 6 contributor, 6 client), homepage CMS sections with default copy, feature flags.
+- Agreement templates (placeholders, all five carrying the same placeholder marker, SCR-036), FAQs (10 general, 6 contributor, 6 client), homepage CMS sections with default copy, feature flags.
 - Demo dataset (local/staging only, `DemoSeeder`): 30 contributors, 12 organizations, 8 briefs, 6 projects across all states, 10 open roles, applications, reviews, proof-of-work items. Must never run in production.
 
 ## 20. Acceptance criteria (summary; per-pass details live in the prompt pack)
@@ -628,3 +634,7 @@ Stored in `feature_flags`, cached, toggled in Admin. Defaults:
 | 2026-10-12 | 5, 14, 17.1 | SCR-032: daily retention job for the email log, `sent` rows after 90 days and `failed` rows after 180 days | Founder |
 | 2026-10-12 | 9, 10.2, 10.4, 11, 13, 14, 17.1 | Recorded as built, no new behaviour: proof of work state moves and contributor rights; header and footer menus and built-in pages; `FAQPage` data; Payouts in contributor navigation; the admin Messages screen; message limits and who sees which name; notification categories and the extra events; the scheduled jobs that exist | Founder |
 | 2026-10-14 | 17.1 | Recorded as built, no new behaviour: the reputation recompute has no schedule; it runs as a queued job on project close and review publish | Founder |
+| 2026-10-15 | 10.4, 17.1 | SCR-035: a staging copy (`APP_ENV=staging`) is never indexed: robots disallow all, sitemap 404, `noindex` header on every response | Founder |
+| 2026-10-15 | 6.10, 8, 12, 19 | SCR-036: one shared placeholder marker on every seeded agreement template; a placeholder counts as not published and cannot be accepted or used; the admin screen labels it | Founder |
+| 2026-10-15 | 17.4 | SCR-037: the deploy script writes a pre-deploy dump (own file name and retention, size check) before the site goes into maintenance mode, and stops if it fails | Founder |
+| 2026-10-15 | 17.1, 17.2 | SCR-038: `public/.htaccess` redirects plain HTTP to HTTPS and honours `X-Forwarded-Proto` | Founder |
