@@ -307,3 +307,60 @@ Proposed changes only. The spec is edited by the founder, between passes, and lo
   3. **The sitemap refresh** clears the public caches (homepage, stats, menu and sitemap) once a day, so changes that happen with the passing of time, such as a role past its deadline, show up without waiting for an edit.
   4. **Import files are removed 30 days after upload:** the stored CSV and its report are deleted and the report path is cleared; the import row, its counts and its status stay. Temporary uploads left unused for a day are deleted.
 - **Code status:** Built in Pass 9 item 6: `groibe:report-stale-invites` (08:30), `groibe:check-database-size` (03:20), `groibe:refresh-public-caches` (03:30) and `groibe:clean-import-files` (03:10), daily.
+
+## SCR-035: Staging must not be indexed (spec sections 10.4, 17.1)
+
+- **Status:** ACCEPTED 2026-10-15 by the founder, recommendation (a). Not built yet. The founder logs it in spec sections 10.4, 17.1 and 23.
+- **Gap:** `docs/DEPLOY.md` runs a staging copy of the site on its own subdomain, and demo data may be loaded there. Spec 10.4 covers private profiles and the sitemap, but nothing covers a second copy of the whole site. Today `robots.txt` blocks only `/admin`, `/app/`, `/login`, `/register`, `/invite/` and `/livewire`, and it lists the sitemap. Several public controllers send `X-Robots-Tag: index, follow`. A staging address that is linked or guessed can be indexed, and staging pages would compete with production.
+- **Options:**
+  - (a) App only. When `APP_ENV` is `staging`: `robots.txt` answers `Disallow: /` with no sitemap line, `/sitemap.xml` answers 404, and a middleware sets `X-Robots-Tag: noindex, nofollow` on every web response, replacing the `index, follow` the public controllers set. Production and local are unchanged.
+  - (b) Host only. Password-protect the staging subdomain in cPanel (Directory Privacy). No code, and strangers see a login prompt. CONFIRM before relying on it: cPanel writes its rules into the `.htaccess` of the protected folder, and with the document root at `groibe/public` that is a tracked file, so `scripts/deploy.sh` would refuse to run (it stops on uncommitted changes).
+  - (c) Both.
+- **Note:** `Disallow: /` stops well-behaved crawlers from fetching pages, so they never read the noindex header. The robots rule prevents crawling. The header is the fallback for a crawler that fetches anyway and is what removes a page already listed.
+- **Recommendation:** (a). It needs no host feature, works on any host, and is easy to test. Treat (b) as an optional extra once the tracked-file problem is checked on the real host.
+- **Spec sections affected:** 10.4 (one added line for non-production copies), 17.1 (the staging environment), 23.
+- **Code status:** Not built. Tests to add: staging robots body and 404 sitemap, header on a page that sets `index, follow` itself, production robots and headers unchanged.
+
+## SCR-036: Placeholder agreements must not be acceptable (spec sections 6.10, 8, 10.2, 12, 19)
+
+- **Status:** ACCEPTED 2026-10-15 by the founder, recommendation (b). Not built yet. The founder logs it in spec sections 8, 19 and 23.
+- **Gap:** The seeder creates all five agreement templates active, with placeholder text (spec 8, 19). Only two of the places that use a template check for that.
+  - **Public Terms and Privacy are already safe.** `LegalPageController::published()` ignores a template that `isPlaceholder()` calls a placeholder. `/terms` and `/privacy` answer 404, and the footer menu and the sitemap leave them out until real wording is published (spec 10.2, SCR-021).
+  - **The three acceptance documents are not protected.** `AcceptMemberAgreement`, `AcceptClientMsa`, `AgreementGate`, `ProfileCompleteness`, the contributor onboarding step, the Client MSA page, `CreateSow` and `AcceptSow` all use `AgreementTemplate::currentFor()`, which does not look at `isPlaceholder()`. A contributor can accept the placeholder Member Agreement and be activated. A client owner can accept the placeholder Client MSA and then submit briefs and accept SOWs. A SOW can be built from the placeholder template, sent and accepted. Each acceptance is stored as a real record (user, version, time, IP) against text that says "Placeholder".
+  - **The marker misses the SOW template.** `isPlaceholder()` looks for "Replace with the approved legal text." The seeded SOW body says "Replace with the approved SOW wording.", so the SOW template is never recognised as a placeholder.
+  - No admin screen uses `isPlaceholder()`, so nothing warns the super admin that an active template is still a placeholder.
+- **What registration does today when no active template exists:** creating an account (`/register/contributor`, `/register/client`) does not use any agreement and works. A contributor reaches step 4 and sees "The Member Agreement is not published yet. Please check back soon." with no accept button, and cannot become `active` (spec 6.10). A client owner sees "The Client MSA has not been published yet. Please contact Groibe." and cannot submit a brief or accept a SOW (the gate fails closed). An admin who sends a SOW is told "No active SOW template is published." These screens already exist and behave well. They just never trigger while the seeded placeholders are active.
+- **Options:**
+  - (a) Seed the five placeholders inactive. Every existing "not published" path then applies by itself, and `/terms` and `/privacy` stay 404. Small change, but it protects only a fresh database: a placeholder activated or republished later is accepted again, and the demo seeder and tests that expect active templates need their own active versions.
+  - (b) Treat a placeholder as not published in the one lookup that the acceptance paths use (a new `currentPublishedFor()` beside `currentFor()`; the Agreement Templates admin screen keeps `currentFor()` so a super admin can still open and replace the placeholder). Use one marker for all five placeholders, including the SOW template. Every acceptance path, the contributor step, the MSA page and SOW creation then show the existing "not published yet" message until real wording is published. The same rule the public pages already follow.
+  - (c) Both.
+- **Recommendation:** (b). It is the rule the public pages already use, it guards against a later mistake as well as the first deploy, and it reuses messages that exist. Also change the seeded SOW text to carry the common marker. (a) adds nothing once (b) is in. A string marker can be defeated by deleting the sentence from a body that is still unfinished, so the Agreement Templates screen should also show a "still a placeholder" label (small, in scope of this SCR).
+- **For the founder:** staging cannot run the full flows until some text without the marker is published. Publish clearly labelled test wording on staging for that, and the real wording on production.
+- **Spec sections affected:** 8 (gating, placeholder bodies), 6.10, 10.2, 12, 19, 23.
+- **Code status:** Not built. Tests to add: with only placeholders, acceptance of each of the three documents is refused and SOW creation is refused; with real wording each works; the SOW seed text is detected; the admin screen can still open a placeholder.
+
+## SCR-037: Database backup before migrations in the deploy script (spec sections 17.4; DEPLOY.md sections 12, 13, 14)
+
+- **Status:** ACCEPTED 2026-10-15 by the founder, recommendation (a), with pre-deploy dumps kept under their own file name and retention and a sanity check on the dump (see Decision). Not built yet. The founder logs it in spec sections 17.4 and 23.
+- **Gap:** `scripts/deploy.sh` runs `migrate --force` with no backup. Migrations here are forward-only and rollback is code only (DEPLOY.md 13). The guide tells a person to run `groibe:backup-db` before any release with migrations, but nothing makes them. The first real deploy and every later one rely on memory.
+- **Facts:** `groibe:backup-db` returns a failure code if the dump cannot be written, so a script that stops on error stops on it. It keeps only the newest `GROIBE_BACKUP_KEEP` dumps (default 4), so extra dumps before every deploy would push the weekly Sunday dumps out. Files in `storage/app/private` are not in the dump. On the very first deploy the database has no tables, so a dump has nothing to write and would fail.
+- **Options:**
+  - (a) Before `artisan down` (so a failure leaves the site up) and only when the database already has tables, run `artisan groibe:backup-db`. If it fails, the script stops with a clear message. On a first deploy the script says the backup is skipped because there is no database yet.
+  - (b) Same, but only when migrations are pending. Fewer dumps, but one more thing to get wrong.
+  - (c) (a) plus an explicit emergency switch (`SKIP_DB_BACKUP=1`) for a hotfix when the disk is full. It weakens the guarantee.
+- **Recommendation:** (a). Pre-deploy dumps get their own file name and retention (see Decision), so frequent deploys never push out the weekly dumps. How the script detects "no tables yet" (for example `migrate:status` failing) is checked when it is built.
+- **Spec sections affected:** 17.4 (backups), 23. DEPLOY.md sections 12 to 14 and `DeployFilesTest` (it checks the order of steps) follow the decision.
+- **Decision (2026-10-15, founder):** (1) Pre-deploy dumps are written as `groibe-predeploy-YYYYMMDD-HHMMSS.sql.gz` in the same backup folder, by `groibe:backup-db` with a new option for the pre-deploy kind. They are pruned on their own, keeping the newest `GROIBE_PREDEPLOY_BACKUP_KEEP` (default 5). The weekly pattern `groibe-db-*.sql.gz` and `GROIBE_BACKUP_KEEP` are unchanged, so neither kind evicts the other. `GROIBE_BACKUP_KEEP` is not raised. (2) The script stops, before `artisan down`, if the command exits with an error, or if the dump file is missing, empty or smaller than 10 KB (a starting value: a dump of the full schema is far larger, tune it when built). A non-zero exit alone is not trusted. (3) No emergency skip switch. The open choice in the recommendation is closed./
+- **Code status:** Not built.
+
+## SCR-038: Forced HTTPS for hosts without Cloudflare (spec sections 17.1, 17.2)
+
+- **Status:** ACCEPTED 2026-10-15 by the founder, recommendation (a). Not built yet. The founder logs it in spec sections 17.1, 17.2 and 23.
+- **Gap:** Nothing in the code or `public/.htaccess` redirects `http://` to `https://`. The guide relies on Cloudflare's "Always Use HTTPS" (DEPLOY.md 11), but a staging subdomain, or production before Cloudflare is switched on, has no redirect. The app sends HSTS only on a request that is already secure, and the production template sets `SESSION_SECURE_COOKIE=true`, so a person who opens the plain `http://` address cannot stay signed in.
+- **Options, smallest first:**
+  - (a) A rule at the top of `public/.htaccess`: if the request is not HTTPS and `X-Forwarded-Proto` is not `https`, answer with a 301 to the same address on `https://`. Runs before PHP, covers every file, is committed so a deploy copies it (option B of the guide too), and cannot loop behind Cloudflare because it honours the forwarded header. Not read by nginx or `php artisan serve`, so local work is unchanged.
+  - (b) In the app: a middleware that redirects when the request is not secure, in staging and production. It needs `TRUSTED_PROXIES` to be right behind Cloudflare or it can redirect in a loop, and it does not cover static files.
+  - (c) The cPanel "Force HTTPS Redirect" switch. No code, but cPanel writes the rule into the document root `.htaccess`, which is a tracked file with the recommended setup, so `scripts/deploy.sh` would refuse to run (CONFIRM on the host).
+- **Recommendation:** (a). Keep Cloudflare's rule too. The guide's smoke test already checks that `http://` redirects.
+- **Spec sections affected:** 17.2 (transport security), 17.1, 23. DEPLOY.md sections 3 and 11.
+- **Code status:** Not built. A test can check the rule text and that `.htaccess` stays a valid rewrite block. The redirect itself is checked with `curl -I` on staging.
