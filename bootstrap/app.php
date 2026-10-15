@@ -4,6 +4,7 @@ use App\Http\Middleware\EnsureAccountNotSuspended;
 use App\Http\Middleware\EnsureActiveContributor;
 use App\Http\Middleware\EnsureFeatureEnabled;
 use App\Http\Middleware\EnsureUserRole;
+use App\Http\Middleware\NoIndexOnStaging;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\StrictContentSecurityPolicy;
 use App\Services\Ops\ExceptionReporter;
@@ -37,6 +38,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // Spec 17.2: security headers on every response, including redirects and errors. It is global, not part of the web
         // group, because Laravel runs `auth` ahead of group middleware and a redirect it throws would otherwise skip the headers.
         $middleware->append(SecurityHeaders::class);
+
+        // Spec 10.4, 17.1 (SCR-035): a staging copy is never indexed. Global for the same reason, so redirects and errors carry it too.
+        $middleware->append(NoIndexOnStaging::class);
 
         // Spec 4, 14: a suspended person loses access at once, even with a session that is already open.
         $middleware->appendToGroup('web', EnsureAccountNotSuspended::class);

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Public;
 use App\Enums\AgreementType;
 use App\Enums\FeatureFlag;
 use App\Http\Controllers\Controller;
+use App\Http\Middleware\NoIndexOnStaging;
 use App\Models\OpenRole;
 use App\Models\Organization;
 use App\Models\Page;
@@ -24,6 +25,9 @@ class SitemapController extends Controller
 
     public function sitemap(FeatureFlags $flags, Cache $cache): Response
     {
+        // A staging copy lists nothing (spec 10.4, SCR-035).
+        abort_if(NoIndexOnStaging::applies(), 404);
+
         // Kept for a few minutes and cleared as soon as anything it lists changes (PublicCache::watch).
         $xml = $cache->remember(PublicCache::SITEMAP_KEY, now()->addMinutes(PublicCache::minutes()), fn (): string => $this->build($flags));
 
@@ -118,7 +122,8 @@ class SitemapController extends Controller
 
     public function robots(): Response
     {
-        $lines = [
+        // A staging copy asks every crawler to stay away and names no sitemap (spec 10.4, SCR-035).
+        $lines = NoIndexOnStaging::applies() ? ['User-agent: *', 'Disallow: /'] : [
             'User-agent: *',
             'Disallow: /admin',
             'Disallow: /app/',

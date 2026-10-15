@@ -310,7 +310,7 @@ Proposed changes only. The spec is edited by the founder, between passes, and lo
 
 ## SCR-035: Staging must not be indexed (spec sections 10.4, 17.1)
 
-- **Status:** ACCEPTED 2026-10-15 by the founder, recommendation (a). Not built yet. The founder logs it in spec sections 10.4, 17.1 and 23.
+- **Status:** ACCEPTED 2026-10-15 by the founder, recommendation (a). Built and logged in spec sections 10.4, 17.1 and 23.
 - **Gap:** `docs/DEPLOY.md` runs a staging copy of the site on its own subdomain, and demo data may be loaded there. Spec 10.4 covers private profiles and the sitemap, but nothing covers a second copy of the whole site. Today `robots.txt` blocks only `/admin`, `/app/`, `/login`, `/register`, `/invite/` and `/livewire`, and it lists the sitemap. Several public controllers send `X-Robots-Tag: index, follow`. A staging address that is linked or guessed can be indexed, and staging pages would compete with production.
 - **Options:**
   - (a) App only. When `APP_ENV` is `staging`: `robots.txt` answers `Disallow: /` with no sitemap line, `/sitemap.xml` answers 404, and a middleware sets `X-Robots-Tag: noindex, nofollow` on every web response, replacing the `index, follow` the public controllers set. Production and local are unchanged.
@@ -319,7 +319,7 @@ Proposed changes only. The spec is edited by the founder, between passes, and lo
 - **Note:** `Disallow: /` stops well-behaved crawlers from fetching pages, so they never read the noindex header. The robots rule prevents crawling. The header is the fallback for a crawler that fetches anyway and is what removes a page already listed.
 - **Recommendation:** (a). It needs no host feature, works on any host, and is easy to test. Treat (b) as an optional extra once the tracked-file problem is checked on the real host.
 - **Spec sections affected:** 10.4 (one added line for non-production copies), 17.1 (the staging environment), 23.
-- **Code status:** Not built. Tests to add: staging robots body and 404 sitemap, header on a page that sets `index, follow` itself, production robots and headers unchanged.
+- **Code status:** Built (`NoIndexOnStaging` middleware, `SitemapController`, `StagingNoIndexTest`). Spec sections 10.4, 17.1 and 23 updated.
 
 ## SCR-036: Placeholder agreements must not be acceptable (spec sections 6.10, 8, 10.2, 12, 19)
 
