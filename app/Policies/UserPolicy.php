@@ -37,6 +37,30 @@ class UserPolicy
         );
     }
 
+    /**
+     * Creating an account of a given role needs that role's own create permission (spec 5): a delivery manager may create client
+     * users but not contributors, a community manager contributors but not clients, and only a super admin admins.
+     */
+    public function createRole(User $actor, UserRole $role): bool
+    {
+        return $actor->isAdmin() && $actor->can(match ($role) {
+            UserRole::Contributor => 'contributors.create',
+            UserRole::Client => 'clients.create',
+            UserRole::Admin => 'admin_users.create',
+        });
+    }
+
+    /**
+     * Who may set the sign-in details of someone else's account: email, password, status and role. Only holders of
+     * `admin_users.update` (the super admin). Anyone else could otherwise sign in as the person, which is what impersonation
+     * is for, with its log (spec 4). Staff with update rights still change names and time zones, and move a contributor's
+     * state through the contributor Actions.
+     */
+    public function manageCredentials(User $actor): bool
+    {
+        return $actor->isAdmin() && $actor->can('admin_users.update');
+    }
+
     public function update(User $actor, User $target): bool
     {
         return $actor->is($target) || $this->adminCan($actor, $target, 'update');
