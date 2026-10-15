@@ -12,7 +12,7 @@ function submitPassword(string $screen, string $password): Testable
 {
     $component = match ($screen) {
         'register-contributor' => Volt::test('auth.register-contributor')->set('name', 'Asha Rao')->set('email', 'asha@example.com'),
-        'register-client' => Volt::test('auth.register-client')->set('name', 'Meera Sen')->set('email', 'meera@acme.example'),
+        'register-client' => Volt::test('auth.register-client')->set('name', 'Meera Sen')->set('email', 'meera@acme.example')->set('organization_name', 'Acme Foods'),
         'invite' => Volt::test('auth.invite', ['token' => User::factory()->contributor()->pending()->create(['password' => null])->uuid]),
         'reset' => Volt::test('auth.reset-password', ['token' => 'a-token'])->set('email', 'asha@example.com'),
         'settings' => Volt::test('settings.password')->set('current_password', 'the-right-password'),

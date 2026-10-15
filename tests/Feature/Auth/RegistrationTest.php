@@ -40,19 +40,23 @@ it('registers a contributor with a pending status, empty profile and verificatio
     Notification::assertSentTo($user, VerifyEmail::class);
 });
 
-it('registers a client account without an organization yet', function () {
+it('registers a client with a pending organization of their own, as its owner', function () {
     Volt::test('auth.register-client')
         ->set('name', 'Ravi Shah')
         ->set('email', 'ravi@example.com')
         ->set('password', 'a-long-password')
         ->set('password_confirmation', 'a-long-password')
+        ->set('organization_name', 'Shah Traders')
         ->call('register')
         ->assertHasNoErrors();
 
     $user = User::query()->where('email', 'ravi@example.com')->firstOrFail();
+    $organization = $user->organizations()->sole();
 
     expect($user->role)->toBe(UserRole::Client)
-        ->and($user->organizations)->toBeEmpty();
+        ->and($organization->name)->toBe('Shah Traders')
+        ->and($organization->status->value)->toBe('pending')
+        ->and($user->organizationRole($organization)->value)->toBe('owner');
 });
 
 it('rejects short passwords and duplicate emails', function () {

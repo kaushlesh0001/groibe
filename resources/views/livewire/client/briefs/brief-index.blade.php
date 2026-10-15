@@ -6,6 +6,8 @@
         @endif
     </div>
 
+    <x-verification-notice :organization="$organization" />
+
     @if (session('status'))
         <p role="status" class="rounded-lg border border-brand-green p-4">{{ session('status') }}</p>
     @endif

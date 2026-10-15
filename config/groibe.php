@@ -62,6 +62,11 @@ return [
         ],
     ],
 
+    // Spec 12: organization details collected when a client registers. `organizations.size_band` is free text (spec 7.1); these are the choices offered.
+    'organizations' => [
+        'size_bands' => ['1-10', '11-50', '51-200', '201-1000', '1000+'],
+    ],
+
     'dashboards' => [
         'contributor' => '/app/contributor',
         'client' => '/app/client',
