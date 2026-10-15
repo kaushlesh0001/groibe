@@ -9,6 +9,10 @@ use Illuminate\Support\Facades\Route;
 
 const NOINDEX_PAGES = ['/', '/how-it-works', '/contact', '/faq', '/opportunities', '/contributors', '/organizations', '/work', '/login', '/register/client', '/admin/login', '/no-such-page', '/up'];
 
+it('has no physical robots.txt or sitemap.xml, which Apache would serve before Laravel', function () {
+    expect(public_path('robots.txt'))->not->toBeFile()->and(public_path('sitemap.xml'))->not->toBeFile();
+});
+
 describe('on staging', function () {
     beforeEach(fn () => app()->detectEnvironment(fn () => 'staging'));
 
