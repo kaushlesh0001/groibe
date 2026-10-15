@@ -8,6 +8,7 @@ use App\Exceptions\ActionBlocked;
 use App\Models\DataRequest;
 use App\Models\User;
 use App\Notifications\DataRequestUpdated;
+use App\Services\Admin\Impersonation;
 use App\Services\Notifications\NotificationDispatcher;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -23,6 +24,7 @@ class OpenDataRequest
     public function __invoke(User $user, DataRequestType $type): DataRequest
     {
         Gate::forUser($user)->authorize('create', DataRequest::class);
+        app(Impersonation::class)->assertNotImpersonating();
 
         $request = DB::transaction(function () use ($user, $type): DataRequest {
             // Two clicks at once serialize on the person's row, so both cannot pass the check below.

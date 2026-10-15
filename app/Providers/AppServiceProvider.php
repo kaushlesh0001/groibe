@@ -14,12 +14,12 @@ use App\Models\Brief;
 use App\Models\Category;
 use App\Models\CmsSection;
 use App\Models\ContactMessage;
+use App\Models\DataRequest;
 use App\Models\Deliverable;
 use App\Models\EmailLog;
 use App\Models\Faq;
 use App\Models\FeaturedItem;
 use App\Models\FeatureFlag;
-use App\Models\DataRequest;
 use App\Models\Import;
 use App\Models\InvoiceRef;
 use App\Models\Message;
@@ -48,10 +48,10 @@ use App\Policies\AssignmentPolicy;
 use App\Policies\BriefPolicy;
 use App\Policies\CmsContentPolicy;
 use App\Policies\ContactMessagePolicy;
+use App\Policies\DataRequestPolicy;
 use App\Policies\DeliverablePolicy;
 use App\Policies\EmailLogPolicy;
 use App\Policies\FeatureFlagPolicy;
-use App\Policies\DataRequestPolicy;
 use App\Policies\ImportPolicy;
 use App\Policies\InvoiceRefPolicy;
 use App\Policies\MediaPolicy;
@@ -72,6 +72,7 @@ use App\Policies\TaskPolicy;
 use App\Policies\TaxonomyPolicy;
 use App\Policies\ThreadPolicy;
 use App\Policies\UserPolicy;
+use App\Services\Admin\Impersonation;
 use App\Services\FeatureFlags\FeatureFlags;
 use App\Services\Notifications\EmailLogger;
 use App\Services\Projects\EloquentProjectTransitionGuards;
@@ -111,6 +112,15 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Model::preventLazyLoading(! $this->app->isProduction());
+
+        // While a super admin impersonates someone, every audit entry also names the admin (spec 4, 17.2).
+        Activity::creating(function (Activity $activity): void {
+            $admin = app(Impersonation::class)->impersonatorId();
+
+            if ($admin !== null && $activity->log_name !== 'impersonation') {
+                $activity->properties = $activity->properties->put('impersonated_by', $admin);
+            }
+        });
 
         // Livewire sends later actions and refreshes to its own endpoint and re-applies only a short list of the
         // page's middleware there. Role and active-contributor checks must be on that list (spec 4, 16), or a
