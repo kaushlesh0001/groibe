@@ -7,6 +7,7 @@ use App\Enums\MilestoneStatus;
 use App\Exceptions\ActionBlocked;
 use App\Models\Milestone;
 use App\Models\User;
+use App\Services\Admin\Impersonation;
 use Illuminate\Support\Facades\Gate;
 
 /**
@@ -20,6 +21,7 @@ class RequestMilestoneChanges
     public function __invoke(Milestone $milestone, User $actor, string $note): Milestone
     {
         Gate::forUser($actor)->authorize('respond', $milestone);
+        app(Impersonation::class)->assertNotImpersonating();
 
         $note = trim($note);
 

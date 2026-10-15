@@ -14,6 +14,7 @@ use App\Models\Project;
 use App\Models\Sow;
 use App\Models\User;
 use App\Notifications\SowAccepted;
+use App\Services\Admin\Impersonation;
 use App\Services\Agreements\AgreementGate;
 use App\Services\Notifications\NotificationDispatcher;
 use Illuminate\Support\Facades\DB;
@@ -36,6 +37,7 @@ class AcceptSow
     public function __invoke(Sow $sow, User $actor, bool $confirmed, ?string $ip = null, ?string $userAgent = null): Sow
     {
         Gate::forUser($actor)->authorize('accept', $sow);
+        app(Impersonation::class)->assertNotImpersonating();
 
         if (! $confirmed) {
             throw ActionBlocked::guardFailed('Please confirm that you accept this Statement of Work.');

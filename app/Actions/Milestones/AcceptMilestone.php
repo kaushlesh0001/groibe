@@ -6,6 +6,7 @@ use App\Actions\Milestones\Concerns\RespondsToMilestone;
 use App\Enums\MilestoneStatus;
 use App\Models\Milestone;
 use App\Models\User;
+use App\Services\Admin\Impersonation;
 use Illuminate\Support\Facades\Gate;
 
 /**
@@ -19,6 +20,7 @@ class AcceptMilestone
     public function __invoke(Milestone $milestone, User $actor): Milestone
     {
         Gate::forUser($actor)->authorize('respond', $milestone);
+        app(Impersonation::class)->assertNotImpersonating();
 
         return $this->respond($milestone, $actor, MilestoneStatus::ClientAccepted, null);
     }

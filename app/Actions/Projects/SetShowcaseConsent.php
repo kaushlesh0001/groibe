@@ -7,6 +7,7 @@ use App\Enums\ShowcaseConsent;
 use App\Models\Project;
 use App\Models\ProofOfWork;
 use App\Models\User;
+use App\Services\Admin\Impersonation;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 
@@ -20,6 +21,7 @@ class SetShowcaseConsent
     public function __invoke(Project $project, User $actor, ShowcaseConsent $consent): Project
     {
         Gate::forUser($actor)->authorize('manageShowcase', $project);
+        app(Impersonation::class)->assertNotImpersonating();
 
         DB::transaction(function () use ($project, $actor, $consent): void {
             $locked = Project::query()->lockForUpdate()->findOrFail($project->getKey());

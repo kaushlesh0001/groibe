@@ -9,6 +9,7 @@ use App\Models\AgreementAcceptance;
 use App\Models\AgreementTemplate;
 use App\Models\Organization;
 use App\Models\User;
+use App\Services\Admin\Impersonation;
 use Illuminate\Auth\Access\AuthorizationException;
 
 /** The organization owner accepts the current Client MSA (spec 8). Idempotent per version. */
@@ -21,6 +22,8 @@ class AcceptClientMsa
         if ($actor->organizationRole($organization) !== OrgRole::Owner) {
             throw new AuthorizationException('Only the organization owner can accept the Client MSA.');
         }
+
+        app(Impersonation::class)->assertNotImpersonating();
 
         $template = AgreementTemplate::currentFor(AgreementType::ClientMsa)
             ?? throw ActionBlocked::missingTemplate('Client MSA');
