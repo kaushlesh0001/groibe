@@ -29,6 +29,8 @@ return [
     // Spec 15.1 and SCR-025: CSV only, run in chunks so a shared host's time limit is never reached.
     'imports' => [
         'max_file_kb' => 5120,
+        // The dry run reads every row in the admin's web request; above this the file is split (a shared host stops a request after 30 to 60 seconds).
+        'max_rows' => 5000,
         'chunk_size' => 200,
         'preview_rows' => 20,
     ],
@@ -102,6 +104,8 @@ return [
         'photo_max_kb' => 2 * 1024,
         'photo_extensions' => ['jpg', 'jpeg', 'png', 'webp'],
         'photo_max_px' => 800,
+        // Decoding needs about 4 bytes a pixel, so 25 million pixels (about 100 MB) keeps a request inside the 256 MB budget (spec 17.1).
+        'photo_max_pixels' => 25_000_000,
     ],
 
     // Spec 17.3: public lists, stats and the homepage are cached for 5 to 15 minutes and cleared when their data changes.

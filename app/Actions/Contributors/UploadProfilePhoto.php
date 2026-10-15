@@ -30,6 +30,8 @@ class UploadProfilePhoto
             'photo' => ['required', 'image', 'max:'.config('groibe.uploads.photo_max_kb'), 'extensions:'.$extensions, 'mimes:'.$extensions],
         ])->validate();
 
+        $this->assertWithinPixelLimit($file);
+
         $contents = $this->reencode($file);
         $path = self::DIRECTORY.'/'.Str::lower((string) Str::ulid()).'.jpg';
 
@@ -59,6 +61,19 @@ class UploadProfilePhoto
         }
 
         return $profile;
+    }
+
+    /**
+     * The file-size cap does not bound the memory a decode needs: a 2 MB PNG can be 15000 by 15000 pixels and take about 900 MB.
+     * The size is read from the image header, without decoding, and refused above the limit (spec 17.1, under 256 MB a request).
+     */
+    private function assertWithinPixelLimit(UploadedFile $file): void
+    {
+        $size = @getimagesize((string) $file->getRealPath());
+
+        if ($size === false || (int) config('groibe.uploads.photo_max_pixels') < $size[0] * $size[1]) {
+            throw ValidationException::withMessages(['photo' => 'That image is too large in pixels. Resize it to under 5000 by 5000 pixels and try again.']);
+        }
     }
 
     private function reencode(UploadedFile $file): string

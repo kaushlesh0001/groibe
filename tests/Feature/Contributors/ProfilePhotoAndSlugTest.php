@@ -113,3 +113,26 @@ it('generates distinct slugs for contributors with the same name', function () {
 
     expect($this->contributor->profile->refresh()->slug)->not->toBe($other->profile->refresh()->slug);
 });
+
+/** A valid PNG header claiming the given size and nothing else, so no memory is needed to build or to refuse it. */
+function pngClaiming(int $width, int $height): UploadedFile
+{
+    $header = pack('NNCCCCC', $width, $height, 8, 2, 0, 0, 0);
+
+    return UploadedFile::fake()->createWithContent('huge.png', "\x89PNG\r\n\x1a\n".pack('N', 13).'IHDR'.$header.pack('N', crc32('IHDR'.$header)));
+}
+
+it('refuses a small file that claims far too many pixels, before decoding it', function () {
+    foreach ([[15000, 15000], [100000, 1000], [5001, 5000]] as [$width, $height]) {
+        expect(fn () => app(UploadProfilePhoto::class)($this->contributor->profile, pngClaiming($width, $height), $this->contributor))
+            ->toThrow(ValidationException::class, 'too large in pixels');
+    }
+
+    expect($this->contributor->profile->refresh()->photo_path)->toBeNull();
+});
+
+it('still accepts a large but reasonable photo', function () {
+    app(UploadProfilePhoto::class)($this->contributor->profile, bigImage(2000, 1500), $this->contributor);
+
+    expect($this->contributor->profile->refresh()->photo_path)->not->toBeNull();
+});
