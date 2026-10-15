@@ -129,6 +129,7 @@ class BriefForm extends Component
             'isResponse' => $this->brief?->status === BriefStatus::NeedsInfo,
             'question' => $this->brief?->status === BriefStatus::NeedsInfo ? $this->brief->needs_info_note : null,
             'msaUrl' => route('client.agreements.msa'),
+            'organization' => Auth::user()->primaryOrganization(),
         ]);
     }
 

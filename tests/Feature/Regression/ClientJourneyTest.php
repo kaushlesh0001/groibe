@@ -14,9 +14,7 @@ use App\Enums\SubmissionStatus;
 use App\Enums\TaskStatus;
 use App\Enums\UserRole;
 use App\Filament\Admin\Resources\Briefs\Pages\EditBrief;
-use App\Filament\Admin\Resources\Organizations\Pages\CreateOrganization;
 use App\Filament\Admin\Resources\Organizations\Pages\EditOrganization;
-use App\Filament\Admin\Resources\Organizations\RelationManagers\UsersRelationManager;
 use App\Filament\Admin\Resources\Projects\Pages\EditProject;
 use App\Filament\Admin\Resources\Projects\RelationManagers\SowsRelationManager;
 use App\Livewire\Client\Agreements\AcceptMsa;
@@ -51,8 +49,7 @@ require_once __DIR__.'/helpers.php';
 /*
  * Pass 9 item 7, persona 3 of 4: the client. Spec 20: "A client can register, get verified, submit a brief, receive and accept a
  * SOW, see progress, accept deliverables, review contributors, and consent to showcase." The client's own steps run on their own
- * pages; Groibe's steps run on the admin screens. The organization is created by an admin, because registration takes the account
- * only (see SUGGESTIONS).
+ * pages; Groibe's steps run on the admin screens. The organization is created at registration, pending, and an admin verifies it.
  */
 
 it('takes a client from sign-up to an accepted deliverable, a review and showcase consent', function () {
@@ -63,26 +60,26 @@ it('takes a client from sign-up to an accepted deliverable, a review and showcas
     $type = ProjectType::factory()->create();
     $skill = Skill::factory()->create();
 
-    // 1. Sign up and confirm the email address. There is no organization yet, so nothing of anyone else's is shown.
+    // 1. Sign up with the organization's details, then confirm the email address. The organization starts pending, with this person as owner.
     Volt::test('auth.register-client')
         ->set('name', 'Ravi Shah')->set('email', 'ravi@acme.test')
         ->set('password', 'a-long-password-1')->set('password_confirmation', 'a-long-password-1')
+        ->set('designation', 'Founder')->set('organization_name', 'Acme Foods')->set('gstin', '27ABCDE1234F1Z5')
+        ->set('industry', 'FMCG')->set('size_band', '51-200')->set('city', 'Mumbai')->set('state', 'Maharashtra')
         ->call('register')->assertHasNoErrors();
 
     $me = User::query()->where('email', 'ravi@acme.test')->firstOrFail();
-    expect($me->role)->toBe(UserRole::Client)->and($me->organizations)->toBeEmpty();
+    $org = Organization::query()->sole();
+    expect($me->role)->toBe(UserRole::Client)
+        ->and($org->status)->toBe(OrganizationStatus::Pending)->and($org->verified_at)->toBeNull()
+        ->and($me->organizationRole($org))->toBe(OrgRole::Owner);
 
     $this->actingAs($me)->get(URL::temporarySignedRoute('verification.verify', now()->addHour(), ['id' => $me->id, 'hash' => sha1($me->getEmailForVerification())]))->assertRedirect();
     expect($me->refresh()->hasVerifiedEmail())->toBeTrue();
-    asUser($me)->get('/app/client')->assertOk();
+    asUser($me)->get('/app/client')->assertOk()->assertSee('Waiting for verification');
 
-    // 2. Groibe sets up the organization as pending, links the person as owner, and only then verifies it.
+    // 2. Until Groibe verifies the organization, a draft can be prepared but not submitted.
     $admin = adminUser();
-    Livewire::actingAs($admin)->test(CreateOrganization::class)
-        ->fillForm(['name' => 'Acme Foods', 'slug' => 'acme-foods', 'status' => 'pending'])->call('create')->assertHasNoFormErrors();
-    $org = Organization::query()->where('slug', 'acme-foods')->firstOrFail();
-    Livewire::actingAs($admin)->test(UsersRelationManager::class, ['ownerRecord' => $org, 'pageClass' => EditOrganization::class])
-        ->callAction(TestAction::make('attach')->table(), ['recordId' => $me->id, 'org_role' => 'owner'])->assertHasNoFormErrors();
 
     // The form opens, but a pending organization cannot submit a brief.
     $fillBrief = fn () => Livewire::actingAs($me)->test(BriefForm::class)
@@ -101,8 +98,8 @@ it('takes a client from sign-up to an accepted deliverable, a review and showcas
 
     Livewire::actingAs($admin)->test(EditOrganization::class, ['record' => $org->getRouteKey()])
         ->fillForm(['status' => 'verified'])->call('save')->assertHasNoFormErrors();
-    // Note: nothing sets `verified_at` when an admin verifies an organization (SUGGESTIONS), so only the status is asserted.
-    expect($org->refresh()->status)->toBe(OrganizationStatus::Verified);
+    expect($org->refresh()->status)->toBe(OrganizationStatus::Verified)->and($org->verified_at)->not->toBeNull();
+    asUser($me)->get('/app/client')->assertOk()->assertDontSee('Waiting for verification');
 
     // 3. The owner accepts the Client MSA, then submits a brief through the guided form.
     asUser($me)->get('/app/client')->assertOk()->assertSee('accept the Client MSA');

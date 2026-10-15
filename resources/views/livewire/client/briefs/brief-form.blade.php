@@ -7,6 +7,8 @@
         </div>
     </div>
 
+    <x-verification-notice :organization="$organization" />
+
     @if ($question)
         <section role="alert" class="rounded-lg border border-amber-400 bg-amber-50 p-4">
             <flux:heading size="lg" level="2">Our question</flux:heading>

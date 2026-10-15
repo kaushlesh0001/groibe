@@ -33,6 +33,7 @@ class BriefIndex extends Component
 
         return view('livewire.client.briefs.brief-index', [
             'briefs' => $briefs,
+            'organization' => $organization,
             'canCreate' => $user->can('create', Brief::class),
         ]);
     }

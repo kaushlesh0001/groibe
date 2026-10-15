@@ -11,6 +11,7 @@ use App\Enums\UserStatus;
 use App\Models\Organization;
 use App\Models\Profile;
 use App\Models\User;
+use App\Services\Organizations\OrganizationSlug;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -215,14 +216,7 @@ class ClientImport extends ImportDefinition
 
     private function uniqueSlug(string $name): string
     {
-        $base = Str::slug($name) ?: 'organization';
-        $slug = $base;
-
-        for ($i = 2; Organization::withTrashed()->where('slug', $slug)->exists(); $i++) {
-            $slug = "{$base}-{$i}";
-        }
-
-        return $slug;
+        return app(OrganizationSlug::class)->unique($name);
     }
 
     private function normalizeWebsite(string $website): ?string

@@ -4,6 +4,8 @@
         <flux:text>{{ $organization?->name ?? 'Your account is not linked to an organization yet. Please contact Groibe.' }}</flux:text>
     </div>
 
+    <x-verification-notice :organization="$organization" />
+
     @if ($msaPending)
         <p role="alert" class="rounded-lg border border-amber-400 bg-amber-50 p-4">
             @if ($isOwner)
