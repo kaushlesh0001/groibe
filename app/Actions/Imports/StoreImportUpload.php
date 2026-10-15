@@ -112,6 +112,13 @@ class StoreImportUpload
             throw ActionBlocked::guardFailed('The file has a header row but no data rows.');
         }
 
+        // The check runs in the admin's web request, and a shared host stops one after 30 to 60 seconds. A file this long is split.
+        $limit = (int) config('groibe.imports.max_rows');
+
+        if ($reader->countRows() > $limit) {
+            throw ActionBlocked::guardFailed('The file has more than '.number_format($limit).' rows. Split it into files of at most '.number_format($limit).' rows and import them one after another.');
+        }
+
         return $headers;
     }
 }
