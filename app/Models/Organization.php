@@ -53,10 +53,30 @@ class Organization extends Model
         ];
     }
 
+    /**
+     * `verified_at` follows the status (spec 7.1): it is stamped when an organization becomes verified and cleared when it stops
+     * being verified (suspended, or sent back to pending). Doing it here covers every way a status changes. Who verified is
+     * the causer of the logged status change, so no column for it is needed.
+     */
+    protected static function booted(): void
+    {
+        static::saving(function (Organization $organization): void {
+            if (! $organization->isDirty('status')) {
+                return;
+            }
+
+            if ($organization->status === OrganizationStatus::Verified) {
+                $organization->verified_at ??= now();
+            } else {
+                $organization->verified_at = null;
+            }
+        });
+    }
+
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['name', 'slug', 'status', 'can_submit_briefs', 'is_public', 'is_featured', 'gstin'])
+            ->logOnly(['name', 'slug', 'status', 'verified_at', 'can_submit_briefs', 'is_public', 'is_featured', 'gstin'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs();
     }
@@ -91,5 +111,11 @@ class Organization extends Model
     public function isVerified(): bool
     {
         return $this->status === OrganizationStatus::Verified;
+    }
+
+    /** Pending, and not cleared by an admin to submit briefs anyway (spec 6.11): the client is told to wait. */
+    public function isAwaitingVerification(): bool
+    {
+        return $this->status === OrganizationStatus::Pending && ! $this->can_submit_briefs;
     }
 }
