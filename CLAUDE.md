@@ -79,6 +79,7 @@ docs/{GROIBE_MASTER_SPEC.md,PROMPT_PACK.md,SUGGESTIONS.md,SPEC_CHANGE_REQUESTS.m
 ## Commands
 - Dev: `composer dev` (or `php artisan serve` + `npm run dev`)
 - Tests: `php artisan test`
+- Never run `php artisan test` (it runs out of memory); run Pest folder by folder, for example `php -d memory_limit=1G vendor/bin/pest tests/Feature/Agreements`.
 - Lint: `./vendor/bin/pint` ; Static: `./vendor/bin/phpstan analyse`
 - Fresh demo DB (local only): `php artisan migrate:fresh --seed --seeder=DemoSeeder`
 - Prod build: `npm run build` (local), then deploy per `docs/DEPLOY.md`
