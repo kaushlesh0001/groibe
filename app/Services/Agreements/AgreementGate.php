@@ -16,7 +16,7 @@ class AgreementGate
     /** True when an owner of the organization has accepted the currently active Client MSA version. */
     public function hasAcceptedClientMsa(Organization $organization): bool
     {
-        $template = AgreementTemplate::currentFor(AgreementType::ClientMsa);
+        $template = AgreementTemplate::currentPublishedFor(AgreementType::ClientMsa);
 
         if ($template === null) {
             return false;

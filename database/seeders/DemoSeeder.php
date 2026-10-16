@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Actions\Agreements\AcceptClientMsa;
 use App\Actions\Contributors\AcceptMemberAgreement;
+use App\Enums\AgreementType;
 use App\Enums\ApplicationStatus;
 use App\Enums\AssignmentStatus;
 use App\Enums\BriefStatus;
@@ -28,6 +29,7 @@ use App\Enums\TaskStatus;
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use App\Enums\WorkMode;
+use App\Models\AgreementTemplate;
 use App\Models\Application;
 use App\Models\Assignment;
 use App\Models\Brief;
@@ -121,6 +123,7 @@ class DemoSeeder extends Seeder
         ]);
 
         activity()->withoutLogs(fn () => Model::unguarded(function (): void {
+            $this->publishDemoWording();
             $this->contributors();
             $organizations = $this->organizations();
             $this->deliveryWork($organizations);
@@ -129,6 +132,33 @@ class DemoSeeder extends Seeder
             // Last, because it picks the roles, people and work the steps above create.
             $this->homepage($organizations);
         }));
+    }
+
+    /**
+     * The demo people accept the Member Agreement and Client MSA, and the demo projects use the SOW template, but a template that
+     * still carries the placeholder marker counts as not published and cannot be accepted (spec 8, SCR-036). So each of those
+     * three gets a clearly labelled demo version, only while its current version is still a placeholder. Real wording is left alone.
+     */
+    private function publishDemoWording(): void
+    {
+        foreach ([AgreementType::MemberAgreement, AgreementType::ClientMsa, AgreementType::SowTemplate] as $type) {
+            $current = AgreementTemplate::currentFor($type);
+
+            if ($current === null || ! $current->isPlaceholder()) {
+                continue;
+            }
+
+            AgreementTemplate::query()->where('type', $type)->update(['is_active' => false]);
+
+            AgreementTemplate::query()->create([
+                'type' => $type,
+                'version' => (int) AgreementTemplate::query()->where('type', $type)->max('version') + 1,
+                'title' => $type->getLabel().' (demo wording)',
+                'body_html' => str_replace(AgreementTemplate::PLACEHOLDER_NOTE, 'Demo wording for local and staging only. This is not legal text.', (string) $current->body_html),
+                'is_active' => true,
+                'effective_from' => now(),
+            ]);
+        }
     }
 
     private function contributors(): void

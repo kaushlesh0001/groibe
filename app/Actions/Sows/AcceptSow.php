@@ -60,8 +60,12 @@ class AcceptSow
 
             $templateId = $locked->templateId();
             $template = ($templateId !== null ? AgreementTemplate::query()->find($templateId) : null)
-                ?? AgreementTemplate::currentFor(AgreementType::SowTemplate)
-                ?? throw ActionBlocked::missingTemplate('SOW template');
+                ?? AgreementTemplate::currentPublishedFor(AgreementType::SowTemplate);
+
+            // Placeholder wording is never accepted (spec 8, SCR-036), even when the SOW was built from it before the rule existed.
+            if ($template === null || $template->isPlaceholder()) {
+                throw ActionBlocked::missingTemplate('SOW template');
+            }
 
             $locked->forceFill([
                 'status' => SowStatus::Accepted,

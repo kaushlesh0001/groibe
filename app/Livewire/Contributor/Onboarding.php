@@ -148,7 +148,7 @@ class Onboarding extends Component
     {
         $user = Auth::user();
         $state = $this->state();
-        $template = AgreementTemplate::currentFor(AgreementType::MemberAgreement);
+        $template = AgreementTemplate::currentPublishedFor(AgreementType::MemberAgreement);
 
         return view('livewire.contributor.onboarding', [
             'state' => $state,

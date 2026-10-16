@@ -5,12 +5,14 @@ use App\Actions\Imports\RunImportDryRun;
 use App\Actions\Imports\StartImport;
 use App\Actions\Imports\StoreImportUpload;
 use App\Enums\AdminRole;
+use App\Enums\AgreementType;
 use App\Enums\AssignmentStatus;
 use App\Enums\ImportType;
 use App\Enums\OnboardingState;
 use App\Enums\OrgRole;
 use App\Enums\ProjectStatus;
 use App\Enums\UserStatus;
+use App\Models\AgreementTemplate;
 use App\Models\Assignment;
 use App\Models\Import;
 use App\Models\Organization;
@@ -22,6 +24,7 @@ use App\Services\Imports\CsvReader;
 use Database\Seeders\AgreementTemplateSeeder;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -43,10 +46,22 @@ function contributorUser(): User
     return User::factory()->contributor()->create();
 }
 
-/** Publish active Client MSA and SOW templates, as the AgreementTemplateSeeder does. */
+/**
+ * Publish the seeded agreement templates, as the AgreementTemplateSeeder does, with the placeholder marker taken out of the three
+ * documents people accept (Member Agreement, Client MSA, SOW template) so they count as published (spec 8, SCR-036). Terms and
+ * Privacy stay placeholders, so the public pages keep answering 404. The marker is removed with a query that skips the model,
+ * because a saved version is otherwise immutable.
+ */
 function publishAgreements(): void
 {
     test()->seed(AgreementTemplateSeeder::class);
+
+    AgreementTemplate::query()
+        ->whereIn('type', [AgreementType::MemberAgreement, AgreementType::ClientMsa, AgreementType::SowTemplate])
+        ->get()
+        ->each(fn (AgreementTemplate $template) => DB::table('agreement_templates')->where('id', $template->id)->update([
+            'body_html' => str_replace(AgreementTemplate::PLACEHOLDER_NOTE, 'Wording used in tests.', (string) $template->body_html),
+        ]));
 }
 
 /** Make the organization satisfy the Client MSA gate: its owner accepts the current version. */

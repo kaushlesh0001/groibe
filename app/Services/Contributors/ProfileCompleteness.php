@@ -39,7 +39,7 @@ class ProfileCompleteness
 
     public function hasAcceptedMemberAgreement(User $user): bool
     {
-        $template = AgreementTemplate::currentFor(AgreementType::MemberAgreement);
+        $template = AgreementTemplate::currentPublishedFor(AgreementType::MemberAgreement);
 
         if ($template === null) {
             return false;

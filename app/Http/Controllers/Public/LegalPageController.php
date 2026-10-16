@@ -28,9 +28,7 @@ class LegalPageController extends Controller
     /** The template of this type that may be shown publicly, or null. */
     public static function published(AgreementType $type): ?AgreementTemplate
     {
-        $template = AgreementTemplate::currentFor($type);
-
-        return $template !== null && ! $template->isPlaceholder() ? $template : null;
+        return AgreementTemplate::currentPublishedFor($type);
     }
 
     private function show(AgreementType $type, string $route): View

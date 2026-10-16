@@ -25,7 +25,7 @@ class AcceptClientMsa
 
         app(Impersonation::class)->assertNotImpersonating();
 
-        $template = AgreementTemplate::currentFor(AgreementType::ClientMsa)
+        $template = AgreementTemplate::currentPublishedFor(AgreementType::ClientMsa)
             ?? throw ActionBlocked::missingTemplate('Client MSA');
 
         $existing = AgreementAcceptance::query()
