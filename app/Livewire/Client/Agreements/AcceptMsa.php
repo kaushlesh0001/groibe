@@ -45,7 +45,7 @@ class AcceptMsa extends Component
 
         return view('livewire.client.agreements.accept-msa', [
             'organization' => $organization,
-            'template' => AgreementTemplate::currentFor(AgreementType::ClientMsa),
+            'template' => AgreementTemplate::currentPublishedFor(AgreementType::ClientMsa),
             'isOwner' => $organization !== null && $user->organizationRole($organization) === OrgRole::Owner,
             'alreadyAccepted' => $organization !== null && app(AgreementGate::class)->hasAcceptedClientMsa($organization),
         ]);

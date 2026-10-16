@@ -24,7 +24,7 @@ class CreateSow
     {
         Gate::forUser($actor)->authorize('create', Sow::class);
 
-        $template = AgreementTemplate::currentFor(AgreementType::SowTemplate)
+        $template = AgreementTemplate::currentPublishedFor(AgreementType::SowTemplate)
             ?? throw ActionBlocked::missingTemplate('SOW template');
 
         return DB::transaction(function () use ($project, $actor, $data, $template): Sow {

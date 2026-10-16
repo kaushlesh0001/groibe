@@ -18,7 +18,10 @@ class AgreementTemplate extends Model
     /** @use HasFactory<AgreementTemplateFactory> */
     use HasFactory, LogsActivity;
 
-    /** The sentence that ends every seeded placeholder body. A template that still contains it is not real wording. */
+    /**
+     * The one marker every seeded placeholder body carries, the SOW template's included (SCR-036, spec 8). A template whose
+     * body still contains it is not real wording and counts as not published.
+     */
     public const PLACEHOLDER_NOTE = 'Replace with the approved legal text.';
 
     /** @var list<string> */
@@ -65,17 +68,29 @@ class AgreementTemplate extends Model
     }
 
     /**
-     * True while the body is still the seeded placeholder (spec 8). The public Terms and Privacy pages only show a
-     * template whose wording is real, so placeholder text can never reach a visitor.
+     * True while the body still carries the placeholder marker (spec 8, SCR-036). Placeholder text never reaches a visitor
+     * and can never be accepted or used: every public page and every acceptance goes through `currentPublishedFor()`.
      */
     public function isPlaceholder(): bool
     {
         return str_contains((string) $this->body_html, self::PLACEHOLDER_NOTE);
     }
 
-    /** The single active template of a type, or null when none has been published. */
+    /**
+     * The single active template of a type, or null when none has been published. It may still be a placeholder, so only the
+     * Agreement Templates admin screen uses it, to open the placeholder for replacement. Everything else uses
+     * `currentPublishedFor()`.
+     */
     public static function currentFor(AgreementType $type): ?self
     {
         return static::query()->active()->where('type', $type)->orderByDesc('version')->first();
+    }
+
+    /** The active template of a type that holds real wording, or null while none is published (SCR-036). */
+    public static function currentPublishedFor(AgreementType $type): ?self
+    {
+        $template = static::currentFor($type);
+
+        return $template !== null && ! $template->isPlaceholder() ? $template : null;
     }
 }

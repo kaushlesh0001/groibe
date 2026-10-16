@@ -19,7 +19,7 @@ class AcceptMemberAgreement
     {
         app(Impersonation::class)->assertNotImpersonating();
 
-        $template = AgreementTemplate::currentFor(AgreementType::MemberAgreement)
+        $template = AgreementTemplate::currentPublishedFor(AgreementType::MemberAgreement)
             ?? throw ActionBlocked::missingTemplate('Member Agreement');
 
         $existing = AgreementAcceptance::query()
