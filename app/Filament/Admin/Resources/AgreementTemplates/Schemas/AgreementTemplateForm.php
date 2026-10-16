@@ -45,6 +45,14 @@ class AgreementTemplateForm
 
                     return $type === null ? 'Pick a type to see where it is used.' : 'Where this is used: '.$type->usedAt();
                 })->columnSpanFull(),
+                Text::make('This text still carries the placeholder note. While it does, it counts as not published and cannot be accepted. Remove the note when you paste the real wording (SCR-036).')
+                    ->visible(function (Get $get): bool {
+                        $state = $get('body_html');
+                        $text = is_string($state) ? $state : json_encode($state);
+
+                        return is_string($text) && str_contains($text, AgreementTemplate::PLACEHOLDER_NOTE);
+                    })
+                    ->columnSpanFull(),
                 TextInput::make('version')
                     ->disabled()
                     ->dehydrated(false)
@@ -64,6 +72,7 @@ class AgreementTemplateForm
                 RichEditor::make('body_html')
                     ->label('Text')
                     ->required()
+                    ->live(onBlur: true)
                     ->helperText('Saving publishes this as a new version. Earlier versions stay unchanged so past acceptances keep their exact wording. SOW templates may use {{client_name}}, {{project_title}}, {{scope}}, {{milestones_table}}, {{total_value}}, {{payment_terms}}, {{start_date}} and {{due_date}}.')
                     ->columnSpanFull(),
             ]);
