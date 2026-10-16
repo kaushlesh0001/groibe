@@ -323,7 +323,7 @@ Proposed changes only. The spec is edited by the founder, between passes, and lo
 
 ## SCR-036: Placeholder agreements must not be acceptable (spec sections 6.10, 8, 10.2, 12, 19)
 
-- **Status:** ACCEPTED 2026-10-15 by the founder, recommendation (b). Not built yet. The founder logs it in spec sections 8, 19 and 23.
+- **Status:** ACCEPTED 2026-10-15 by the founder, recommendation (b). BUILT 2026-10-16. The founder logs it in spec sections 8, 19 and 23.
 - **Gap:** The seeder creates all five agreement templates active, with placeholder text (spec 8, 19). Only two of the places that use a template check for that.
   - **Public Terms and Privacy are already safe.** `LegalPageController::published()` ignores a template that `isPlaceholder()` calls a placeholder. `/terms` and `/privacy` answer 404, and the footer menu and the sitemap leave them out until real wording is published (spec 10.2, SCR-021).
   - **The three acceptance documents are not protected.** `AcceptMemberAgreement`, `AcceptClientMsa`, `AgreementGate`, `ProfileCompleteness`, the contributor onboarding step, the Client MSA page, `CreateSow` and `AcceptSow` all use `AgreementTemplate::currentFor()`, which does not look at `isPlaceholder()`. A contributor can accept the placeholder Member Agreement and be activated. A client owner can accept the placeholder Client MSA and then submit briefs and accept SOWs. A SOW can be built from the placeholder template, sent and accepted. Each acceptance is stored as a real record (user, version, time, IP) against text that says "Placeholder".
@@ -337,7 +337,15 @@ Proposed changes only. The spec is edited by the founder, between passes, and lo
 - **Recommendation:** (b). It is the rule the public pages already use, it guards against a later mistake as well as the first deploy, and it reuses messages that exist. Also change the seeded SOW text to carry the common marker. (a) adds nothing once (b) is in. A string marker can be defeated by deleting the sentence from a body that is still unfinished, so the Agreement Templates screen should also show a "still a placeholder" label (small, in scope of this SCR).
 - **For the founder:** staging cannot run the full flows until some text without the marker is published. Publish clearly labelled test wording on staging for that, and the real wording on production.
 - **Spec sections affected:** 8 (gating, placeholder bodies), 6.10, 10.2, 12, 19, 23.
-- **Code status:** Not built. Tests to add: with only placeholders, acceptance of each of the three documents is refused and SOW creation is refused; with real wording each works; the SOW seed text is detected; the admin screen can still open a placeholder.
+- **Code status:** Built as option (b), 2026-10-16.
+  - `AgreementTemplate::currentPublishedFor()` returns the active template of a type only when it holds real wording. `currentFor()` stays, and only the model itself still calls it.
+  - Every acceptance path now uses `currentPublishedFor()`: `AcceptMemberAgreement`, `AcceptClientMsa`, `AgreementGate`, `ProfileCompleteness`, the contributor onboarding step, the Client MSA page, `CreateSow` and `AcceptSow`. `LegalPageController::published()` uses it too, with no change in behaviour. `AcceptSow` also refuses a SOW whose own template has become a placeholder.
+  - One marker for all five placeholders. The seeded SOW text now carries `AgreementTemplate::PLACEHOLDER_NOTE`.
+  - The Agreement Templates screen shows a "Still a placeholder / Real wording" badge in the list and a notice in the form while the text carries the marker. A super admin can still open and replace a placeholder.
+  - `DemoSeeder` publishes a labelled "demo wording" version of the Member Agreement, Client MSA and SOW template, only while the current version is a placeholder. `tests/Pest.php` `publishAgreements()` removes the marker from those three. Terms and Privacy stay placeholders, so `/terms` and `/privacy` stay 404.
+  - Tests: `tests/Feature/Agreements/PlaceholderAgreementTest.php` (25 cases). With only placeholders, acceptance of each of the three documents and SOW creation are refused and nothing is stored; with real wording each works; an old acceptance of a placeholder does not count; the SOW seed text is detected; the admin screen labels templates and still opens a placeholder.
+  - Checked: Pint and Larastan clean. Pest run folder by folder: every folder and loose test file exited 0, with no failures. One Deployment test skips on this Windows machine because `bash` is not on the PATH (SUGGESTIONS 317).
+  - Open: a text marker can still be deleted from an unfinished body (SUGGESTIONS 319). Staging needs test wording before the full flows can run (SUGGESTIONS 320).
 
 ## SCR-037: Database backup before migrations in the deploy script (spec sections 17.4; DEPLOY.md sections 12, 13, 14)
 
