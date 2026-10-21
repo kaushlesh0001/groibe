@@ -3,6 +3,7 @@
 namespace App\Providers\Filament;
 
 use App\Http\Middleware\EnsureAdminTwoFactor;
+use App\Services\Auth\AdminEmailCodeAuthentication;
 use Filament\Auth\MultiFactor\App\AppAuthentication;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -31,12 +32,13 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
-            // Spec 17.2, SCR-029: authenticator-app 2FA with recovery codes. The panel marks it required so every page carries the
-            // check, and EnsureAdminTwoFactor decides who must have it: super admins always, other admins while the flag is on.
-            // The profile page is where an admin sets it up and manages it.
+            // Spec 17.2, SCR-040 (amending SCR-029): the second step of admin sign-in is a 6-digit code emailed to the admin. It is the first
+            // provider, so it is the default. A super admin always has it and any other admin has it while the `two_factor_admin` flag is on
+            // (`User::mustUseEmailCode()`), with nothing to set up. The authenticator app and its recovery codes stay as an extra for an admin
+            // who has set them up; the profile page is where that is managed. `EnsureAdminTwoFactor` is kept as a guard on every page.
             ->profile()
             ->multiFactorAuthentication(
-                [AppAuthentication::make()->recoverable()->brandName('Groibe')],
+                [AdminEmailCodeAuthentication::make(), AppAuthentication::make()->recoverable()->brandName('Groibe')],
                 isRequired: true,
             )
             ->multiFactorAuthenticationRequiredMiddlewareName(EnsureAdminTwoFactor::class)

@@ -84,6 +84,16 @@ return [
         ],
     ],
 
+    // Spec 17.2, SCR-040: the emailed sign-in code for the admin panel. The code has 6 digits (Filament fixes that).
+    'admin_email_code' => [
+        'expires_minutes' => 10,
+        // Wrong codes before the lockout, and how long it lasts. The count is per person, across sessions.
+        'max_wrong' => 5,
+        'lockout_minutes' => 15,
+        // At most one email a minute, the one sent at sign-in included.
+        'resend_seconds' => 60,
+    ],
+
     // Spec 12: organization details collected when a client registers. `organizations.size_band` is free text (spec 7.1); these are the choices offered.
     'organizations' => [
         'size_bands' => ['1-10', '11-50', '51-200', '201-1000', '1000+'],

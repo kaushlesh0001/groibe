@@ -2,30 +2,29 @@
 
 namespace App\Http\Middleware;
 
-use App\Enums\FeatureFlag;
 use App\Models\User;
-use App\Services\FeatureFlags\FeatureFlags;
 use Closure;
+use Filament\Auth\MultiFactor\MultiFactorChallenge;
 use Filament\Facades\Filament;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Two-factor authentication for the admin panel (spec 17.2, SCR-029). A super admin must always have it. Any other admin
- * must have it while the `two_factor_admin` flag is on. An admin who is required to have it and has not set it up is sent
- * to Filament's set-up page, which is the only admin page they can open until they finish.
+ * Two-factor authentication for the admin panel (spec 17.2, SCR-029, SCR-040). A super admin must always have it. Any other admin
+ * must have it while the `two_factor_admin` flag is on. Since SCR-040 the emailed sign-in code is decided by role and flag
+ * (`User::mustUseEmailCode()`), so there is nothing to set up. This stays as a guard on every admin page that the panel really
+ * offers such an admin a second factor: if it did not (for example the email provider were taken off the panel), the admin is sent
+ * to Filament's set-up page, the only admin page they can open until they finish.
  *
- * Filament runs the sign-in challenge itself for anyone who has set it up, whatever this middleware or the flag says.
+ * Filament runs the sign-in challenge itself for anyone who has a factor, whatever this middleware or the flag says.
  */
 class EnsureAdminTwoFactor
 {
-    public function __construct(private readonly FeatureFlags $flags) {}
-
     public function handle(Request $request, Closure $next): Response
     {
         $user = Filament::auth()->user();
 
-        if (! $user instanceof User || ! $this->required($user) || $user->hasTwoFactor()) {
+        if (! $user instanceof User || ! $this->required($user) || MultiFactorChallenge::make()->hasEnabledProviders($user)) {
             return $next($request);
         }
 
@@ -34,6 +33,6 @@ class EnsureAdminTwoFactor
 
     public function required(User $user): bool
     {
-        return $user->isSuperAdmin() || $this->flags->enabled(FeatureFlag::TwoFactorAdmin);
+        return $user->mustUseEmailCode();
     }
 }

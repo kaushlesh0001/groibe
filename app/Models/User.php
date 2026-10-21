@@ -3,14 +3,17 @@
 namespace App\Models;
 
 use App\Enums\AdminRole;
+use App\Enums\FeatureFlag as FeatureFlagKey;
 use App\Enums\OnboardingState;
 use App\Enums\OrgRole;
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use App\Models\Concerns\HasUuid;
+use App\Services\FeatureFlags\FeatureFlags;
 use Database\Factories\UserFactory;
 use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthentication;
 use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthenticationRecovery;
+use Filament\Auth\MultiFactor\Email\Contracts\HasEmailAuthentication;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -25,7 +28,7 @@ use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Permission\Traits\HasRoles;
 
-class User extends Authenticatable implements FilamentUser, HasAppAuthentication, HasAppAuthenticationRecovery, MustVerifyEmail
+class User extends Authenticatable implements FilamentUser, HasAppAuthentication, HasAppAuthenticationRecovery, HasEmailAuthentication, MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, HasRoles, HasUuid, LogsActivity, Notifiable, SoftDeletes;
@@ -157,10 +160,29 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
         return $this->isAdmin() && $this->hasRole(AdminRole::SuperAdmin->value);
     }
 
+    /** Whether an authenticator app is set up. The emailed code is `mustUseEmailCode()`. */
     public function hasTwoFactor(): bool
     {
         return $this->two_factor_secret !== null;
     }
+
+    /**
+     * Whether this admin signs in with an emailed code (spec 17.2, SCR-040): always for a super admin, and for any other admin role
+     * while the `two_factor_admin` flag is on. It is decided here, from the role and the flag, so there is nothing to set up and
+     * nothing to switch off. Nobody who is not an admin has it.
+     */
+    public function mustUseEmailCode(): bool
+    {
+        return $this->isAdmin() && ($this->isSuperAdmin() || app(FeatureFlags::class)->enabled(FeatureFlagKey::TwoFactorAdmin));
+    }
+
+    public function hasEmailAuthentication(): bool
+    {
+        return $this->mustUseEmailCode();
+    }
+
+    /** Filament's opt-in switch. The emailed code is required or not by role and flag, never by choice, so this does nothing. */
+    public function toggleEmailAuthentication(bool $condition): void {}
 
     public function getAppAuthenticationSecret(): ?string
     {
