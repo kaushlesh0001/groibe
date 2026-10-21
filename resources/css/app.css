@@ -73,3 +73,76 @@ select:focus[data-flux-control] {
 /* \[:where(&)\]:size-4 {
     @apply size-4;
 } */
+
+
+/* Homepage motion (spec 10.1). CSS only: the public pages send no script and allow no inline style (strict CSP), so the
+   cycles are set by data attributes and fixed rules. Everything that moves is inside "no-preference"; with reduced motion
+   nothing animates, the first rotating word stays, and the community row is a plain row that scrolls by hand. */
+
+.hero-rotor { display: inline-grid; }
+.hero-rotor > span { grid-area: 1 / 1; opacity: 0; }
+.hero-rotor > span:first-child { opacity: 1; }
+
+.marquee { overflow-x: auto; }
+.marquee-track { display: flex; width: max-content; }
+.marquee-list { display: flex; gap: 1rem; margin: 0; padding: 0.25rem 1rem 0.25rem 0; list-style: none; }
+.marquee-dup { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+    .motion-control { display: none; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    /* Hero: the slogan fades in word by word over about 700 ms. Opacity only, so no layout shift. */
+    .hero-word { animation: hero-word-in 0.3s ease-out both; }
+    .hero-word:nth-child(2) { animation-delay: 130ms; }
+    .hero-word:nth-child(3) { animation-delay: 260ms; }
+    .hero-word:nth-child(4) { animation-delay: 390ms; }
+    .hero-word:nth-child(5) { animation-delay: 520ms; }
+    .hero-word:nth-child(n + 6) { animation-delay: 650ms; }
+
+    /* Hero: one category every 3 seconds, all in one grid cell. */
+    .hero-rotor > span { animation: none 0s linear infinite both; }
+    .hero-rotor[data-count='2'] > span { animation-name: rotor-2; animation-duration: 6s; }
+    .hero-rotor[data-count='3'] > span { animation-name: rotor-3; animation-duration: 9s; }
+    .hero-rotor[data-count='4'] > span { animation-name: rotor-4; animation-duration: 12s; }
+    .hero-rotor[data-count='5'] > span { animation-name: rotor-5; animation-duration: 15s; }
+    .hero-rotor[data-count='6'] > span { animation-name: rotor-6; animation-duration: 18s; }
+    .hero-rotor > span:nth-child(2) { animation-delay: 3s; }
+    .hero-rotor > span:nth-child(3) { animation-delay: 6s; }
+    .hero-rotor > span:nth-child(4) { animation-delay: 9s; }
+    .hero-rotor > span:nth-child(5) { animation-delay: 12s; }
+    .hero-rotor > span:nth-child(6) { animation-delay: 15s; }
+    .motion-scope:has(.motion-toggle:checked) .hero-rotor > span { animation-play-state: paused; }
+
+    /* Community: a slow loop to the left. One card takes 7 seconds to pass (about 39 px a second), a comfortable reading pace. */
+    .marquee { overflow: hidden; }
+    .marquee-dup { display: flex; }
+    .marquee-track { animation: marquee-left var(--marquee-duration, 42s) linear infinite; }
+    .marquee[data-cards='6'] { --marquee-duration: 42s; }
+    .marquee[data-cards='7'] { --marquee-duration: 49s; }
+    .marquee[data-cards='8'] { --marquee-duration: 56s; }
+    .marquee[data-cards='9'] { --marquee-duration: 63s; }
+    .marquee[data-cards='10'] { --marquee-duration: 70s; }
+    .marquee[data-cards='11'] { --marquee-duration: 77s; }
+    .marquee[data-cards='12'] { --marquee-duration: 84s; }
+    .marquee:hover .marquee-track,
+    .marquee:focus-within .marquee-track,
+    .marquee-scope:has(.motion-toggle:checked) .marquee-track { animation-play-state: paused; }
+}
+
+/* Other sections fade up as they scroll into view. Browsers without scroll-driven animations just show them. */
+@supports (animation-timeline: view()) {
+    @media (prefers-reduced-motion: no-preference) {
+        .reveal { animation: reveal-up linear both; animation-timeline: view(); animation-range: entry 0% entry 35%; }
+    }
+}
+
+@keyframes hero-word-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes marquee-left { to { transform: translateX(-50%); } }
+@keyframes reveal-up { from { opacity: 0; transform: translateY(1.25rem); } to { opacity: 1; transform: none; } }
+@keyframes rotor-2 { 0% { opacity: 0; } 3% { opacity: 1; } 47% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 0; } }
+@keyframes rotor-3 { 0% { opacity: 0; } 3% { opacity: 1; } 30.3% { opacity: 1; } 33.3% { opacity: 0; } 100% { opacity: 0; } }
+@keyframes rotor-4 { 0% { opacity: 0; } 3% { opacity: 1; } 22% { opacity: 1; } 25% { opacity: 0; } 100% { opacity: 0; } }
+@keyframes rotor-5 { 0% { opacity: 0; } 3% { opacity: 1; } 17% { opacity: 1; } 20% { opacity: 0; } 100% { opacity: 0; } }
+@keyframes rotor-6 { 0% { opacity: 0; } 3% { opacity: 1; } 13.7% { opacity: 1; } 16.7% { opacity: 0; } 100% { opacity: 0; } }

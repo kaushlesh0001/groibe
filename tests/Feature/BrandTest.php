@@ -204,7 +204,8 @@ describe('pages', function () {
     it('shows the tagline, dark logo, navy header and footer and one green word on the home page', function () {
         $html = $this->get('/')->assertOk()->getContent();
 
-        expect($html)->toContain('Where Ideas Find <span class="text-brand-green">People</span>')
+        expect($html)->toContain('<span class="hero-word text-brand-green">People</span>')
+            ->and(preg_replace('/\s+/', ' ', strip_tags(preg_match('/<h1.*?<\/h1>/s', $html, $h1) ? $h1[0] : '')))->toBe('Where Ideas Find People')
             ->and(substr_count($html, 'brand/groibe-logo-dark.svg'))->toBe(2) // header and footer
             ->and($html)->not->toContain('brand/groibe-logo-white.svg')
             ->and($html)->toContain('<title>Where Ideas Find People | ')

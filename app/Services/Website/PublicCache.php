@@ -3,6 +3,7 @@
 namespace App\Services\Website;
 
 use App\Models\AgreementTemplate;
+use App\Models\Category;
 use App\Models\CmsSection;
 use App\Models\Faq;
 use App\Models\FeaturedItem;
@@ -46,6 +47,7 @@ class PublicCache
         FeatureFlag::class => null,
         OpenRole::class => null,
         Organization::class => null,
+        Category::class => ['name', 'type', 'sort'],
         Skill::class => ['name', 'slug', 'is_active'],
         Profile::class => ['slug', 'is_public', 'onboarding_state', 'headline', 'city', 'state', 'photo_path'],
         User::class => ['name', 'role', 'status'],

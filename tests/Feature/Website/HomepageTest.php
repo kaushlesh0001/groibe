@@ -3,19 +3,25 @@
 use App\Enums\FaqAudience;
 use App\Enums\FeaturedItemType;
 use App\Enums\FeatureFlag;
+use App\Enums\OnboardingState;
 use App\Enums\ProjectStatus;
 use App\Enums\ShowcaseConsent;
+use App\Enums\UserStatus;
+use App\Models\Category;
 use App\Models\CmsSection;
 use App\Models\Faq;
 use App\Models\FeaturedItem;
 use App\Models\OpenRole;
 use App\Models\Organization;
 use App\Models\ProofOfWork;
+use App\Models\Skill;
 use App\Models\Testimonial;
+use App\Models\User;
 use App\Rules\PublicCopy;
 use App\Services\FeatureFlags\FeatureFlags;
 use App\Services\Website\HomepageBuilder;
 use App\Support\Website\HomepageSections;
+use Database\Seeders\DemoSeeder;
 use Illuminate\Support\Facades\DB;
 
 /** Seeds one active section per key, in the spec's order, so a test can change only what it cares about. */
@@ -80,7 +86,7 @@ describe('sections from Admin', function () {
         seedSections(['hero' => ['content' => ['heading' => 'Where Work Finds', 'highlight' => 'Talent', 'subheading' => '']]]);
 
         $this->get('/')->assertOk()
-            ->assertSee('Where Work Finds <span class="text-brand-green">Talent</span>', false)
+            ->assertSee('<span class="hero-word">Where</span> <span class="hero-word">Work</span> <span class="hero-word">Finds</span> <span class="hero-word text-brand-green">Talent</span>', false)
             ->assertSee('Groibe assembles and manages teams of skilled professionals');
     });
 
@@ -156,6 +162,9 @@ describe('live data sections', function () {
         seedSections();
         $public = publicContributor('Asha Rao');
         $private = publicContributor('Hidden Person', ['is_public' => false]);
+        foreach (range(1, 5) as $i) {
+            publicContributor("Filler{$i} Person", ['slug' => "filler{$i}-person-abc123"]); // the community row needs 6 people
+        }
         $org = Organization::factory()->verified()->create(['name' => 'Kestrel Foods', 'is_public' => true]);
         $privateOrg = Organization::factory()->verified()->create(['name' => 'Secret Holdings', 'is_public' => false]);
         $pendingOrg = Organization::factory()->create(['name' => 'Pending Partners', 'is_public' => true, 'status' => 'pending']);
@@ -165,11 +174,11 @@ describe('live data sections', function () {
             feature(FeaturedItemType::Organization, $organization->id, $i + 1);
         }
 
-        $this->get('/')->assertOk()->assertSee('Asha Rao')->assertSee('Kestrel Foods')
-            ->assertDontSee('Hidden Person')->assertDontSee('Secret Holdings')->assertDontSee('Pending Partners');
+        $this->get('/')->assertOk()->assertSee('Asha')->assertSee('Kestrel Foods')
+            ->assertDontSee('Hidden')->assertDontSee('Secret Holdings')->assertDontSee('Pending Partners');
 
         setFlag(FeatureFlag::PublicDirectories, false);
-        $this->get('/')->assertDontSee('Asha Rao')->assertDontSee('Kestrel Foods');
+        $this->get('/')->assertDontSee('Asha')->assertDontSee('Kestrel Foods');
     });
 
     it('lists organizations flagged featured on the organization itself', function () {
@@ -273,5 +282,211 @@ describe('quality', function () {
         $text = html_entity_decode(strip_tags($this->get('/')->getContent()));
 
         expect(PublicCopy::violation($text))->toBeNull();
+    });
+});
+
+/** Public contributors, so the community row can show (it needs 6). */
+function communityPeople(int $count, string $prefix = 'Person'): void
+{
+    foreach (range(1, $count) as $i) {
+        publicContributor("{$prefix}{$i} Surname", ['slug' => str("{$prefix}{$i}")->lower()->toString().'-slug']);
+    }
+}
+
+describe('community row', function () {
+    it('hides the whole section under 6 people and shows it from 6', function () {
+        seedSections();
+        communityPeople(5);
+        $this->get('/')->assertOk()->assertDontSee('See all contributors')->assertDontSee('class="marquee"', false);
+
+        communityPeople(1, 'Sixth');
+        app(HomepageBuilder::class)->flush();
+        $this->get('/')->assertSee('See all contributors')->assertSee('data-cards="6"', false);
+    });
+
+    it('shows at most 12 cards, once visible and once as a hidden copy', function () {
+        seedSections();
+        communityPeople(14);
+
+        $html = $this->get('/')->getContent();
+
+        expect($html)->toContain('data-cards="12"')
+            ->and(substr_count($html, 'href="'.url('/contributors').'/'))->toBe(24)
+            ->and($html)->toContain('aria-hidden="true" inert');
+    });
+
+    it('never shows a private, pending or suspended contributor, or a profile with no slug', function () {
+        seedSections();
+        communityPeople(6);
+        publicContributor('Private Priya', ['is_public' => false, 'slug' => 'private-priya-slug']);
+        contributorIn(OnboardingState::PendingReview, ['is_public' => true, 'slug' => 'pending-pooja-slug'], ['name' => 'Pending Pooja']);
+        contributorIn(OnboardingState::Suspended, ['is_public' => true, 'slug' => 'suspended-sana-slug'], ['name' => 'Suspended Sana']);
+        contributorIn(OnboardingState::Active, ['is_public' => true, 'slug' => null], ['name' => 'Slugless Sam']);
+
+        $this->get('/')->assertOk()->assertSee('Person1')
+            ->assertDontSee('Private')->assertDontSee('Pending')->assertDontSee('Suspended')->assertDontSee('Slugless');
+    });
+
+    it('never shows a suspended user whose profile is still marked public and active', function () {
+        seedSections();
+        communityPeople(6);
+        $user = publicContributor('Locked Out', ['slug' => 'locked-out-slug']);
+        $user->update(['status' => UserStatus::Suspended]);
+        app(HomepageBuilder::class)->flush();
+
+        $this->get('/')->assertOk()->assertDontSee('Locked');
+    });
+
+    it('labels demo contributors outside production and never shows them in production', function () {
+        seedSections();
+        communityPeople(6);
+        foreach (['Demo Dev', 'Demo Dia'] as $name) {
+            publicContributor($name, ['slug' => str($name)->slug().'-demo'])->update(['email' => str($name)->slug().'@'.config('groibe.demo.email_domain')]);
+        }
+        app(HomepageBuilder::class)->flush();
+
+        $this->get('/')->assertSee('Demo profile')->assertSee('>Demo<', false);
+
+        app()->detectEnvironment(fn () => 'production');
+        app(HomepageBuilder::class)->flush();
+
+        $this->get('/')->assertOk()->assertDontSee('Demo profile')->assertDontSee('>Demo<', false)->assertSee('Person1');
+    });
+
+    it('matches the email domain DemoSeeder uses', function () {
+        expect(config('groibe.demo.email_domain'))->toBe(DemoSeeder::EMAIL_DOMAIN);
+    });
+
+    it('shows a first name, a headline, at most three skills, and a photo only when there is one', function () {
+        seedSections();
+        communityPeople(5);
+        $star = publicContributor('Dr Asha Rao', ['slug' => 'asha-rao-slug', 'headline' => 'Market researcher', 'photo_path' => 'profile-photos/asha.jpg']);
+        foreach (Skill::factory()->count(4)->create() as $skill) {
+            $star->skills()->attach($skill->id, ['level' => 'expert']);
+        }
+
+        $html = $this->get('/')->getContent();
+
+        expect($html)->toContain('>Asha<')->not->toContain('Rao')
+            ->and($html)->toContain('Market researcher')
+            ->and($html)->toContain(route('contributors.photo', 'asha-rao-slug'))
+            ->and($html)->not->toContain(route('contributors.photo', 'person1-slug'));
+
+        $skills = preg_match('/asha-rao-slug".*?<\/li>/s', $html, $m) ? substr_count($m[0], 'rounded bg-zinc-100') : -1;
+        expect($skills)->toBe(3);
+    });
+
+    it('keeps emails and phone numbers out of the cached copy', function () {
+        seedSections();
+        communityPeople(6);
+        $this->get('/')->assertOk();
+
+        $cached = json_encode(cache()->get(HomepageBuilder::CACHE_KEY));
+
+        expect($cached)->toContain('person1-slug')->not->toContain('@')->not->toContain('phone');
+    });
+
+    it('is cleared when a profile changes', function () {
+        seedSections();
+        communityPeople(6);
+        $this->get('/')->assertOk();
+
+        $user = User::query()->where('name', 'Person1 Surname')->first();
+        $user->profile->update(['headline' => 'A brand new headline']);
+
+        $this->get('/')->assertSee('A brand new headline');
+    });
+
+    it('puts Admin picks first, then the newest others', function () {
+        seedSections();
+        communityPeople(7);
+        feature(FeaturedItemType::Contributor, User::query()->where('name', 'Person1 Surname')->value('id'), 1);
+
+        $html = $this->get('/')->getContent();
+
+        expect(strpos($html, '>Person1<'))->toBeLessThan(strpos($html, '>Person7<'));
+    });
+
+    it('is hidden with the directory flag off', function () {
+        seedSections();
+        communityPeople(6);
+        setFlag(FeatureFlag::PublicDirectories, false);
+
+        $this->get('/')->assertOk()->assertDontSee('data-cards', false);
+    });
+});
+
+describe('motion', function () {
+    it('keeps the slogan as plain text in one H1', function () {
+        seedSections();
+        $html = $this->get('/')->getContent();
+
+        expect(substr_count($html, '<h1'))->toBe(1)
+            ->and(preg_match('/<h1.*?<\/h1>/s', $html, $h1))->toBe(1)
+            ->and(trim(preg_replace('/\s+/', ' ', strip_tags($h1[0]))))->toBe('Where Ideas Find People')
+            ->and($h1[0])->toContain('hero-word');
+    });
+
+    it('rotates real skill categories, hidden from screen readers, with one fixed sentence', function () {
+        seedSections();
+        foreach (['Design' => 1, 'Research' => 2, 'Finance' => 3] as $name => $sort) {
+            $category = Category::factory()->create(['name' => $name, 'slug' => str($name)->slug(), 'sort' => $sort]);
+            Skill::factory()->create(['category_id' => $category->id, 'is_active' => true]);
+        }
+        Category::factory()->create(['name' => 'Empty Category', 'sort' => 4]);
+        $inactive = Category::factory()->create(['name' => 'Inactive Category', 'sort' => 5]);
+        Skill::factory()->create(['category_id' => $inactive->id, 'is_active' => false]);
+        app(HomepageBuilder::class)->flush();
+
+        $html = $this->get('/')->getContent();
+
+        expect($html)->toContain('<p class="sr-only">Where ideas find talent in Design, Research and Finance.</p>')
+            ->and($html)->toContain('aria-hidden="true" class="text-xl font-semibold text-white">Where ideas find talent in')
+            ->and($html)->toContain('data-count="3"')
+            ->and($html)->toContain('<span>Design</span><span>Research</span><span>Finance</span>')
+            ->and($html)->not->toContain('Empty Category')->not->toContain('Inactive Category');
+    });
+
+    it('leaves the rotating line out with fewer than two categories', function () {
+        seedSections();
+        $category = Category::factory()->create(['name' => 'Only One', 'sort' => 1]);
+        Skill::factory()->create(['category_id' => $category->id, 'is_active' => true]);
+        app(HomepageBuilder::class)->flush();
+
+        $this->get('/')->assertOk()->assertDontSee('Where ideas find talent in')->assertDontSee('hero-rotor', false);
+    });
+
+    it('ships reduced-motion markup: a pause control, a scrollable row, and motion only when allowed', function () {
+        seedSections();
+        communityPeople(6);
+        $html = $this->get('/')->getContent();
+
+        expect($html)->toContain('motion-toggle')->toContain('Pause motion')
+            ->and($html)->toContain('class="marquee"')->toContain('role="region" aria-label="Contributors"')
+            ->and($html)->toContain('class="reveal"');
+
+        $css = file_get_contents(resource_path('css/app.css'));
+        $plain = strpos($css, '.marquee { overflow-x: auto; }');
+        $motion = strpos($css, '@media (prefers-reduced-motion: no-preference)');
+
+        expect($plain)->not->toBeFalse()->and($motion)->not->toBeFalse()->and($plain)->toBeLessThan($motion)
+            ->and(strpos($css, 'animation: marquee-left'))->toBeGreaterThan($motion)
+            ->and(strpos($css, 'animation: hero-word-in'))->toBeGreaterThan($motion)
+            ->and(strpos($css, 'animation: reveal-up'))->toBeGreaterThan($motion)
+            ->and($css)->toContain('animation-play-state: paused')->toContain('.marquee:focus-within')->toContain('.marquee:hover');
+    });
+
+    it('moves no faster than a card every 7 seconds and adds no script, style attribute or Alpine', function () {
+        seedSections();
+        communityPeople(6);
+        $html = $this->get('/')->getContent();
+        $css = file_get_contents(resource_path('css/app.css'));
+
+        // 272 px (card plus gap) per 7 s is about 39 px a second, for every card count.
+        foreach (range(6, 12) as $n) {
+            expect($css)->toContain("data-cards='{$n}'] { --marquee-duration: ".($n * 7).'s; }');
+        }
+
+        expect($html)->not->toMatch('/\sstyle=/i')->and($html)->not->toContain('x-data')->not->toContain('alpine')->not->toContain('wire:');
     });
 });

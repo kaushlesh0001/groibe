@@ -156,6 +156,11 @@ return [
         'per_page' => 12,
     ],
 
+    // The reserved email domain of the fake accounts DemoSeeder makes (local and staging only). The homepage never shows them in production.
+    'demo' => [
+        'email_domain' => 'demo.groibe.test',
+    ],
+
     'opportunities' => [
         'per_page' => 12,
     ],

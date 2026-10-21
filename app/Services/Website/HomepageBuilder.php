@@ -2,6 +2,7 @@
 
 namespace App\Services\Website;
 
+use App\Enums\CategoryType;
 use App\Enums\FaqAudience;
 use App\Enums\FeaturedItemType;
 use App\Enums\FeatureFlag;
@@ -10,8 +11,10 @@ use App\Enums\OrganizationStatus;
 use App\Enums\ProjectStatus;
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
+use App\Models\Category;
 use App\Models\CmsSection;
 use App\Models\Faq;
+use App\Models\FeaturedItem;
 use App\Models\OpenRole;
 use App\Models\Organization;
 use App\Models\Profile;
@@ -33,6 +36,14 @@ use Illuminate\Support\Collection;
 class HomepageBuilder
 {
     public const CACHE_KEY = 'website.homepage';
+
+    /** The community row shows at most this many cards, and the whole section is left out below the minimum. */
+    public const COMMUNITY_MAX = 12;
+
+    public const COMMUNITY_MIN = 6;
+
+    /** The hero rotates through at most this many skill categories. */
+    public const HERO_CATEGORIES = 6;
 
     // The cached copy holds only what the homepage prints: no phone numbers, emails, contract values or GSTINs.
     private const ROLE_COLUMNS = ['open_roles.id', 'open_roles.slug', 'open_roles.title', 'open_roles.summary', 'open_roles.work_mode', 'open_roles.compensation_type', 'open_roles.duration_label', 'open_roles.deadline', 'open_roles.status', 'open_roles.visibility', 'open_roles.published_at'];
@@ -93,7 +104,7 @@ class HomepageBuilder
         $limit = max(1, min(12, (int) ($content['limit'] ?? 6)));
 
         return match ($key) {
-            'hero' => ['explore' => $this->flags->enabled(FeatureFlag::OpenRoles)],
+            'hero' => ['explore' => $this->flags->enabled(FeatureFlag::OpenRoles), 'categories' => $this->categories()],
             'ecosystem', 'how_it_works', 'final_cta' => [],
             'open_roles' => $this->flags->enabled(FeatureFlag::OpenRoles) ? $this->filled('roles', $this->roles($limit)) : null,
             'proof_of_work' => $this->flags->enabled(FeatureFlag::ProofOfWorkPublic)
@@ -104,15 +115,71 @@ class HomepageBuilder
                     self::PROOF_COLUMNS,
                 ))
                 : null,
-            'community' => $this->flags->enabled(FeatureFlag::PublicDirectories)
-                ? $this->filled('profiles', $this->featured->featured(FeaturedItemType::Contributor, $limit, ['user:id,name,role,status', 'user.skills:id,name,slug'], self::PROFILE_COLUMNS))
-                : null,
+            'community' => $this->flags->enabled(FeatureFlag::PublicDirectories) ? $this->community() : null,
             'organizations' => $this->flags->enabled(FeatureFlag::PublicDirectories) ? $this->filled('organizations', $this->organizations($limit)) : null,
             'stats' => $this->filled('tiles', $this->stats($content)),
             'testimonials' => $this->filled('testimonials', $this->testimonials($limit)),
             'faq' => $this->filled('groups', $this->faqs()),
             default => null,
         };
+    }
+
+    /** @return list<string> names of the skill categories that have at least one active skill, in Admin's order */
+    private function categories(): array
+    {
+        return Category::query()
+            ->where('type', CategoryType::Skill->value)
+            ->whereHas('skills', fn ($skills) => $skills->where('is_active', true))
+            ->orderBy('sort')->orderBy('name')
+            ->limit(self::HERO_CATEGORIES)
+            ->pluck('name')
+            ->all();
+    }
+
+    /**
+     * The community row: publicly visible contributors only, through the same scope as the directory. Admin's featured
+     * picks come first, then the newest others, up to the maximum. Under the minimum the section is left out. The cached
+     * copy holds plain values (first name, headline, three skills, whether there is a photo), never an email or a phone.
+     * Demo accounts never reach production.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function community(): ?array
+    {
+        $with = ['user:id,name,email', 'user.skills:id,name,is_active'];
+        $demoDomain = '@'.config('groibe.demo.email_domain');
+        $base = fn () => Profile::query()->publiclyVisible()->select(self::PROFILE_COLUMNS)->with($with)
+            ->when(app()->isProduction(), fn ($query) => $query->whereHas('user', fn ($user) => $user->where('email', 'not like', '%'.$demoDomain)));
+
+        $pickedIds = FeaturedItem::query()->active()->ofType(FeaturedItemType::Contributor)->ordered()->pluck('item_id')->all();
+
+        $picked = $pickedIds === []
+            ? collect()
+            : $base()->whereIn('profiles.user_id', $pickedIds)->get()->sortBy(fn (Profile $profile): int => (int) array_search($profile->user_id, $pickedIds, true))->take(self::COMMUNITY_MAX);
+
+        $room = self::COMMUNITY_MAX - $picked->count();
+        $rest = $room > 0
+            ? $base()->whereNotIn('profiles.user_id', $pickedIds)->orderByDesc('profiles.id')->limit($room)->get()
+            : collect();
+
+        $cards = $picked->concat($rest)->map(fn (Profile $profile): array => [
+            'slug' => (string) $profile->slug,
+            'name' => $this->firstName($profile->user->name),
+            'headline' => $profile->headline,
+            'skills' => $profile->user->skills->where('is_active', true)->pluck('name')->take(3)->values()->all(),
+            'photo' => $profile->photo_path !== null,
+            'demo' => str_ends_with(strtolower($profile->user->email), $demoDomain),
+        ])->values()->all();
+
+        return count($cards) < self::COMMUNITY_MIN ? null : ['profiles' => $cards];
+    }
+
+    /** First name for a public card: the first word, skipping a leading title such as "Dr". */
+    private function firstName(string $name): string
+    {
+        $words = preg_split('/\s+/', trim($name), -1, PREG_SPLIT_NO_EMPTY) ?: [''];
+
+        return in_array(rtrim(strtolower($words[0]), '.'), ['dr', 'mr', 'mrs', 'ms', 'prof'], true) && isset($words[1]) ? $words[1] : $words[0];
     }
 
     /** @return array<string, mixed>|null the data under one name, or null when it is empty */
