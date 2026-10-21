@@ -1,8 +1,10 @@
 <?php
 
+use App\Actions\Contributors\SetProfileVisibility;
 use App\Enums\AgreementType;
 use App\Enums\FeaturedItemType;
 use App\Enums\FeatureFlag;
+use App\Enums\OnboardingState;
 use App\Enums\ProjectStatus;
 use App\Enums\ShowcaseConsent;
 use App\Enums\UserStatus;
@@ -16,7 +18,9 @@ use App\Models\Page;
 use App\Models\ProofOfWork;
 use App\Models\Skill;
 use App\Models\Testimonial;
+use App\Models\User;
 use App\Services\FeatureFlags\FeatureFlags;
+use App\Services\Privacy\UserAnonymiser;
 use App\Services\Website\HomepageBuilder;
 use App\Services\Website\PublicCache;
 use App\Services\Website\PublicNavigation;
@@ -47,6 +51,22 @@ function requestSql(string $url): array
 function pick(FeaturedItemType $type, int $id): void
 {
     FeaturedItem::factory()->of($type, $id)->create();
+}
+
+/**
+ * Six public contributors, so the community row shows (SCR-042: first names only, left out under 6). The first one has a
+ * first name that appears nowhere else on the page, and is the one the test changes. The cache is warm on return.
+ */
+function communityMember(): User
+{
+    cachedHome();
+    $person = publicContributor('Zephyra Quill');
+
+    foreach (range(1, 5) as $i) {
+        publicContributor("Filler{$i} Person", ['slug' => "filler{$i}-person-abc123"]);
+    }
+
+    return $person;
 }
 
 describe('lifetime', function () {
@@ -122,23 +142,87 @@ describe('cleared when the data changes', function () {
     });
 
     it('drops a contributor the moment they are suspended or their profile is made private', function () {
-        cachedHome();
-        $person = publicContributor('Asha Rao');
-        foreach (range(1, 5) as $i) {
-            publicContributor("Filler{$i} Person", ['slug' => "filler{$i}-person-abc123"]); // the community row needs 6 people (SCR-042)
-        }
-        pick(FeaturedItemType::Contributor, $person->id);
-        // The row shows first names only (SCR-042).
-        $this->get('/')->assertSee('Asha');
+        $person = communityMember();
+        $this->get('/')->assertSee('Zephyra');
 
         $person->profile->update(['is_public' => false]);
-        $this->get('/')->assertDontSee('Asha');
+        $this->get('/')->assertDontSee('Zephyra');
 
         $person->profile->update(['is_public' => true]);
-        $this->get('/')->assertSee('Asha');
+        $this->get('/')->assertSee('Zephyra');
 
         $person->update(['status' => UserStatus::Suspended]);
-        $this->get('/')->assertDontSee('Asha');
+        $this->get('/')->assertDontSee('Zephyra');
+    });
+
+    // One test per trigger (SCR-042). Each warms the cache with the person on the row, proves the cache is warm, makes
+    // the change the way the app makes it, and then the very next request must not show them.
+    describe('community row', function () {
+        it('drops a contributor the moment their profile is made private', function () {
+            $person = communityMember();
+            $this->get('/')->assertSee('Zephyra');
+            expect(Cache::has(HomepageBuilder::CACHE_KEY))->toBeTrue();
+
+            app(SetProfileVisibility::class)($person->profile, false, $person);
+
+            $this->get('/')->assertDontSee('Zephyra');
+        });
+
+        it('drops a contributor the moment they are suspended', function () {
+            $person = communityMember();
+            $this->get('/')->assertSee('Zephyra');
+            expect(Cache::has(HomepageBuilder::CACHE_KEY))->toBeTrue();
+
+            $person->update(['status' => UserStatus::Suspended]);
+
+            $this->get('/')->assertDontSee('Zephyra');
+        });
+
+        it('drops a contributor the moment they are no longer active', function (OnboardingState $state) {
+            $person = communityMember();
+            $this->get('/')->assertSee('Zephyra');
+            expect(Cache::has(HomepageBuilder::CACHE_KEY))->toBeTrue();
+
+            $person->profile->update(['onboarding_state' => $state]);
+
+            $this->get('/')->assertDontSee('Zephyra');
+        })->with([OnboardingState::Suspended, OnboardingState::PendingReview, OnboardingState::Rejected]);
+
+        it('drops a contributor the moment their profile is deleted', function () {
+            $person = communityMember();
+            $this->get('/')->assertSee('Zephyra');
+            expect(Cache::has(HomepageBuilder::CACHE_KEY))->toBeTrue();
+
+            $person->profile->delete();
+
+            $this->get('/')->assertDontSee('Zephyra');
+        });
+
+        it('drops a contributor the moment they are erased', function () {
+            $person = communityMember();
+            $this->get('/')->assertSee('Zephyra');
+            expect(Cache::has(HomepageBuilder::CACHE_KEY))->toBeTrue();
+
+            DB::transaction(fn () => app(UserAnonymiser::class)->anonymise($person));
+
+            $this->get('/')->assertDontSee('Zephyra');
+        });
+
+        it('clears the cache only after the change is committed, so a reader cannot cache the old data', function () {
+            $person = communityMember();
+            $this->get('/')->assertSee('Zephyra');
+
+            DB::transaction(function () use ($person): void {
+                $person->update(['status' => UserStatus::Suspended]);
+
+                // Another request could still read the old row here, so the cache must not have been rebuilt yet,
+                // and it must not be cleared yet either: clearing before the commit lets that reader store old data.
+                expect(Cache::has(HomepageBuilder::CACHE_KEY))->toBeTrue();
+            });
+
+            expect(Cache::has(HomepageBuilder::CACHE_KEY))->toBeFalse();
+            $this->get('/')->assertDontSee('Zephyra');
+        });
     });
 
     it('drops proof of work when it is hidden or the client withdraws consent', function () {

@@ -20,6 +20,7 @@ use App\Models\User;
 use Illuminate\Contracts\Cache\Repository as Cache;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 
 /**
  * The public site's caches in one place (spec 17.3). The homepage, its stats, the menu and the sitemap are kept for a
@@ -70,23 +71,33 @@ class PublicCache
         $this->cache->forget(self::SITEMAP_KEY);
     }
 
-    /** Clear the caches whenever a watched model changes in a way the public can see. */
+    /**
+     * Clear the caches whenever a watched model changes in a way the public can see. The clearing waits for the commit when
+     * the change is inside a transaction (an erasure, a state transition): cleared earlier, another request could read the
+     * old row, rebuild the cache from it and keep the old data for up to 15 minutes. Outside a transaction it runs at once,
+     * and a rolled-back change clears nothing.
+     */
     public function watch(): void
     {
         foreach (self::WATCHED as $class => $attributes) {
-            $class::created(fn () => $this->flush());
+            $class::created(fn () => $this->flushAfterCommit());
 
             $class::updated(function (Model $model) use ($attributes): void {
                 if ($attributes === null ? $model->wasChanged() : $model->wasChanged($attributes)) {
-                    $this->flush();
+                    $this->flushAfterCommit();
                 }
             });
 
-            $class::deleted(fn () => $this->flush());
+            $class::deleted(fn () => $this->flushAfterCommit());
 
             if (in_array(SoftDeletes::class, class_uses_recursive($class), true)) {
-                $class::restored(fn () => $this->flush());
+                $class::restored(fn () => $this->flushAfterCommit());
             }
         }
+    }
+
+    private function flushAfterCommit(): void
+    {
+        DB::afterCommit(fn () => $this->flush());
     }
 }
