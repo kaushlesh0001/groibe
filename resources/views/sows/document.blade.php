@@ -32,7 +32,7 @@
         @if ($forPdf ?? false)
             <img src="{{ public_path('brand/groibe-logo-small.png') }}" alt="Groibe" width="140">
         @else
-            <img src="{{ asset('brand/groibe-logo.svg') }}" alt="Groibe" width="140">
+            <img src="{{ asset('brand/groibe-logo-clean.svg') }}" alt="Groibe" width="140">
         @endif
     </div>
 

@@ -125,8 +125,11 @@ describe('contrast (spec 10.3)', function () {
                     expect($line)->not->toMatch('/\btext-white\b/', $where);
                 }
 
-                // Blue links never sit on navy.
-                if (str_contains($line, 'bg-brand-navy')) {
+                // Blue text never sits on navy. A logo is not text: the dark logo files carry blue on navy by design
+                // (supplied artwork, not recolored), so lines that only place a logo are exempt. Text lines are not.
+                $placesLogo = str_contains($line, '<x-app-logo') || str_contains($line, 'brand/groibe-logo');
+
+                if (str_contains($line, 'bg-brand-navy') && ! $placesLogo) {
                     expect($line)->not->toContain('text-brand-blue', $where);
                 }
             }
@@ -143,7 +146,7 @@ describe('contrast (spec 10.3)', function () {
 
 describe('logo and icons', function () {
     it('ships the supplied logo files unchanged in shape', function () {
-        foreach (['groibe-logo', 'groibe-logo-white', 'groibe-ring', 'groibe-ring-white'] as $file) {
+        foreach (['groibe-logo', 'groibe-logo-clean', 'groibe-logo-dark', 'groibe-logo-white', 'groibe-ring', 'groibe-ring-white'] as $file) {
             expect(public_path("brand/{$file}.svg"))->toBeFile();
         }
 
@@ -159,6 +162,20 @@ describe('logo and icons', function () {
 
         expect(getimagesize(public_path('apple-touch-icon.png'))[0])->toBe(180)
             ->and(getimagesize(public_path('brand/icon-512.png'))[0])->toBe(512);
+    });
+
+    it('exempts logo lines from the blue-on-navy text rule without exempting text', function () {
+        // The exemption is by line: a line that places a logo is skipped, any other navy line with blue text still fails.
+        $logoLine = '<div class="bg-brand-navy"><x-app-logo variant="dark" /></div>';
+        $textLine = '<div class="bg-brand-navy text-brand-blue">Hello</div>';
+
+        $exempt = fn (string $line) => str_contains($line, '<x-app-logo') || str_contains($line, 'brand/groibe-logo');
+
+        expect($exempt($logoLine))->toBeTrue()->and($exempt($textLine))->toBeFalse();
+
+        // Navy surfaces use the dark logo, not the all-white one, in the public layout.
+        $layout = file_get_contents(resource_path('views/components/layouts/public.blade.php'));
+        expect($layout)->toContain('variant="dark"')->not->toContain('variant="white"');
     });
 
     it('has a real favicon, not the empty placeholder', function () {
@@ -184,11 +201,12 @@ describe('logo and icons', function () {
 });
 
 describe('pages', function () {
-    it('shows the tagline, white logo, navy header and footer and one green word on the home page', function () {
+    it('shows the tagline, dark logo, navy header and footer and one green word on the home page', function () {
         $html = $this->get('/')->assertOk()->getContent();
 
         expect($html)->toContain('Where Ideas Find <span class="text-brand-green">People</span>')
-            ->and(substr_count($html, 'brand/groibe-logo-white.svg'))->toBe(2) // header and footer
+            ->and(substr_count($html, 'brand/groibe-logo-dark.svg'))->toBe(2) // header and footer
+            ->and($html)->not->toContain('brand/groibe-logo-white.svg')
             ->and($html)->toContain('<title>Where Ideas Find People | ')
             ->and($html)->toContain('bg-brand-navy')
             ->and($html)->not->toContain('—')
@@ -210,15 +228,15 @@ describe('pages', function () {
     })->with(['/', '/login', '/register/client']);
 
     it('shows the logo on the sign-in page and on the signed-in app', function () {
-        $this->get('/login')->assertOk()->assertSee('brand/groibe-logo.svg', false);
+        $this->get('/login')->assertOk()->assertSee('brand/groibe-logo-clean.svg', false);
 
         $this->actingAs(contributorUser())->get('/dashboard')->assertRedirect();
-        $this->actingAs(clientUser())->get('/app/client')->assertOk()->assertSee('brand/groibe-logo.svg', false);
+        $this->actingAs(clientUser())->get('/app/client')->assertOk()->assertSee('brand/groibe-logo-clean.svg', false);
     });
 
     it('brands the admin panel', function () {
         $this->get('/admin/login')->assertOk()
-            ->assertSee('brand/groibe-logo.svg', false)
+            ->assertSee('brand/groibe-logo-clean.svg', false)
             ->assertSee('favicon.ico', false);
     });
 
@@ -236,7 +254,7 @@ describe('email and documents', function () {
         $task->loadMissing('milestone.project');
         $html = (string) (new TaskAssigned($task, $task->milestone->project))->toMail(contributorUser())->render();
 
-        expect($html)->toContain('brand/groibe-logo-small.png')->and($html)->not->toContain('brand/groibe-logo.svg')
+        expect($html)->toContain('brand/groibe-logo-small.png')->and($html)->not->toContain('brand/groibe-logo-clean.svg')
             ->and($html)->toContain('0EAE44')->toContain('042B65')   // green button, navy label and heading
             ->and($html)->not->toContain('laravel.com/img');
 
@@ -255,7 +273,7 @@ a img');
         $print = view('sows.document', ['sow' => $sow, 'forPdf' => false])->render();
         $pdfView = view('sows.document', ['sow' => $sow, 'forPdf' => true])->render();
 
-        expect($print)->toContain('brand/groibe-logo.svg')->and($print)->toContain('#042B65')
+        expect($print)->toContain('brand/groibe-logo-clean.svg')->and($print)->toContain('#042B65')
             ->and($pdfView)->toContain(public_path('brand/groibe-logo-small.png'))
             ->and(app(SowPdf::class)->render($sow))->toStartWith('%PDF');
     });

@@ -44,7 +44,7 @@ class AdminPanelProvider extends PanelProvider
             ->multiFactorAuthenticationRequiredMiddlewareName(EnsureAdminTwoFactor::class)
             ->brandName('Groibe Admin')
             // The supplied logo files, at their own ratio (spec 10.3): white on the dark theme, standard on light.
-            ->brandLogo(asset('brand/groibe-logo.svg'))
+            ->brandLogo(asset('brand/groibe-logo-clean.svg'))
             ->darkModeBrandLogo(asset('brand/groibe-logo-white.svg'))
             ->brandLogoHeight('2rem')
             ->favicon(asset('favicon.ico'))

@@ -15,7 +15,7 @@
         <header class="bg-brand-navy text-white">
             <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-6 py-4">
                 <a href="{{ route('home') }}" class="flex items-center rounded-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white">
-                    <x-app-logo variant="white" />
+                    <x-app-logo variant="dark" />
                 </a>
                 <nav aria-label="Main" class="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
                     @foreach ($nav['header'] ?? [] as $link)
@@ -47,7 +47,7 @@
             <div class="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-10">
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <a href="{{ route('home') }}" class="rounded-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white">
-                        <x-app-logo variant="white" class="h-7" />
+                        <x-app-logo variant="dark" class="h-7" />
                     </a>
                     <p class="text-sm text-zinc-200">Where Ideas Find People. &copy; {{ now()->year }} Groibe</p>
                 </div>
