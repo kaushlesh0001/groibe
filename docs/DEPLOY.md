@@ -141,7 +141,7 @@ Do this on staging first. Replace `CPUSER`, the repository address and the paths
    Then open `.env`, **delete the value of `ADMIN_PASSWORD`**, and run `$PHP artisan config:cache`. The password is only read when the account is first created.
    `DemoSeeder` (fake people and projects) is refused outside the `local`, `staging` and `testing` environments. Run it on staging only if you want demo data: `$PHP artisan migrate:fresh --seed --seeder=DemoSeeder` wipes that database.
 9. **Document root** (section 3), **cron** (section 7), **permissions** (section 8).
-10. **Sign in** at `/admin/login` as the super admin. Two-factor set-up is compulsory for the super admin: scan the code with an authenticator app and store the recovery codes safely. If you are ever locked out, the server can reset it: `$PHP artisan groibe:two-factor-reset someone@example.com`. The full steps are in [`docs/OPERATIONS.md`](OPERATIONS.md), section 3.
+10. **Sign in** at `/admin/login` as the super admin: email and password, then a 6-digit code that is emailed to the super admin's address (SCR-040). **Mail must work first.** The code is sent at once and is never written anywhere you can read it on production, so if the email does not arrive you cannot sign in. Do step 7 of section 10 (mail) **before** this step, and on staging first. Nothing needs to be set up for the code. If you are ever locked out, the server can clear the lockout and any authenticator app: `$PHP artisan groibe:two-factor-reset someone@example.com`. The full steps, and what to do when the code email does not arrive, are in [`docs/OPERATIONS.md`](OPERATIONS.md), sections 3 and 4.
 11. **Admin, once:** System, Agreement Templates: paste and publish the real legal texts. Website: approve the wording of the seeded pages and sections ("Approve wording"), then switch on what should be public. Nothing marked "needs review" is ever public.
 12. Run the smoke test (section 15).
 
@@ -246,6 +246,14 @@ Groibe sends from the address in `MAIL_FROM_ADDRESS` through the mailbox in `MAI
 4. In Cloudflare, mail-related records (`MX`, `mail.` and the like) must be **DNS only** (grey cloud), never proxied.
 5. **Test.** Contact form, then register a test contributor. In Gmail open the message, **Show original**, and check `SPF: PASS`, `DKIM: PASS` and `DMARC: PASS`. Also send one to a Microsoft address and check the spam folder.
 6. Check the host's **hourly sending limit** (CONFIRM). Invitations are queued at 30 a minute, which is faster than many shared hosts allow per hour. Send invitations in small batches, and watch Admin, System, Email Log for failures (failed rows are kept 180 days).
+7. **Send a test sign-in code before you rely on it (SCR-040).** Admin sign-in needs a 6-digit code emailed to the admin, and the code cannot be read anywhere on production. So prove the email arrives while you can still fix things:
+   1. On **staging** first, with the real SMTP settings. Make sure you can still reach `.env` over SSH and that another way in exists (a second super admin, once there is one).
+   2. Open `/admin/login`, enter the super admin's email and password. The page asks for a code.
+   3. The email "Your Groibe admin sign-in code" must arrive **within about a minute** (it is sent at once, not through cron). Check the spam folder, and in Gmail "Show original" for `SPF: PASS`, `DKIM: PASS` and `DMARC: PASS` as in step 5.
+   4. Type the code. You should be in. Try it again with the same code in a new sign-in: it must be refused.
+   5. In **System, Email Log** there is a row `AdminSignInCode` with status `sent` for that address. It shows the address and the template name only, never the code.
+   6. Repeat on production before anyone else relies on it. If the email does not arrive, do not carry on: fix the mail settings first (steps 1 to 6 above). What to do when it does not arrive is in [`docs/OPERATIONS.md`](OPERATIONS.md), section 4.
+   Do **not** switch production to `MAIL_MAILER=log` to read a code: that writes every sign-in code into a log file. Local use is different: on your own computer `MAIL_MAILER=log` puts the email in the newest file in `storage/logs` (README).
 
 ## 11. Cloudflare
 
@@ -334,7 +342,8 @@ Run this after the first deploy and after every release. Tick each line.
 - [ ] Session cookie is `Secure`, `HttpOnly`, `SameSite=Lax` (browser dev tools, Application, Cookies).
 
 **Sign-in and admin**
-- [ ] `/admin/login` works for the super admin with two-factor; a wrong code is refused.
+- [ ] `/admin/login` asks the super admin for a 6-digit code after the password; the email arrives within a minute; a wrong code is refused; the right code lets them in; the same code does not work a second time (SCR-040).
+- [ ] System, Email Log shows a row with template `AdminSignInCode` and status `sent` for that address, and no row shows a code.
 - [ ] System status shows cron **Running**, 0 jobs waiting, 0 failed jobs, and a database size line (it shows "Not checked yet" until 03:20 or `php artisan groibe:check-database-size`).
 - [ ] An open Admin page for a delivery manager does not show System status.
 - [ ] `/login` is rate limited: six wrong passwords in a minute are refused.

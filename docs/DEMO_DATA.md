@@ -47,6 +47,20 @@ All demo accounts use the password `DemoPass#2026`. Emails end in `@demo.groibe.
 | Northwind Health (Demo), verified | Dr Farhan Qureshi | dr.farhan.qureshi@demo.groibe.test | Owner |
 | Lumen Retail (Demo), pending verification, Client MSA not accepted | Nisha Arora | nisha.arora@demo.groibe.test | Owner |
 
+## Signing in to Admin
+
+The demo creates no admin accounts. Use your own super admin (`ADMIN_EMAIL` and `ADMIN_PASSWORD` from `.env`, created by `SuperAdminSeeder`) at `/admin/login`.
+
+Admin sign-in has a second step: a 6-digit code emailed to the admin (SCR-040). A super admin always needs it, and so does any other admin role while the `two_factor_admin` flag is on. The code works for 10 minutes and once only.
+
+**Locally, with `MAIL_MAILER=log`** (the default in `.env.example`), nothing is sent. The email, code included, is written to the log instead:
+
+1. Enter the email and password. The page asks for a code.
+2. Open the newest file in `storage/logs` (`laravel-YYYY-MM-DD.log`, because the log channel is `daily`) and go to the end. The message "Your Groibe admin sign-in code" is there; the code is the 6-digit number in the body. In PowerShell: `Get-Content (Get-ChildItem storage/logs/laravel-*.log | Sort-Object LastWriteTime | Select-Object -Last 1) -Tail 80`.
+3. Type the code within 10 minutes. After 5 wrong codes you are locked out for 15 minutes (`php artisan groibe:two-factor-reset your@email` clears it).
+
+There is no setting that skips the code. On staging with demo data, mail must work for real (DEPLOY section 10, step 7).
+
 ## What else is in it
 
 - Briefs: draft, submitted, needs info, scoped and two converted.

@@ -48,6 +48,10 @@ php artisan migrate:fresh --seed --seeder=DemoSeeder
 
 Logins and what the demo holds are in `docs/DEMO_DATA.md`. `.env` is never committed. Real secrets live only in the host's `.env`.
 
+## Sign in to Admin on your computer
+
+Admin sign-in is your email and password, then a 6-digit code emailed to you. With the default `MAIL_MAILER=log` nothing is sent: open the newest file in `storage/logs` (`laravel-YYYY-MM-DD.log`) and read the code from the message "Your Groibe admin sign-in code" at the end. The code works once, for 10 minutes. There is no setting that skips it. Details: `docs/DEMO_DATA.md`. If it does not arrive on a real host: `docs/OPERATIONS.md`, section 4.
+
 ## Check your work
 
 ```bash

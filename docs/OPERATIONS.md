@@ -6,9 +6,10 @@ Status: a procedure, not policy. It says how to run Groibe day to day. Setup and
 
 1. [Who does what](#1-who-does-what)
 2. [Data requests (export and erasure)](#2-data-requests-export-and-erasure)
-3. [Reset two-factor authentication for a locked-out admin](#3-reset-two-factor-authentication-for-a-locked-out-admin)
-4. [Routine checks](#4-routine-checks)
-5. [Change how long data is kept](#5-change-how-long-data-is-kept)
+3. [Reset an admin's sign-in from the server](#3-reset-an-admins-sign-in-from-the-server)
+4. [The sign-in code email does not arrive](#4-the-sign-in-code-email-does-not-arrive)
+5. [Routine checks](#5-routine-checks)
+6. [Change how long data is kept](#6-change-how-long-data-is-kept)
 
 ---
 
@@ -29,7 +30,7 @@ A contributor or client can ask, at `/settings/privacy`, for a copy of their dat
 
 **Legal deadline for answering: to be confirmed by the lawyer before launch.** Do not quote a number to anyone until then. Until it is confirmed, answer as fast as you can.
 
-**Reminder for requests older than 7 days.** Every day at 08:45 (Indian time) the app sends every super admin one bell notice and one email while any request that is still `open` or `in_progress` was made more than 7 days ago (SCR-039). It says how many are waiting and how long the oldest has waited. It carries no name. Open **System, Data requests** and deal with them. The System status panel on the dashboard also shows how many have waited more than 7 days. The weekly check (section 4) is the backup if the notice is missed.
+**Reminder for requests older than 7 days.** Every day at 08:45 (Indian time) the app sends every super admin one bell notice and one email while any request that is still `open` or `in_progress` was made more than 7 days ago (SCR-039). It says how many are waiting and how long the oldest has waited. It carries no name. Open **System, Data requests** and deal with them. The System status panel on the dashboard also shows how many have waited more than 7 days. The weekly check (section 5) is the backup if the notice is missed.
 
 ### Steps for every request
 
@@ -60,9 +61,11 @@ A contributor or client can ask, at `/settings/privacy`, for a copy of their dat
 
 Press **Reject** and write the reason in the box ("Reason (the person can read this)"). The person is told. Use it when the request is not from the account holder, or the lawyer advises refusing. Get legal advice if you are unsure.
 
-## 3. Reset two-factor authentication for a locked-out admin
+## 3. Reset an admin's sign-in from the server
 
-Use this when an admin lost their phone and their recovery codes. Two-factor sign-in is always required for super admin, and for other admins while the `two_factor_admin` flag is on (SCR-029).
+Admin sign-in has a second step: a 6-digit code emailed to the admin (SCR-040). A super admin always has it. Every other admin has it while the `two_factor_admin` flag is on. The code is valid for 10 minutes, works once, and 5 wrong codes lock that person out for 15 minutes. An admin may also have an authenticator app and recovery codes from before.
+
+Use this procedure when an admin lost their authenticator app and recovery codes, or when you need to clear a code lockout at once instead of waiting 15 minutes. It does **not** turn the emailed code off: that is decided by role and flag. It does not help if the admin cannot reach their mailbox (see section 4).
 
 1. **Prove who is asking.** Speak to the person on a call you start yourself, or in person. An email request alone is not enough.
 2. Sign in to the host by SSH:
@@ -72,14 +75,38 @@ Use this when an admin lost their phone and their recovery codes. Two-factor sig
    /opt/cpanel/ea-php83/root/usr/bin/php artisan groibe:two-factor-reset person@example.com
    ```
 
-   Replace the PHP path with the one in your `.env` notes (DEPLOY section 7), and the email with the admin's. It asks you to confirm. Add `--force` only in a script.
-3. The command turns off the secret and recovery codes for that one person. It writes an entry to the audit log (event `two_factor_reset`, "by server command"). It does not tell the person.
-4. Tell the person to sign in. The panel sends them to the set-up page. They scan the code with an authenticator app and **store the new recovery codes safely**.
+   Replace the PHP path with the one in your `.env` notes (DEPLOY section 7), and the email with the admin's. If the person has an authenticator app or recovery codes it asks you to confirm. Add `--force` only in a script.
+3. The command removes that one person's authenticator secret and recovery codes, and clears their code lockout, wrong-code count and resend wait, so a fresh code can be sent at once. A reset that removed an app is written to the audit log (event `two_factor_reset`, "by server command"). It does not tell the person.
+4. Tell the person to sign in. They get a new emailed code. Nothing needs to be set up. If they want the authenticator app again they can add it on their profile page, which makes new recovery codes: **store them safely**.
 5. If the person asked for it because a phone was lost or stolen, ask them to change their password too, and check the audit log for activity they did not do.
 
 If the **only** super admin is locked out and nobody has SSH, the host's support can run the command only if they have access to the account. Keep a second super admin to avoid this.
 
-## 4. Routine checks
+## 4. The sign-in code email does not arrive
+
+The code is sent at once, not through the queue, so it does not depend on cron. It is sent to the email address on the admin's own account, once a minute at most (the one sent at sign-in counts). There is no way to skip the code, and nobody can read it from the server on production.
+
+Go through these in order:
+
+1. **Wait a minute, then use "Resend" on the sign-in page.** A second email within a minute is refused on purpose. After 5 wrong codes the page says "Too many wrong codes" and waits 15 minutes; no email is sent during that time.
+2. **Check the address and the spam folder.** The email is from the Groibe sender address, subject "Your Groibe admin sign-in code". The address is the one on the admin's account (Admin, People, Admin Users). A typo there means the code goes to someone else: another super admin corrects it.
+3. **Look at the email log.** Another super admin opens **System, Email Log** and finds a row with template `AdminSignInCode` for that address.
+   - **No row:** the app did not send. The person is probably locked out, or asked less than a minute ago. Wait, or run the reset command (section 3) to clear the lockout.
+   - **Row with status `sent`:** the mail server accepted it. The problem is delivery: spam, a mailbox rule, or the sender domain (SPF, DKIM and DMARC, DEPLOY section 10).
+   - **Row with status `failed`:** the mail server refused it. Check the mail settings and the host's hourly sending limit (DEPLOY sections 10 and 17). The contact form is a quick test of the same settings.
+4. **Another super admin can sign in?** If yes, they check the above and, if needed, correct the address. If **no admin** can receive the code, fix the mail settings on the server (`.env`, then rebuild the caches the way `scripts/deploy.sh` does) and try again.
+5. **If the admin has lost access to their mailbox for good,** a super admin changes the email address on the account (Admin, People, Admin Users). With no other super admin, change it on the server with the app's own model so the change is recorded:
+
+   ```bash
+   cd ~/groibe
+   /opt/cpanel/ea-php83/root/usr/bin/php artisan tinker --execute="App\Models\User::where('email', 'old@example.com')->firstOrFail()->update(['email' => 'new@example.com']);"
+   ```
+
+   Do this only after proving who is asking (section 3, step 1). Do **not** switch production to the `log` mailer to read a code: that writes every code into a file.
+
+On a local computer, `MAIL_MAILER=log` writes the email, code included, to the newest file in `storage/logs` (`laravel-DATE.log`, because the log channel is `daily`). That is the only local shortcut, and it is not a setting to turn the code off (README).
+
+## 5. Routine checks
 
 **Every week (the founder, 15 minutes)**
 
@@ -99,7 +126,7 @@ If the **only** super admin is locked out and nobody has SSH, the host's support
 - [ ] Do the restore drill (DEPLOY section 14).
 - [ ] Check that the retention rules in DEPLOY section 18 still match what the app does.
 
-## 5. Change how long data is kept
+## 6. Change how long data is kept
 
 The days kept for four kinds of data are settings (SCR-039). The defaults need no action. Change one only on advice (for example from the lawyer for the audit trail). The table of what is kept and for how long is in `docs/DEPLOY.md`, section 18.
 
