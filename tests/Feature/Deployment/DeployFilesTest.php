@@ -221,14 +221,15 @@ it('names the scheduled jobs that really are scheduled, and the right number of 
     $guide = deployFile('docs/DEPLOY.md');
     $scheduled = collect(app(Schedule::class)->events())->map(fn ($event): string => (string) $event->command)->implode("\n");
 
-    // "shows ten jobs" in the smoke test must stay true.
-    expect(count(app(Schedule::class)->events()))->toBe(10)->and($guide)->toContain('shows ten jobs');
+    // "shows fourteen jobs" in the smoke test must stay true (SCR-039 added four).
+    expect(count(app(Schedule::class)->events()))->toBe(14)->and($guide)->toContain('shows fourteen jobs');
 
-    foreach (['03:00', '03:10', '03:20', '03:30', '08:00', '08:15', '08:30', 'Sunday 02:30'] as $time) {
+    foreach (['03:00', '03:10', '03:20', '03:30', '03:40', '03:45', '03:50', '08:00', '08:15', '08:30', '08:45', 'Sunday 02:30'] as $time) {
         expect($guide)->toContain($time);
     }
 
-    expect($scheduled)->toContain('groibe:backup-db')->toContain('groibe:prune-email-log')->toContain('groibe:report-stale-invites');
+    expect($scheduled)->toContain('groibe:backup-db')->toContain('groibe:prune-email-log')->toContain('groibe:report-stale-invites')
+        ->toContain('groibe:prune-queue-history')->toContain('groibe:prune-notifications')->toContain('groibe:prune-activity-log')->toContain('groibe:remind-data-requests');
 });
 
 it('gives only commands and addresses a person can paste, with no password in them', function () {

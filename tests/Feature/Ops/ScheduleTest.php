@@ -14,6 +14,10 @@ it('schedules every housekeeping job and the weekly backup at their times', func
     'database size check' => ['groibe:check-database-size', '20 3 * * *'],
     'public cache refresh' => ['groibe:refresh-public-caches', '30 3 * * *'],
     'stale invite report' => ['groibe:report-stale-invites', '30 8 * * *'],
+    'queue history retention' => ['groibe:prune-queue-history', '40 3 * * *'],
+    'read notification retention' => ['groibe:prune-notifications', '45 3 * * *'],
+    'audit log retention' => ['groibe:prune-activity-log', '50 3 * * *'],
+    'data request reminder' => ['groibe:remind-data-requests', '45 8 * * *'],
     'weekly database dump' => ['groibe:backup-db', '30 2 * * 0'],
 ]);
 

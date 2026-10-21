@@ -34,3 +34,10 @@ Schedule::command('groibe:report-stale-invites')->dailyAt('08:30')->withoutOverl
 
 // Weekly database dump outside the web root (spec 17.4), on top of the host's own daily backups.
 Schedule::command('groibe:backup-db')->weeklyOn(0, '02:30')->withoutOverlapping(60);
+
+// SCR-039: retention for the queue tables, read notifications and the audit trail (days are settings), and the daily reminder
+// of data requests that have waited too long. Spaced after the other overnight jobs; the reminder follows the stale invite report.
+Schedule::command('groibe:prune-queue-history')->dailyAt('03:40')->withoutOverlapping(30);
+Schedule::command('groibe:prune-notifications')->dailyAt('03:45')->withoutOverlapping(30);
+Schedule::command('groibe:prune-activity-log')->dailyAt('03:50')->withoutOverlapping(30);
+Schedule::command('groibe:remind-data-requests')->dailyAt('08:45')->withoutOverlapping(30);
