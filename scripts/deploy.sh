@@ -135,6 +135,10 @@ predeploy_backup() {
     size="$(wc -c < "$file" | tr -d '[:space:]')"
     [ "$size" -ge "$MIN_DUMP_BYTES" ] || fail "The pre-deploy backup file is only $size bytes (under $MIN_DUMP_BYTES). Nothing was changed and the site is still up. Look at $file before going on."
 
+    # The size cannot tell a complete dump from one that is cut off. `gzip -t` reads the whole compressed file and checks it.
+    command -v gzip >/dev/null || fail "gzip is not installed, so the pre-deploy backup cannot be checked. Nothing was changed and the site is still up."
+    gzip -t "$file" 2>/dev/null || fail "The pre-deploy backup file is not a complete gzip file (cut off or damaged). Nothing was changed and the site is still up. Look at $file before going on."
+
     say "Pre-deploy backup written: $(basename "$file") ($size bytes)"
 }
 

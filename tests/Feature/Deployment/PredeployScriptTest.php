@@ -58,13 +58,14 @@ it('asks for the pre-deploy kind of dump and checks the file itself, not only th
         ->and($script)->toContain('-f "$file"')
         ->and($script)->toContain('wc -c')
         ->and($script)->toContain('-ge "$MIN_DUMP_BYTES"')
+        ->and($script)->toContain('gzip -t "$file"')   // SUGGESTIONS 329: the compressed file must be complete
         ->and($script)->toContain('-eq 2');   // the first-deploy code, skipped
 });
 
 it('says in plain words that nothing changed and the site is still up when the backup stops it', function () {
     $script = deployScript();
 
-    expect(substr_count($script, 'Nothing was changed and the site is still up'))->toBe(3)   // command failed, file missing, file too small
+    expect(substr_count($script, 'Nothing was changed and the site is still up'))->toBe(5)   // command failed, file missing, too small, no gzip tool, not a complete gzip file
         ->and($script)->toContain('The database has no tables yet');
 });
 
@@ -97,16 +98,27 @@ source "$dir/fn.sh"
 FILE="$file"
 artisan() {
   case "$scenario" in
-    ok) head -c 20000 /dev/zero > "\$FILE"; echo "Wrote it"; echo "BACKUP_FILE=\$FILE"; return 0 ;;
+    ok) head -c 20000 /dev/urandom | gzip -c > "\$FILE"; echo "Wrote it"; echo "BACKUP_FILE=\$FILE"; return 0 ;;
     first) echo "no tables"; return 2 ;;
     fail) echo "disk full"; return 1 ;;
     missing) rm -f "\$FILE"; echo "BACKUP_FILE=\$FILE"; return 0 ;;
     empty) : > "\$FILE"; echo "BACKUP_FILE=\$FILE"; return 0 ;;
-    small) head -c 2000 /dev/zero > "\$FILE"; echo "BACKUP_FILE=\$FILE"; return 0 ;;
-    exactly) head -c 4096 /dev/zero > "\$FILE"; echo "BACKUP_FILE=\$FILE"; return 0 ;;
+    small) head -c 2000 /dev/urandom | gzip -c > "\$FILE"; echo "BACKUP_FILE=\$FILE"; return 0 ;;
+    exact|oneshort) echo "BACKUP_FILE=\$FILE"; return 0 ;;
+    truncated) head -c 30000 /dev/urandom | gzip -c > "\$FILE.full"; head -c 9000 "\$FILE.full" > "\$FILE"; echo "BACKUP_FILE=\$FILE"; return 0 ;;
+    notgzip) head -c 20000 /dev/zero > "\$FILE"; echo "BACKUP_FILE=\$FILE"; return 0 ;;
     noline) echo "Wrote it"; return 0 ;;
   esac
 }
+# The floor is moved to the size of a real gzip file (a subshell inside artisan() could not change it): exactly that size,
+# or one byte more.
+case "$scenario" in
+  exact|oneshort)
+    head -c 20000 /dev/urandom | gzip -c > "\$FILE"
+    size=\$(wc -c < "\$FILE" | tr -d '[:space:]')
+    if [ "$scenario" = exact ]; then MIN_DUMP_BYTES=\$size; else MIN_DUMP_BYTES=\$((size + 1)); fi
+    ;;
+esac
 predeploy_backup
 echo CONTINUED
 BASH);
@@ -128,10 +140,16 @@ BASH);
         expect($status)->toBe(0)->and($out)->toContain('Pre-deploy backup written')->toContain('CONTINUED');
     });
 
-    it('accepts a dump of exactly 4 KB', function () {
-        [$status, $out] = rehearse('exactly');
+    it('accepts a good dump of exactly the smallest allowed size', function () {
+        [$status, $out] = rehearse('exact');
 
         expect($status)->toBe(0)->and($out)->toContain('CONTINUED');
+    });
+
+    it('stops one byte under the smallest allowed size', function () {
+        [$status, $out] = rehearse('oneshort');
+
+        expect($status)->toBe(1)->and($out)->toContain('bytes (under')->not->toContain('CONTINUED');
     });
 
     it('skips on a first deploy with no tables and goes on', function () {
@@ -146,14 +164,16 @@ BASH);
         expect($status)->toBe(1)->and($out)->toContain('failed')->not->toContain('CONTINUED');
     });
 
-    it('stops when the file is missing, empty, under 4 KB, or never reported', function (string $scenario, string $words) {
+    it('stops when the file is missing, empty, under 4 KB, never reported, cut off or not gzip', function (string $scenario, string $words) {
         [$status, $out] = rehearse($scenario);
 
         expect($status)->toBe(1)->and($out)->toContain($words)->not->toContain('CONTINUED');
     })->with([
         'missing' => ['missing', 'file is missing'],
         'empty' => ['empty', '0 bytes'],
-        'small' => ['small', '2000 bytes'],
+        'small' => ['small', 'bytes (under'],
         'no file line' => ['noline', 'file is missing'],
+        'cut off (SUGGESTIONS 329)' => ['truncated', 'not a complete gzip file'],
+        'not gzip at all' => ['notgzip', 'not a complete gzip file'],
     ]);
 });
