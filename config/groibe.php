@@ -72,6 +72,8 @@ return [
         'backup' => [
             'path' => env('GROIBE_BACKUP_PATH'),
             'keep' => (int) env('GROIBE_BACKUP_KEEP', 4),
+            // The dump `scripts/deploy.sh` takes before a release (SCR-037). Kept apart from the weekly ones.
+            'predeploy_keep' => (int) env('GROIBE_PREDEPLOY_BACKUP_KEEP', 5),
         ],
     ],
 

@@ -5,23 +5,42 @@ namespace App\Console\Commands;
 use App\Services\Ops\DatabaseDumper;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Schema;
 use Throwable;
 
 /**
  * Weekly database dump (spec 17.4), a gzipped SQL file written outside the web root. It is on top of the host's own daily
  * backups, and it is the file the restore drill in the deploy guide uses. The folder is `GROIBE_BACKUP_PATH`, or
  * `storage/backups`; a folder under `public` is refused, because a dump holds personal data. Only the newest few are kept.
+ *
+ * `--predeploy` (SCR-037) is what `scripts/deploy.sh` runs before a release: the dump is named `groibe-predeploy-DATE-TIME`,
+ * is kept under its own retention (`GROIBE_PREDEPLOY_BACKUP_KEEP`, 5) so it never pushes out the weekly dumps, and the last
+ * line printed is `BACKUP_FILE=<path>` for the script to check. A database with no tables yet (a first deploy) has nothing
+ * to dump: the command writes nothing and exits with code 2, which the script reads as "skip".
  */
 class BackupDatabase extends Command
 {
-    protected $signature = 'groibe:backup-db';
+    protected $signature = 'groibe:backup-db {--predeploy : Write the dump the deploy script takes before a release}';
 
     protected $description = 'Write a gzipped SQL dump of the database to a folder outside the web root';
 
     private const PATTERN = 'groibe-db-*.sql.gz';
 
+    private const PREDEPLOY_PATTERN = 'groibe-predeploy-*.sql.gz';
+
+    /** Exit code for "no tables yet, nothing to back up" (only with --predeploy). */
+    public const NO_DATABASE = 2;
+
     public function handle(DatabaseDumper $dumper): int
     {
+        $predeploy = (bool) $this->option('predeploy');
+
+        if ($predeploy && ! Schema::hasTable('migrations')) {
+            $this->info('The database has no tables yet, so there is nothing to back up. Skipped.');
+
+            return self::NO_DATABASE;
+        }
+
         $directory = $this->directory();
 
         if ($this->isUnderPublic($directory)) {
@@ -46,7 +65,7 @@ class BackupDatabase extends Command
         // Belt and braces for a host whose web server is pointed at the wrong folder.
         File::put($directory.DIRECTORY_SEPARATOR.'.htaccess', "Require all denied\n");
 
-        $name = 'groibe-db-'.now()->format('Ymd-His').'.sql.gz';
+        $name = ($predeploy ? 'groibe-predeploy-' : 'groibe-db-').now()->format('Ymd-His').'.sql.gz';
         $final = $directory.DIRECTORY_SEPARATOR.$name;
         $partial = $final.'.part';
 
@@ -63,14 +82,19 @@ class BackupDatabase extends Command
             return self::FAILURE;
         }
 
-        $removed = $this->prune($directory, $final);
+        $removed = $this->prune($directory, $final, $predeploy);
         $bytes = (int) filesize($final);
 
         activity('ops')->event('db_backup')
-            ->withProperties(['file' => $name, 'bytes' => $bytes, 'tables' => $stats['tables'], 'rows' => $stats['rows'], 'old_removed' => $removed])
+            ->withProperties(['file' => $name, 'predeploy' => $predeploy, 'bytes' => $bytes, 'tables' => $stats['tables'], 'rows' => $stats['rows'], 'old_removed' => $removed])
             ->log('Database backup written');
 
         $this->info("Wrote {$name} ({$stats['tables']} tables, {$stats['rows']} rows, ".number_format($bytes / 1024, 0).' KB). Removed '.$removed.' old '.($removed === 1 ? 'backup' : 'backups').'.');
+
+        if ($predeploy) {
+            // The deploy script reads this line and checks the file itself; it does not trust the exit code alone.
+            $this->line('BACKUP_FILE='.$final);
+        }
 
         return self::SUCCESS;
     }
@@ -95,14 +119,17 @@ class BackupDatabase extends Command
         return rtrim(strtolower(str_replace('\\', '/', $path)), '/');
     }
 
-    /** Deletes all but the newest `keep` dumps (always at least the one just written). Returns how many were removed. */
-    private function prune(string $directory, string $justWritten): int
+    /**
+     * Deletes all but the newest `keep` dumps of the same kind (always at least the one just written). Weekly and pre-deploy dumps
+     * are pruned apart, so neither kind evicts the other. Returns how many were removed.
+     */
+    private function prune(string $directory, string $justWritten, bool $predeploy): int
     {
-        $files = collect(File::glob($directory.DIRECTORY_SEPARATOR.self::PATTERN) ?: [])
+        $files = collect(File::glob($directory.DIRECTORY_SEPARATOR.($predeploy ? self::PREDEPLOY_PATTERN : self::PATTERN)) ?: [])
             ->sortDesc()
             ->values();
 
-        $keep = max(1, (int) config('groibe.ops.backup.keep'));
+        $keep = max(1, (int) config($predeploy ? 'groibe.ops.backup.predeploy_keep' : 'groibe.ops.backup.keep'));
         $old = $files->slice($keep)->reject(fn (string $file): bool => $file === $justWritten);
 
         $old->each(fn (string $file) => File::delete($file));

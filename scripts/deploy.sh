@@ -107,9 +107,41 @@ on_failure() {
     printf 'To bring the site up as it is: %s artisan up\n' "$PHP_BIN" >&2
 }
 
+# SCR-037, spec 17.4. A database dump before anything changes. It runs BEFORE `artisan down`, so a failure leaves the site up and
+# nothing touched. The exit code alone is not trusted: the file itself must exist and be at least 10 KB (a dump of the full schema is
+# far larger). On a first deploy the database has no tables, the command exits with code 2 and the backup is skipped.
+MIN_DUMP_BYTES=10240
+
+predeploy_backup() {
+    say "Backing up the database before anything changes"
+
+    local output code file size
+    set +e
+    output="$(artisan groibe:backup-db --predeploy 2>&1)"
+    code=$?
+    set -e
+    printf '%s\n' "$output"
+
+    if [ "$code" -eq 2 ]; then
+        say "The database has no tables yet, so this is a first deploy. The backup is skipped."
+        return 0
+    fi
+
+    [ "$code" -eq 0 ] || fail "The pre-deploy backup failed (exit code $code). Nothing was changed and the site is still up. Fix it (free disk space? GROIBE_BACKUP_PATH?) and run this script again."
+
+    file="$(printf '%s\n' "$output" | sed -n 's/^BACKUP_FILE=//p' | tail -n 1)"
+    { [ -n "$file" ] && [ -f "$file" ]; } || fail "The pre-deploy backup reported success but the file is missing. Nothing was changed and the site is still up."
+
+    size="$(wc -c < "$file" | tr -d '[:space:]')"
+    [ "$size" -ge "$MIN_DUMP_BYTES" ] || fail "The pre-deploy backup file is only $size bytes (under $MIN_DUMP_BYTES). Nothing was changed and the site is still up. Look at $file before going on."
+
+    say "Pre-deploy backup written: $(basename "$file") ($size bytes)"
+}
+
 deploy() {
     preflight
     prepare_folders
+    predeploy_backup
 
     say "Releasing $(git rev-parse --short HEAD) on $BRANCH"
     git rev-parse HEAD > storage/framework/previous-release
