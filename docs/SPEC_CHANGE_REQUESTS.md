@@ -372,3 +372,18 @@ Proposed changes only. The spec is edited by the founder, between passes, and lo
 - **Recommendation:** (a). Keep Cloudflare's rule too. The guide's smoke test already checks that `http://` redirects.
 - **Spec sections affected:** 17.2 (transport security), 17.1, 23. DEPLOY.md sections 3 and 11.
 - **Code status:** Not built. A test can check the rule text and that `.htaccess` stays a valid rewrite block. The redirect itself is checked with `curl -I` on staging.
+
+## SCR-039: Retention settings, ops alerts and the test wording guard (spec sections 17.1, 17.4)
+
+- **Status:** ACCEPTED 2026-10-21 by the founder (SUGGESTIONS 321, items 1 to 6). Not built yet. The founder logs it in spec sections 17.1, 17.4 and 23.
+- **Gap:** DEPLOY section 18 lists retention rules for `failed_jobs`, `job_batches`, read notifications and the audit log that no job applies. Nothing reminds a super admin of a data request that is left waiting. The System status widget calls cron "stopped" after 5 minutes but raises no alert. Nothing stops test agreement wording (DEPLOY section 22) from being published on production.
+- **Decision:**
+  1. **Retention settings.** Four keys in the `settings` table, each a whole number of days of 1 or more, with these defaults when no row exists or the value is not valid: `retention.failed_jobs_days` 30, `retention.job_batches_days` 30, `retention.notifications_read_days` 180, `retention.activity_log_days` 365. A super admin changes them in System, Settings.
+  2. **Daily jobs, in the application time zone:** `groibe:prune-queue-history` (03:40) deletes `failed_jobs` by `failed_at` and `job_batches` by `created_at`; `groibe:prune-notifications` (03:45) deletes notifications that have been read, by `created_at`, and never an unread one; `groibe:prune-activity-log` (03:50) runs Spatie's `activitylog:clean` with the setting. Each writes the number removed, even when none, to the audit log (the activity log run writes its entry after cleaning, so the entry itself is kept).
+  3. **Data request reminder.** `groibe:remind-data-requests` (daily 08:45) sends super admins one in-app and email notice a day while any request is `open` or `in_progress` and was made more than 7 days ago (`groibe.ops.data_request_reminder_days`). It carries the count and the age of the oldest, never a name or a request. It is in the locked `security` category, like the data request notices.
+  4. **Cron alert.** A cron heartbeat older than 10 minutes counts as stopped. The System status widget then shows an alert line saying how many minutes it has been, and that queued email and every scheduled job are stopped. "No run recorded yet" is not an alert. The widget also shows how many data requests have waited more than 7 days.
+  5. **Test wording guard.** `AgreementTemplate::TEST_WORDING_BANNER` is `TEST TEXT, NOT LEGAL WORDING`. When `APP_ENV` is `production`, publishing a version whose body holds the banner (any letter case) is refused with a message on the body field, and nothing is saved. On any other environment it is allowed. In production the System status widget also shows an alert, with the template names, while an active template holds the banner.
+  6. **Data exports.** A data export file is sent as a password-protected zip with the password sent by a different route. Off-server copies keep the last 8 weekly dumps and the last 3 monthly file copies. Both are procedure (OPERATIONS, DEPLOY) and need no code.
+- **Not changed:** the 14-day log retention, the email log rules (SCR-032), import files (SCR-034) and the dump retention (`GROIBE_BACKUP_KEEP`).
+- **Spec sections affected:** 17.1, 17.4, 23.
+- **Code status:** Not built yet.
