@@ -8,15 +8,14 @@
         <meta property="og:url" content="{{ route('faq') }}">
         @if (! empty($groups))
             <script type="application/ld+json">
-                {!! json_encode([
-                    '@context' => 'https://schema.org',
+                {!! \App\Support\Seo\JsonLd::json([
                     '@type' => 'FAQPage',
                     'mainEntity' => collect($groups)->flatten(1)->map(fn ($faq) => [
                         '@type' => 'Question',
                         'name' => $faq->question,
                         'acceptedAnswer' => ['@type' => 'Answer', 'text' => $faq->answer],
                     ])->values()->all(),
-                ], JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP) !!}
+                ]) !!}
             </script>
         @endif
     @endpush

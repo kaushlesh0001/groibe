@@ -11,15 +11,14 @@
         <meta property="og:type" content="article">
         <meta property="og:url" content="{{ route('work.show', $item->slug) }}">
         <script type="application/ld+json">
-            {!! json_encode([
-                '@context' => 'https://schema.org',
+            {!! \App\Support\Seo\JsonLd::json([
                 '@type' => 'BreadcrumbList',
                 'itemListElement' => [
                     ['@type' => 'ListItem', 'position' => 1, 'name' => 'Home', 'item' => route('home')],
                     ['@type' => 'ListItem', 'position' => 2, 'name' => 'Our work', 'item' => route('work.index')],
                     ['@type' => 'ListItem', 'position' => 3, 'name' => $item->title, 'item' => route('work.show', $item->slug)],
                 ],
-            ], JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP) !!}
+            ]) !!}
         </script>
     @endpush
 

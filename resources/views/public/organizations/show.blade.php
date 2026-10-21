@@ -6,15 +6,14 @@
         <meta property="og:type" content="website">
         <meta property="og:url" content="{{ route('organizations.show', $organization->slug) }}">
         <script type="application/ld+json">
-            {!! json_encode([
-                '@context' => 'https://schema.org',
+            {!! \App\Support\Seo\JsonLd::json([
                 '@type' => 'BreadcrumbList',
                 'itemListElement' => [
                     ['@type' => 'ListItem', 'position' => 1, 'name' => 'Home', 'item' => route('home')],
                     ['@type' => 'ListItem', 'position' => 2, 'name' => 'Organizations', 'item' => route('organizations.index')],
                     ['@type' => 'ListItem', 'position' => 3, 'name' => $organization->name, 'item' => route('organizations.show', $organization->slug)],
                 ],
-            ], JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP) !!}
+            ]) !!}
         </script>
     @endpush
 

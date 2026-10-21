@@ -13,13 +13,12 @@
         <meta property="og:type" content="website">
         <meta property="og:url" content="{{ route('home') }}">
         <script type="application/ld+json">
-            {!! json_encode([
-                '@context' => 'https://schema.org',
+            {!! \App\Support\Seo\JsonLd::json([
                 '@type' => 'Organization',
                 'name' => config('app.name'),
                 'url' => route('home'),
                 'logo' => asset('brand/groibe-logo.png'),
-            ], JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP) !!}
+            ]) !!}
         </script>
     @endpush
 

@@ -6,15 +6,14 @@
         <meta property="og:description" content="{{ \Illuminate\Support\Str::limit(strip_tags((string) $role->summary), 155) }}">
         <meta property="og:type" content="website">
         <meta property="og:url" content="{{ route('opportunities.show', $role->slug) }}">
-        <script type="application/ld+json">{!! json_encode([
-            '@context' => 'https://schema.org',
+        <script type="application/ld+json">{!! \App\Support\Seo\JsonLd::json([
             '@type' => 'BreadcrumbList',
             'itemListElement' => [
                 ['@type' => 'ListItem', 'position' => 1, 'name' => 'Home', 'item' => route('home')],
                 ['@type' => 'ListItem', 'position' => 2, 'name' => 'Opportunities', 'item' => route('opportunities.index')],
                 ['@type' => 'ListItem', 'position' => 3, 'name' => $role->title, 'item' => route('opportunities.show', $role->slug)],
             ],
-        ], JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP) !!}</script>
+        ]) !!}</script>
     @endpush
 
     <article class="mx-auto flex max-w-3xl flex-col gap-6">
