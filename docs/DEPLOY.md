@@ -274,7 +274,7 @@ Put the site behind Cloudflare once DNS, mail and the smoke test are working.
    ```
 
    It: checks the setup, **takes a pre-deploy database backup** (see below), records the current release, puts the site in maintenance mode, pulls `main` (fast-forward only), installs packages without dev tools, runs migrations, publishes admin assets, creates and secures the folders, rebuilds the caches (`config:cache`, `route:cache`, `view:cache` and `event:cache`, after clearing the old ones), restarts queue workers, brings the site back, and calls `/up`.
-3. **The pre-deploy backup (SCR-037).** Before anything changes, and before the site goes into maintenance mode, the script runs `php artisan groibe:backup-db --predeploy`. That writes `groibe-predeploy-YYYYMMDD-HHMMSS.sql.gz` into `GROIBE_BACKUP_PATH`. The newest `GROIBE_PREDEPLOY_BACKUP_KEEP` (default 5) are kept, apart from the weekly dumps, so frequent deploys never push out the weekly ones. The script **stops, with the site still up and nothing changed**, if the command fails, or if the file is missing, empty or smaller than 4 KB (it does not trust the exit code alone). On a first deploy the database has no tables, there is nothing to dump, and the script says the backup is skipped. There is no switch to skip it: if the disk is full, free space first. Rehearsed with a stand-in command in tests, not yet run on the real host: watch for the line "Pre-deploy backup written" on your first staging deploy.
+3. **The pre-deploy backup (SCR-037).** Before anything changes, and before the site goes into maintenance mode, the script runs `php artisan groibe:backup-db --predeploy`. That writes `groibe-predeploy-YYYYMMDD-HHMMSS.sql.gz` into `GROIBE_BACKUP_PATH`. The newest `GROIBE_PREDEPLOY_BACKUP_KEEP` (default 5) are kept, apart from the weekly dumps, so frequent deploys never push out the weekly ones. The script **stops, with the site still up and nothing changed**, if the command fails, or if the file is missing, empty or smaller than 4 KB (it does not trust the exit code alone). It also runs `gzip -t` on the file, so a dump that is cut off or damaged stops the deploy too. On a first deploy the database has no tables, there is nothing to dump, and the script says the backup is skipped. There is no switch to skip it: if the disk is full, free space first. Rehearsed with a stand-in command in tests, not yet run on the real host: watch for the line "Pre-deploy backup written" on your first staging deploy.
 4. If it stops part way, **the site stays in maintenance mode on purpose**: the code and the database may not match. Read the error, fix it, run the script again, or roll back (section 13).
 5. Run the smoke test (section 15).
 
@@ -388,7 +388,7 @@ These cannot be checked from the code. Ask once, in writing, and keep the answer
 
 ## 18. Retention and pruning
 
-Data that grows without limit eats the host's database quota (`DB_SIZE_LIMIT_MB`) and keeps personal data longer than needed. These are the rules, and the app applies all of them (SCR-039 added the last four). The days are settings: a super admin changes one in **System, Settings** by adding a row with the key shown. A missing row, or a value that is not a whole number of 1 or more, falls back to the default, so a typo cannot switch pruning off or wipe everything.
+Data that grows without limit eats the host's database quota (`DB_SIZE_LIMIT_MB`) and keeps personal data longer than needed. These are the rules, and the app applies all of them (SCR-039 added the last four). The days are settings: a super admin changes one in **System, Settings** by adding a row with the key shown. A missing row, a value that is not a whole number, or a value below the minimum falls back to the default, so a typo cannot switch pruning off or wipe the audit trail. The minimums are 7 days for `failed_jobs` and `job_batches`, 30 for read notifications and 90 for the audit log; the Settings screen says so under the Value field (SCR-039 amendment). Use type Integer.
 
 | Data | Keep | Status |
 |---|---|---|
@@ -399,10 +399,10 @@ Data that grows without limit eats the host's database quota (`DB_SIZE_LIMIT_MB`
 | Expired password-reset tokens | Cleared daily (SCR-034) | Built |
 | Log files (`storage/logs`) | 14 days (`daily` channel) | Built |
 | Weekly database dumps | Newest `GROIBE_BACKUP_KEEP` (default 4) | Built |
-| `failed_jobs` (by `failed_at`) | 30 days, setting `retention.failed_jobs_days` (daily 03:40, `groibe:prune-queue-history`) | Built |
-| `job_batches` (by `created_at`) | 30 days, setting `retention.job_batches_days` (same job) | Built |
-| Notifications that have been read (by `created_at`) | 180 days, setting `retention.notifications_read_days` (daily 03:45, `groibe:prune-notifications`). Unread ones are never deleted. | Built |
-| `activity_log` (audit trail) | 365 days, setting `retention.activity_log_days` (daily 03:50, `groibe:prune-activity-log`, which runs `activitylog:clean`) | Built |
+| `failed_jobs` (by `failed_at`) | 30 days (at least 7), setting `retention.failed_jobs_days` (daily 03:40, `groibe:prune-queue-history`) | Built |
+| `job_batches` (by `created_at`) | 30 days (at least 7), setting `retention.job_batches_days` (same job) | Built |
+| Notifications that have been read (by `created_at`) | 180 days (at least 30), setting `retention.notifications_read_days` (daily 03:45, `groibe:prune-notifications`). Unread ones are never deleted. | Built |
+| `activity_log` (audit trail) | 365 days (at least 90), setting `retention.activity_log_days` (daily 03:50, `groibe:prune-activity-log`, which runs `activitylog:clean`) | Built |
 
 Each prune job writes the number removed to the audit log (even when it is none). Payouts, agreement acceptances and the audit entries of erasures follow SCR-028, not this table. If the lawyer sets a longer period for the audit trail or the email log, change this table and the spec first.
 

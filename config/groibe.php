@@ -57,12 +57,19 @@ return [
         'email_log_sent_days' => 90,
         'email_log_failed_days' => 180,
 
-        // SCR-039: days kept, used when the `settings` row of the same key (retention.<name>) is missing or not a whole number of 1 or more.
+        // SCR-039: days kept. A `settings` row of the same key (retention.<name>) changes it, but a value that is missing, not a whole
+        // number, or below the minimum is ignored and the default is used (SCR-039 amendment), so a typo cannot wipe the audit trail.
         'retention' => [
             'failed_jobs_days' => 30,
             'job_batches_days' => 30,
             'notifications_read_days' => 180,
             'activity_log_days' => 365,
+        ],
+        'retention_min' => [
+            'failed_jobs_days' => 7,
+            'job_batches_days' => 7,
+            'notifications_read_days' => 30,
+            'activity_log_days' => 90,
         ],
 
         // SCR-039: super admins are reminded once a day while a data request that is still waiting is older than this.

@@ -359,7 +359,7 @@ Proposed changes only. The spec is edited by the founder, between passes, and lo
 - **Recommendation:** (a). Pre-deploy dumps get their own file name and retention (see Decision), so frequent deploys never push out the weekly dumps. How the script detects "no tables yet" (for example `migrate:status` failing) is checked when it is built.
 - **Spec sections affected:** 17.4 (backups), 23. DEPLOY.md sections 12 to 14 and `DeployFilesTest` (it checks the order of steps) follow the decision.
 - **Decision (2026-10-15, founder):** (1) Pre-deploy dumps are written as `groibe-predeploy-YYYYMMDD-HHMMSS.sql.gz` in the same backup folder, by `groibe:backup-db` with a new option for the pre-deploy kind. They are pruned on their own, keeping the newest `GROIBE_PREDEPLOY_BACKUP_KEEP` (default 5). The weekly pattern `groibe-db-*.sql.gz` and `GROIBE_BACKUP_KEEP` are unchanged, so neither kind evicts the other. `GROIBE_BACKUP_KEEP` is not raised. (2) The script stops, before `artisan down`, if the command exits with an error, or if the dump file is missing, empty or smaller than 4 KB (amended 2026-10-21 from 10 KB: a freshly migrated and seeded database dumps to about 7 KB gzipped, so 10 KB would refuse a good dump of a site with no real data yet; the first figure was a starting value: a dump of the full schema is far larger, tune it when built). A non-zero exit alone is not trusted. (3) No emergency skip switch. The open choice in the recommendation is closed./
-- **Code status:** Built 2026-10-21, rehearsed, not run on the real host (SUGGESTIONS 322). `groibe:backup-db --predeploy`, `GROIBE_PREDEPLOY_BACKUP_KEEP`, the `predeploy_backup` step in `scripts/deploy.sh`, DEPLOY 12 to 14. Tests: `PredeployBackupTest`, `PredeployScriptTest`.
+- **Code status:** Built 2026-10-21, rehearsed, not run on the real host (SUGGESTIONS 322). Audit addition 2026-10-21: the script also runs `gzip -t` on the dump (SUGGESTIONS 329). `groibe:backup-db --predeploy`, `GROIBE_PREDEPLOY_BACKUP_KEEP`, the `predeploy_backup` step in `scripts/deploy.sh`, DEPLOY 12 to 14. Tests: `PredeployBackupTest`, `PredeployScriptTest`.
 
 ## SCR-038: Forced HTTPS for hosts without Cloudflare (spec sections 17.1, 17.2)
 
@@ -387,3 +387,11 @@ Proposed changes only. The spec is edited by the founder, between passes, and lo
 - **Not changed:** the 14-day log retention, the email log rules (SCR-032), import files (SCR-034) and the dump retention (`GROIBE_BACKUP_KEEP`).
 - **Spec sections affected:** 17.1, 17.4, 23.
 - **Code status:** Built 2026-10-21 (SUGGESTIONS 321). Tests: `TestWordingGuardTest`, `RetentionTest`, `DataRequestReminderTest`, `CronAlertTest`, `ScheduleTest`.
+
+### SCR-039 amendment (2026-10-21): minimums for the retention settings
+
+- **Status:** ACCEPTED 2026-10-21 by the founder (audit finding, SUGGESTIONS 326). Built 2026-10-21. Spec 17.4 and section 23 updated.
+- **Gap:** SCR-039 accepted any whole number of 1 or more for the four retention settings. A typo such as `3` for `retention.activity_log_days` would delete the audit trail older than 3 days that night, and spec 17.2 relies on the trail.
+- **Decision:** Each setting has a minimum: `retention.failed_jobs_days` 7, `retention.job_batches_days` 7, `retention.notifications_read_days` 30, `retention.activity_log_days` 90. A value below its minimum is ignored and the default is used (30, 30, 180 and 365), the same as a missing row or a value that is not a whole number. The Settings screen (the Value field in System, Settings) says this, with the minimums and defaults read from `config/groibe.php`. The minimums are `groibe.ops.retention_min`.
+- **Also from the same audit (no spec change needed):** the test wording check reads the text a person would see (SUGGESTIONS 324), and `scripts/deploy.sh` runs `gzip -t` on the pre-deploy dump (SUGGESTIONS 329, a further check under SCR-037; spec 17.4 still says "missing, empty or under 4 KB" and does not yet mention it).
+- **Code status:** Built 2026-10-21. Tests: `RetentionTest`, `TestWordingGuardTest`, `PredeployScriptTest`.

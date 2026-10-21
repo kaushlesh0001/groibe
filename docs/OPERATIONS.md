@@ -8,6 +8,7 @@ Status: a procedure, not policy. It says how to run Groibe day to day. Setup and
 2. [Data requests (export and erasure)](#2-data-requests-export-and-erasure)
 3. [Reset two-factor authentication for a locked-out admin](#3-reset-two-factor-authentication-for-a-locked-out-admin)
 4. [Routine checks](#4-routine-checks)
+5. [Change how long data is kept](#5-change-how-long-data-is-kept)
 
 ---
 
@@ -97,3 +98,22 @@ If the **only** super admin is locked out and nobody has SSH, the host's support
 
 - [ ] Do the restore drill (DEPLOY section 14).
 - [ ] Check that the retention rules in DEPLOY section 18 still match what the app does.
+
+## 5. Change how long data is kept
+
+The days kept for four kinds of data are settings (SCR-039). The defaults need no action. Change one only on advice (for example from the lawyer for the audit trail). The table of what is kept and for how long is in `docs/DEPLOY.md`, section 18.
+
+| Setting key | Default | Lowest allowed |
+|---|---|---|
+| `retention.failed_jobs_days` | 30 | 7 |
+| `retention.job_batches_days` | 30 | 7 |
+| `retention.notifications_read_days` | 180 | 30 |
+| `retention.activity_log_days` (the audit trail) | 365 | 90 |
+
+1. Open **System, Settings**. Look for the key in the list. If it is there, open it with its edit button. If it is not (the default is in use), press **New setting**.
+2. Fill the form: **Key** is the setting key from the table, exactly. **Value** is a whole number of days, for example `400`. **Type** is **Integer**. Save.
+3. The change applies at the next nightly run (03:40 for failed jobs and job batches, 03:45 for read notifications, 03:50 for the audit trail). The settings are cached for up to 15 minutes.
+4. **A value below the lowest allowed is ignored, with no error, and the default is used.** So `3` for the audit trail does not delete anything older than 3 days: the 365-day default stays. The text under **Value** says the same. A value that is not a whole number (for example `45 days`) is ignored too. After saving, check the next run's audit log entry (event `retention`): it records the days actually used.
+5. To go back to the default, delete the setting.
+
+Data is deleted for good by these jobs and cannot be brought back, except from a dump (DEPLOY section 14). Raising a number never restores what an earlier run already removed.

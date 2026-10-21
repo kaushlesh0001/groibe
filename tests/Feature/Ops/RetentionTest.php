@@ -1,10 +1,14 @@
 <?php
 
+use App\Enums\SettingType;
+use App\Filament\Admin\Resources\Settings\Pages\CreateSetting;
+use App\Filament\Admin\Resources\Settings\Schemas\SettingForm;
 use App\Models\Setting;
 use App\Services\Ops\Retention;
 use App\Services\Settings\Settings;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Livewire\Livewire;
 use Spatie\Activitylog\Models\Activity;
 
 beforeEach(function () {
@@ -147,12 +151,97 @@ describe('prune activity log', function () {
     });
 
     it('follows the setting', function () {
-        activity('test')->log('forty days');
-        Activity::query()->where('description', 'forty days')->update(['created_at' => now()->subDays(40)]);
-        setRetention('activity_log_days', '30');
+        activity('test')->log('older than 100');
+        activity('test')->log('younger than 100');
+        Activity::query()->where('description', 'older than 100')->update(['created_at' => now()->subDays(120)]);
+        Activity::query()->where('description', 'younger than 100')->update(['created_at' => now()->subDays(95)]);
+        setRetention('activity_log_days', '100');
 
         $this->artisan('groibe:prune-activity-log')->assertSuccessful();
 
-        expect(Activity::query()->where('description', 'forty days')->exists())->toBeFalse();
+        expect(Activity::query()->where('description', 'older than 100')->exists())->toBeFalse()
+            ->and(Activity::query()->where('description', 'younger than 100')->exists())->toBeTrue();
     });
+
+    it('ignores a setting below the floor, so a typo cannot wipe the audit trail (SUGGESTIONS 326)', function () {
+        activity('test')->log('two hundred days');
+        activity('test')->log('thirty days');
+        Activity::query()->where('description', 'two hundred days')->update(['created_at' => now()->subDays(200)]);
+        Activity::query()->where('description', 'thirty days')->update(['created_at' => now()->subDays(30)]);
+        setRetention('activity_log_days', '3');
+
+        $this->artisan('groibe:prune-activity-log')->assertSuccessful();
+
+        // 3 is ignored, so the default 365 days applies and nothing here is old enough to go.
+        expect(Activity::query()->where('description', 'two hundred days')->exists())->toBeTrue()
+            ->and(Activity::query()->where('description', 'thirty days')->exists())->toBeTrue();
+
+        $entry = Activity::query()->where('log_name', 'audit_log')->latest('id')->first();
+        expect($entry->properties['days'])->toBe(365);
+    });
+});
+
+describe('retention floors (SCR-039 amendment)', function () {
+    it('has the minimums 7, 7, 30 and 90 days', function () {
+        $retention = app(Retention::class);
+
+        expect($retention->minimum('failed_jobs_days'))->toBe(7)
+            ->and($retention->minimum('job_batches_days'))->toBe(7)
+            ->and($retention->minimum('notifications_read_days'))->toBe(30)
+            ->and($retention->minimum('activity_log_days'))->toBe(90);
+    });
+
+    it('uses the default for a value below the floor and the value at the floor', function (string $name, string $below, string $atFloor, int $default) {
+        setRetention($name, $below);
+        expect(app(Retention::class)->days($name))->toBe($default);
+
+        Setting::query()->where('key', "retention.{$name}")->update(['value' => $atFloor]);
+        app(Settings::class)->flush();
+        expect(app(Retention::class)->days($name))->toBe((int) $atFloor);
+    })->with([
+        'failed jobs' => ['failed_jobs_days', '6', '7', 30],
+        'job batches' => ['job_batches_days', '1', '7', 30],
+        'read notifications' => ['notifications_read_days', '29', '30', 180],
+        'audit log' => ['activity_log_days', '89', '90', 365],
+    ]);
+
+    it('accepts a stored integer setting above the floor', function () {
+        app(Settings::class)->set('retention.activity_log_days', 120, SettingType::Integer);
+
+        expect(app(Retention::class)->days('activity_log_days'))->toBe(120);
+    });
+
+    it('applies the floor to the failed jobs and notification jobs too', function () {
+        failedJob(10);
+        setRetention('failed_jobs_days', '2');
+        notificationRow(40, read: true);
+        setRetention('notifications_read_days', '5');
+
+        $this->artisan('groibe:prune-queue-history')->assertSuccessful();
+        $this->artisan('groibe:prune-notifications')->assertSuccessful();
+
+        // 2 and 5 are ignored: 10 days is inside the 30-day default and 40 days is inside the 180-day default.
+        expect(DB::table('failed_jobs')->count())->toBe(1)
+            ->and(DB::table('notifications')->count())->toBe(1);
+    });
+
+    it('says on the Settings screen what the minimums and defaults are', function () {
+        $text = SettingForm::retentionNote();
+
+        expect($text)->toContain('below the minimum is ignored')
+            ->and($text)->toContain('at least 7 (default 30)')
+            ->and($text)->toContain('at least 30 (default 180)')
+            ->and($text)->toContain('at least 90 (default 365)');
+
+        Livewire::actingAs(adminUser())->test(CreateSetting::class)
+            ->assertSee('retention.activity_log_days')
+            ->assertSee('below the minimum is ignored');
+    });
+
+    it('keeps the screen text in step with the config', function () {
+        config(['groibe.ops.retention_min.activity_log_days' => 120, 'groibe.ops.retention.activity_log_days' => 400]);
+
+        expect(SettingForm::retentionNote())->toContain('at least 120 (default 400)');
+    });
+
 });
