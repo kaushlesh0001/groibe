@@ -189,9 +189,9 @@ One cron entry runs the whole schedule. In cPanel, **Cron Jobs**, add, every min
 cd /home/CPUSER/groibe && /opt/cpanel/ea-php83/root/usr/bin/php artisan schedule:run >> /dev/null 2>&1
 ```
 
-It must use the PHP 8.3 binary and `cd` into the app first. That one line runs: the queue drain every minute (emails and notifications leave within about a minute), the overdue task digest (08:00), overdue invoices (08:15), the stale invite report (08:30), email log retention (03:00), import file clean-up (03:10), the database size check (03:20), the public cache refresh (03:30) and the weekly database backup (Sunday 02:30). Times are in the app time zone, `Asia/Kolkata`.
+It must use the PHP 8.3 binary and `cd` into the app first. That one line runs: the queue drain every minute (emails and notifications leave within about a minute), the overdue task digest (08:00), overdue invoices (08:15), the stale invite report (08:30), email log retention (03:00), import file clean-up (03:10), the database size check (03:20), the public cache refresh (03:30) and the weekly database backup (Sunday 02:30), and from SCR-039 the queue history clean-up (03:40), read notification clean-up (03:45), audit log clean-up (03:50) and the data request reminder (08:45). Times are in the app time zone, `Asia/Kolkata`.
 
-Check it: `php artisan schedule:list` shows the jobs, and Admin's **System status** shows "Running (last run … ago)" within two minutes. If it says "No run recorded yet" or "Stopped", cron is not reaching the app: wrong PHP path, wrong folder, or `proc_open` disabled (section 2).
+Check it: `php artisan schedule:list` shows the jobs, and Admin's **System status** shows "Running (last run … ago)" within two minutes. If it says "Stopped" with a red alert line (the last run is more than 10 minutes old), or still says "No run recorded yet" after a few minutes, cron is not reaching the app: wrong PHP path, wrong folder, or `proc_open` disabled (section 2).
 
 ## 8. File permissions
 
@@ -350,7 +350,7 @@ Run this after the first deploy and after every release. Tick each line.
 **Operations**
 - [ ] `php artisan groibe:backup-db` writes a file into `GROIBE_BACKUP_PATH` and not into the web root, and the restore drill (section 14) has been done once.
 - [ ] `storage/logs/laravel-DATE.log` is being written, and it contains no passwords or tokens.
-- [ ] `php artisan schedule:list` shows ten jobs.
+- [ ] `php artisan schedule:list` shows fourteen jobs.
 - [ ] On production, the test agreement wording check in section 22 prints `0`.
 - [ ] The uptime monitor (section 20) is on and its alert email arrives.
 - [ ] The first encrypted off-server copy (section 19) has been made and opened once.
@@ -383,7 +383,7 @@ These cannot be checked from the code. Ask once, in writing, and keep the answer
 
 ## 18. Retention and pruning
 
-Data that grows without limit eats the host's database quota (`DB_SIZE_LIMIT_MB`) and keeps personal data longer than needed. These are the rules. **Built** means the app already does it. **Decided, not built** means the rule is agreed but needs code, and is listed in SUGGESTIONS 321 for the founder to schedule. Until it is built, nobody prunes it.
+Data that grows without limit eats the host's database quota (`DB_SIZE_LIMIT_MB`) and keeps personal data longer than needed. These are the rules, and the app applies all of them (SCR-039 added the last four). The days are settings: a super admin changes one in **System, Settings** by adding a row with the key shown. A missing row, or a value that is not a whole number of 1 or more, falls back to the default, so a typo cannot switch pruning off or wipe everything.
 
 | Data | Keep | Status |
 |---|---|---|
@@ -394,11 +394,12 @@ Data that grows without limit eats the host's database quota (`DB_SIZE_LIMIT_MB`
 | Expired password-reset tokens | Cleared daily (SCR-034) | Built |
 | Log files (`storage/logs`) | 14 days (`daily` channel) | Built |
 | Weekly database dumps | Newest `GROIBE_BACKUP_KEEP` (default 4) | Built |
-| `failed_jobs` and `job_batches` | 30 days (`queue:prune-failed --hours=720`, `queue:prune-batches --hours=720`) | Decided, not built (no schedule today) |
-| Notifications that have been read | 180 days. Unread ones stay. | Decided, not built (no command exists) |
-| `activity_log` (audit trail) | 365 days (`activitylog:clean`; `config/activitylog.php` already says 365) | Decided, not built (`activitylog:clean` is not scheduled) |
+| `failed_jobs` (by `failed_at`) | 30 days, setting `retention.failed_jobs_days` (daily 03:40, `groibe:prune-queue-history`) | Built |
+| `job_batches` (by `created_at`) | 30 days, setting `retention.job_batches_days` (same job) | Built |
+| Notifications that have been read (by `created_at`) | 180 days, setting `retention.notifications_read_days` (daily 03:45, `groibe:prune-notifications`). Unread ones are never deleted. | Built |
+| `activity_log` (audit trail) | 365 days, setting `retention.activity_log_days` (daily 03:50, `groibe:prune-activity-log`, which runs `activitylog:clean`) | Built |
 
-Payouts, agreement acceptances and the audit entries of erasures follow SCR-028, not this table. If the lawyer sets a longer period for the audit trail or the email log, change this table and the spec first.
+Each prune job writes the number removed to the audit log (even when it is none). Payouts, agreement acceptances and the audit entries of erasures follow SCR-028, not this table. If the lawyer sets a longer period for the audit trail or the email log, change this table and the spec first.
 
 ## 19. Off-server copies
 
@@ -434,7 +435,7 @@ How many off-server copies to keep is the founder's choice. A starting value is 
 Set up an outside monitor on `https://SITE/up` (Laravel's health route). Any monitoring service that checks a URL every 5 minutes and sends **email alerts** will do. Send the alerts to the founder and to `contact@groibe.com`. Do this for production, and for staging while it is in use.
 
 - Alert when the check fails twice in a row.
-- `/up` shows that the app starts. It does **not** show that cron runs, so a stopped cron raises no alert. The weekly check of System status in `docs/OPERATIONS.md` covers that. Whether to add an alert for a stopped cron is open (SUGGESTIONS 321).
+- `/up` shows that the app starts. It does **not** show that cron runs, so a stopped cron raises no email alert. Instead, Admin's **System status** shows a red "Alert: cron has not run for N minutes" line once the cron heartbeat is more than 10 minutes old (SCR-039). It is only seen when a super admin opens the dashboard, so keep the weekly check in `docs/OPERATIONS.md`. An email alert for a stopped cron is not built.
 - Write down the monitor's account name and who can see it, next to the host answers in section 17.
 
 ## 21. Incidents and breaches
@@ -464,9 +465,9 @@ These are short checklists. They are not legal advice. **If personal data may ha
 Until real legal wording is published, the Member Agreement, Client MSA and SOW template count as not published (SCR-036). On a staging site **without demo data**, contributors cannot finish onboarding, client owners cannot submit a brief and no SOW can be built. (With demo data, `DemoSeeder` publishes its own labelled wording.) For staging only, publish this test wording.
 
 1. Sign in as super admin on **staging**. Open **System, Agreement Templates**.
-2. For each of the three templates, replace the body with the banner below, then a line of dummy text. For the SOW template keep the variables from spec 8 (`{{client_name}}`, `{{project_title}}`, `{{scope}}`, `{{milestones_table}}`, `{{total_value}}`, `{{payment_terms}}`, `{{start_date}}`, `{{due_date}}`).
+2. For each of the three templates, press **Revise** on its row (or **Publish agreement version** if the list is empty). Replace the body with the banner below, then a line of dummy text. Saving publishes the next version and retires the old one. For the SOW template keep the variables from spec 8 (`{{client_name}}`, `{{project_title}}`, `{{scope}}`, `{{milestones_table}}`, `{{total_value}}`, `{{payment_terms}}`, `{{start_date}}`, `{{due_date}}`).
 3. **Do not** keep the sentence "Replace with the approved legal text." in the body: while it is there the template still counts as a placeholder.
-4. Publish each one, and check the screen shows "Real wording".
+4. Check the list: the Wording column must say "Real wording" for the three, and the page that opened after saving shows the new version.
 
 Banner, as the first line of every test body (it is shown to the person who accepts):
 
@@ -484,4 +485,4 @@ php artisan tinker --execute="echo App\Models\AgreementTemplate::query()->where(
 
 It must print `0`. If it prints more than `0` on production, replace that template with the approved wording at once and ask the lawyer whether anyone accepted it. This check is also in the smoke test (section 15).
 
-This is a manual check. The app does not block the banner text on production. Whether to add a code guard is open (SUGGESTIONS 321).
+The app also guards this (SCR-039). On production, publishing a version whose text holds the banner is refused, with a message on the text field, and nothing is saved. If test wording is already live on production, **System status** shows a red "Alert: test wording is live on the site" line with the template names. The manual check above stays as the proof before go-live.

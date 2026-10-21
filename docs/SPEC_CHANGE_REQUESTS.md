@@ -375,7 +375,7 @@ Proposed changes only. The spec is edited by the founder, between passes, and lo
 
 ## SCR-039: Retention settings, ops alerts and the test wording guard (spec sections 17.1, 17.4)
 
-- **Status:** ACCEPTED 2026-10-21 by the founder (SUGGESTIONS 321, items 1 to 6). Not built yet. The founder logs it in spec sections 17.1, 17.4 and 23.
+- **Status:** ACCEPTED 2026-10-21 by the founder (SUGGESTIONS 321, items 1 to 6). Built. The founder logged it in spec sections 17.1, 17.4 and 23.
 - **Gap:** DEPLOY section 18 lists retention rules for `failed_jobs`, `job_batches`, read notifications and the audit log that no job applies. Nothing reminds a super admin of a data request that is left waiting. The System status widget calls cron "stopped" after 5 minutes but raises no alert. Nothing stops test agreement wording (DEPLOY section 22) from being published on production.
 - **Decision:**
   1. **Retention settings.** Four keys in the `settings` table, each a whole number of days of 1 or more, with these defaults when no row exists or the value is not valid: `retention.failed_jobs_days` 30, `retention.job_batches_days` 30, `retention.notifications_read_days` 180, `retention.activity_log_days` 365. A super admin changes them in System, Settings.
@@ -386,4 +386,4 @@ Proposed changes only. The spec is edited by the founder, between passes, and lo
   6. **Data exports.** A data export file is sent as a password-protected zip with the password sent by a different route. Off-server copies keep the last 8 weekly dumps and the last 3 monthly file copies. Both are procedure (OPERATIONS, DEPLOY) and need no code.
 - **Not changed:** the 14-day log retention, the email log rules (SCR-032), import files (SCR-034) and the dump retention (`GROIBE_BACKUP_KEEP`).
 - **Spec sections affected:** 17.1, 17.4, 23.
-- **Code status:** Not built yet.
+- **Code status:** Built 2026-10-21 (SUGGESTIONS 321). Tests: `TestWordingGuardTest`, `RetentionTest`, `DataRequestReminderTest`, `CronAlertTest`, `ScheduleTest`.
