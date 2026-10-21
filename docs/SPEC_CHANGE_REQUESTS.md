@@ -427,3 +427,19 @@ Proposed changes only. The spec is edited by the founder, between passes, and lo
 - **Community (item 6):** spec 10.1 says "featured contributors". The row now shows Admin's featured picks first, then the newest other contributors from `Profile::publiclyVisible()` (the directory scope), up to 12 cards. Under 6 people the whole section is left out. The Admin "limit" field for this section no longer applies. Demo accounts (email on `groibe.demo.email_domain`) are labelled "Demo profile" outside production and never shown in production.
 - **No Alpine, no script:** the public layout sends no script and the strict CSP forbids inline styles (SUGGESTIONS 259), so all motion is CSS. The pause control is a labelled checkbox driven by `:has()`. Reduced motion turns every animation off and the row becomes a plain row that scrolls by hand.
 - **Other sections** fade up on scroll with CSS scroll-driven animation, where the browser supports it.
+
+## SCR-043: Contributor Code of Ethical Remote Work as its own agreement (proposed; amends spec 7.7, 8, 6.10, 11)
+
+- **Status:** PROPOSED 2026-10-21. Nothing is built. The draft text is `docs/legal-drafts/contributor-ethical-remote-work-code.md` (for lawyer review).
+- **Gap:** Spec 7.7 lists five agreement types (`member_agreement`, `client_msa`, `sow_template`, `privacy`, `terms`). Only the Member Agreement is accepted by contributors, at onboarding step 4, and it gates `active` (spec 6.10, 8). A separate code of conduct has no type, no acceptance step, no version gate and no re-acceptance for contributors who are already active.
+- **Option A, no spec change (recommended to try first):** publish the code as a schedule inside the Member Agreement text. Contributors accept it with the agreement, and acceptance is already recorded with user, version, time, IP address and browser (spec 7.7). Cost: one document, no code. Limit: changing the code means a new Member Agreement version, and existing active contributors are not asked to accept it again unless the platform is changed for that (not covered by the spec today).
+- **Option B, if the code must stand alone with its own recorded acceptance:**
+  1. Add the type `contributor_code` to `AgreementType` and to `agreement_templates.type` (string column, no migration of existing rows).
+  2. Seed a placeholder body carrying the shared placeholder marker (SCR-036), so it counts as not published until the real text is pasted.
+  3. Onboarding gets an acceptance of the current published version, recorded in `agreement_acceptances` (spec 7.7), required before `active` (spec 6.10) in the same way as the Member Agreement.
+  4. Decide for contributors who are already `active`: a one-time acceptance prompt on their next visit, with their access unchanged if they delay, or access to new assignments paused until they accept.
+  5. Tests: the gate, the placeholder refusal, the acceptance record, and a negative test for a non-active contributor.
+- **Needs from the founder:** Option A or B; for B, the answer to step 4.
+- **Not decided here:** the wording of the code (lawyer), and whether it is public.
+- **Spec sections affected if B is accepted:** 6.10, 7.7, 8, 11, 19 and 23.
+- **Code status:** Not built.
