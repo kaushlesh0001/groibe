@@ -413,9 +413,9 @@ Proposed changes only. The spec is edited by the founder, between passes, and lo
 - **Spec sections affected:** 17.2 (the Admin line), 18 (the flag's description), 23.
 - **Code status:** Built 2026-10-21. `AdminEmailCodeAuthentication`, `AdminSignInCode`, `User::mustUseEmailCode()`, the panel registration, `EnsureAdminTwoFactor` as a guard, and the reset command. Tests: `AdminEmailCodeTest`, `AdminEmailCodeSignInTest`, `TwoFactorTest`.
 
-## SCR-041: Dark logo on navy surfaces (proposed; amends spec 10.3)
+## SCR-041: Dark logo on navy surfaces (amends spec 10.3)
 
-- **Status:** PROPOSED 2026-10-21. The founder asked for this brand polish with no spec edit, so the spec is unchanged and still disagrees with the code.
+- **Status:** ACCEPTED 2026-10-22 by the founder. Already built. Spec 10.3 and section 23 updated to match the code (docs only).
 - **Gap:** Spec 10.3 says "Navy surfaces carry the white logo" and names `groibe-logo.svg`. The code now uses `groibe-logo-dark.svg` on navy (public header and footer), `groibe-logo-clean.svg` on light surfaces, and `groibe-logo-white.svg` only where a single-colour logo is needed.
 - **Proposed text:** Replace "the white logo" with "the dark logo (`groibe-logo-dark.svg`, PNG `groibe-logo-dark.png` and `groibe-logo-dark-small.png`)" and name `groibe-logo-clean.svg` as the logo for light surfaces. A logo is not text, so the "no blue on navy" rule applies to text only.
 - **Not changed:** emails and the SOW PDF sit on white, so they keep `groibe-logo-small.png`. The card and split auth layouts sit on neutral grey, not navy, so they keep the white logo. Filament dark mode keeps the white logo.
