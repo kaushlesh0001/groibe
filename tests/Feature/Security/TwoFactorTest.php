@@ -7,6 +7,7 @@ use App\Services\FeatureFlags\FeatureFlags;
 use Filament\Auth\MultiFactor\App\AppAuthentication;
 use Filament\Auth\MultiFactor\MultiFactorChallenge;
 use Filament\Facades\Filament;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Spatie\Activitylog\Models\Activity;
@@ -22,48 +23,56 @@ function setTwoFactorFlag(bool $on): void
     app(FeatureFlags::class)->set(FeatureFlag::TwoFactorAdmin, $on);
 }
 
-describe('who must set it up', function () {
-    it('sends a super admin without it to the set-up page, whatever the flag says', function (bool $flag) {
+describe('who must have a second step (SCR-040: the emailed code, nothing to set up)', function () {
+    it('lets a super admin without an authenticator app in, whatever the flag says, because the emailed code is theirs by role', function (bool $flag) {
         setTwoFactorFlag($flag);
 
-        $this->actingAs(adminWithoutTwoFactor())->get('/admin')
-            ->assertRedirect()
-            ->assertRedirectContains('multi-factor-authentication/set-up');
+        $this->actingAs(adminWithoutTwoFactor())->get('/admin')->assertOk();
     })->with([true, false]);
 
-    it('sends every other admin role without it to set-up while the flag is on', function (AdminRole $role) {
-        setTwoFactorFlag(true);
-
-        $this->actingAs(adminWithoutTwoFactor($role))->get('/admin')->assertRedirectContains('multi-factor-authentication/set-up');
-    })->with([AdminRole::DeliveryManager, AdminRole::CommunityManager, AdminRole::FinanceOps]);
-
-    it('lets the other admin roles in without it when the flag is off', function (AdminRole $role) {
-        setTwoFactorFlag(false);
+    it('lets every other admin role without an app in while the flag is on, and while it is off', function (AdminRole $role, bool $flag) {
+        setTwoFactorFlag($flag);
 
         $this->actingAs(adminWithoutTwoFactor($role))->get('/admin')->assertOk();
-    })->with([AdminRole::DeliveryManager, AdminRole::CommunityManager, AdminRole::FinanceOps]);
+    })->with([AdminRole::DeliveryManager, AdminRole::CommunityManager, AdminRole::FinanceOps])->with([true, false]);
 
     it('requires it by default, as spec 18 lists', function () {
         expect(app(FeatureFlags::class)->enabled(FeatureFlag::TwoFactorAdmin))->toBeTrue();
     });
 
-    it('lets an admin who has set it up in', function (AdminRole $role) {
+    it('lets an admin who has set up the app in', function (AdminRole $role) {
         $this->actingAs(adminUser($role))->get('/admin')->assertOk();
     })->with(AdminRole::cases());
 
-    it('lets an admin without it open the set-up page, so there is no redirect loop', function () {
-        $admin = adminWithoutTwoFactor();
-        $url = $this->actingAs($admin)->get('/admin')->headers->get('Location');
+    it('is a guard on every admin page: a required admin the panel offers no second step is sent to set-up', function () {
+        setTwoFactorFlag(true);
+        // A panel that, by mistake, had no provider enabled for anyone.
+        app()->bind(MultiFactorChallenge::class, fn () => new class extends MultiFactorChallenge
+        {
+            public function hasEnabledProviders(Authenticatable $user): bool
+            {
+                return false;
+            }
+        });
 
-        $this->get($url)->assertOk();
-    });
-
-    it('blocks every admin page for them, not only the dashboard', function () {
         $this->actingAs(adminWithoutTwoFactor());
 
-        foreach (['/admin/users', '/admin/organizations', '/admin/imports', '/admin/payouts'] as $url) {
+        foreach (['/admin', '/admin/users', '/admin/organizations', '/admin/imports', '/admin/payouts'] as $url) {
             $this->get($url)->assertRedirectContains('multi-factor-authentication/set-up');
         }
+    });
+
+    it('does not send an admin who is not required to have it to set-up, even if the panel offers nothing', function () {
+        setTwoFactorFlag(false);
+        app()->bind(MultiFactorChallenge::class, fn () => new class extends MultiFactorChallenge
+        {
+            public function hasEnabledProviders(Authenticatable $user): bool
+            {
+                return false;
+            }
+        });
+
+        $this->actingAs(adminWithoutTwoFactor(AdminRole::FinanceOps))->get('/admin')->assertOk();
     });
 
     it('leaves guests and non-admins as they were', function () {
@@ -74,26 +83,26 @@ describe('who must set it up', function () {
 });
 
 describe('the panel setup', function () {
-    it('has authenticator-app 2FA with recovery codes, marked required', function () {
+    it('has the emailed code first, then authenticator-app 2FA with recovery codes, marked required', function () {
         $panel = Filament::getPanel('admin');
         $providers = $panel->getMultiFactorAuthenticationProviders();
 
         expect($panel->isMultiFactorAuthenticationRequired())->toBeTrue()
-            ->and($providers)->toHaveCount(1)
+            ->and(array_keys($providers))->toBe(['email_code', 'app'])
             ->and($providers['app'])->toBeInstanceOf(AppAuthentication::class)
             ->and($providers['app']->isRecoverable())->toBeTrue()
             ->and($panel->hasProfile())->toBeTrue();
     });
 
-    it('challenges anyone who has set it up, and nobody who has not', function () {
-        $with = adminUser();
-        $without = adminWithoutTwoFactor();
+    it('challenges every admin who must have the emailed code, and an admin who is not required only if they set up the app', function () {
+        setTwoFactorFlag(false);
+        $challenge = MultiFactorChallenge::make();
 
-        expect(MultiFactorChallenge::make()->hasEnabledProviders($with))->toBeTrue()
-            ->and(MultiFactorChallenge::make()->hasEnabledProviders($without))->toBeFalse();
+        expect($challenge->hasEnabledProviders(adminWithoutTwoFactor()))->toBeTrue()                       // super admin: the emailed code
+            ->and($challenge->hasEnabledProviders(adminUser(AdminRole::DeliveryManager)))->toBeTrue()       // has the app
+            ->and($challenge->hasEnabledProviders(adminWithoutTwoFactor(AdminRole::DeliveryManager)))->toBeFalse(); // flag off, no app
     });
 });
-
 describe('codes and recovery codes', function () {
     it('accepts a current code and refuses a wrong one', function () {
         $provider = AppAuthentication::make()->recoverable();
@@ -166,31 +175,35 @@ describe('the recovery command', function () {
         $other = adminUser(AdminRole::DeliveryManager);
 
         $this->artisan('groibe:two-factor-reset', ['email' => strtoupper($admin->email), '--force' => true])
-            ->expectsOutputToContain('is off for')
+            ->expectsOutputToContain('are off for')
             ->assertSuccessful();
 
         $admin->refresh();
         expect([$admin->two_factor_secret, $admin->two_factor_recovery_codes, $admin->two_factor_confirmed_at])->toBe([null, null, null])
-            ->and($other->refresh()->hasTwoFactor())->toBeTrue();
+            ->and($other->refresh()->hasTwoFactor())->toBeTrue()
+            // The emailed code is required by role, so a reset cannot switch it off.
+            ->and($admin->hasEmailAuthentication())->toBeTrue();
 
         $entry = Activity::query()->where('event', 'two_factor_reset')->sole();
         expect($entry->subject_id)->toBe($admin->id)->and($entry->causer_id)->toBeNull()->and($entry->properties['email'])->toBe($admin->email)
             ->and(json_encode($entry->properties))->not->toContain('AAAA-1111');
     });
 
-    it('sends the person through set-up again at their next admin visit', function () {
+    it('leaves the person signing in with the emailed code, with nothing to set up again', function () {
         $admin = adminUser();
 
         $this->artisan('groibe:two-factor-reset', ['email' => $admin->email, '--force' => true])->assertSuccessful();
 
-        $this->actingAs($admin->refresh())->get('/admin')->assertRedirectContains('multi-factor-authentication/set-up');
+        $this->actingAs($admin->refresh())->get('/admin')->assertOk();
+        expect(MultiFactorChallenge::make()->hasEnabledProviders($admin))->toBeTrue()
+            ->and(MultiFactorChallenge::make()->getFirstEnabledProvider($admin)->getId())->toBe('email_code');
     });
 
     it('asks first, and changes nothing when the answer is no', function () {
         $admin = adminUser();
 
         $this->artisan('groibe:two-factor-reset', ['email' => $admin->email])
-            ->expectsConfirmation("Turn off two-factor authentication for {$admin->email} (admin)?", 'no')
+            ->expectsConfirmation("Turn off the authenticator app and recovery codes for {$admin->email} (admin)?", 'no')
             ->expectsOutputToContain('Nothing was changed')
             ->assertSuccessful();
 
