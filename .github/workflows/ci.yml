@@ -1,0 +1,174 @@
+name: ci
+
+# One light check on every push and pull request, and a full run you start by hand.
+#
+#   check  Pint (--test, explicit paths), Larastan, and a quick subset of Pest. About 5 to 7 minutes.
+#   plan   Manual runs only: lists every test folder.
+#   full   Manual runs only: one job per test folder, so each stays inside the 1 GB memory limit.
+#
+# Rules this file follows (CLAUDE.md): PHP 8.3 (the version in composer.json and on the host); `npm run build` before the tests
+# (pages that use @vite need public/build); Pest folder by folder with `php -d memory_limit=1G`, never the all-in-one test command; Pint only on
+# explicit paths, never on the whole repo or the docs folder.
+
+on:
+  push:
+    branches: [main, develop]
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+  pull_request:
+    branches: [main, develop]
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    if: github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: composer:v2
+          extensions: mbstring, intl, gd, zip, pdo_sqlite, sqlite3, fileinfo, dom, xml, curl
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Environment file
+        run: |
+          cp .env.example .env
+          touch database/database.sqlite
+
+      - name: Cache Composer downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/composer/files
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      - name: Install PHP packages
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Application key
+        run: php artisan key:generate
+
+      - name: Install Node packages
+        run: npm ci
+
+      - name: Build assets
+        run: npm run build
+
+      - name: Pint (explicit paths)
+        run: vendor/bin/pint --test app database routes config tests scripts
+
+      - name: Larastan
+        run: vendor/bin/phpstan analyse --memory-limit=1G --no-progress
+
+      # One folder (or file group) per call, each with its own PHP process and memory limit.
+      - name: Tests, policies
+        run: php -d memory_limit=1G vendor/bin/pest tests/Feature/Policies
+
+      - name: Tests, security
+        run: php -d memory_limit=1G vendor/bin/pest tests/Feature/Security
+
+      - name: Tests, ops
+        run: php -d memory_limit=1G vendor/bin/pest tests/Feature/Ops
+
+      - name: Tests, deploy files
+        run: php -d memory_limit=1G vendor/bin/pest tests/Feature/Deployment/HttpsRedirectTest.php tests/Feature/Deployment/PredeployScriptTest.php
+
+  plan:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      targets: ${{ steps.list.outputs.targets }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: List the test folders
+        id: list
+        run: |
+          folders="$( { ls -d tests/Unit 2>/dev/null || true; ls -d tests/Feature/*/ | sed 's#/$##'; } | jq -R . | jq -sc . )"
+          loose="$(ls tests/Feature/*.php | tr '\n' ' ' | sed 's/ $//')"
+          echo "targets=$(jq -nc --argjson folders "$folders" --arg loose "$loose" 'if $loose == "" then $folders else $folders + [$loose] end')" >> "$GITHUB_OUTPUT"
+
+  full:
+    needs: plan
+    runs-on: ubuntu-latest
+    # The Admin and Regression folders boot Filament in every test and are slow; the rest finish in a few minutes.
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ${{ fromJSON(needs.plan.outputs.targets) }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: composer:v2
+          extensions: mbstring, intl, gd, zip, pdo_sqlite, sqlite3, fileinfo, dom, xml, curl
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Environment file
+        run: |
+          cp .env.example .env
+          touch database/database.sqlite
+
+      - name: Cache Composer downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/composer/files
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      - name: Install PHP packages
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Application key
+        run: php artisan key:generate
+
+      - name: Install Node packages
+        run: npm ci
+
+      - name: Build assets
+        run: npm run build
+
+      - name: Pest, ${{ matrix.target }}
+        # $TARGET holds one folder, or the loose test files in tests/Feature separated by spaces, so it is left unquoted on purpose.
+        env:
+          TARGET: ${{ matrix.target }}
+        run: php -d memory_limit=1G vendor/bin/pest $TARGET
