@@ -101,8 +101,8 @@ select:focus[data-flux-control] {
     .hero-word:nth-child(5) { animation-delay: 520ms; }
     .hero-word:nth-child(n + 6) { animation-delay: 650ms; }
 
-    /* Hero: one category every 3 seconds, all in one grid cell. */
-    .hero-rotor > span { animation: none 0s linear infinite both; }
+    /* Hero: one category every 3 seconds, all in one grid cell. A hard cut, not a fade: half-transparent text over navy fails the contrast check while it is measured. */
+    .hero-rotor > span { animation: none 0s step-end infinite; }
     .hero-rotor[data-count='2'] > span { animation-name: rotor-2; animation-duration: 6s; }
     .hero-rotor[data-count='3'] > span { animation-name: rotor-3; animation-duration: 9s; }
     .hero-rotor[data-count='4'] > span { animation-name: rotor-4; animation-duration: 12s; }
@@ -141,8 +141,8 @@ select:focus[data-flux-control] {
 @keyframes hero-word-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes marquee-left { to { transform: translateX(-50%); } }
 @keyframes reveal-up { from { opacity: 0; transform: translateY(1.25rem); } to { opacity: 1; transform: none; } }
-@keyframes rotor-2 { 0% { opacity: 0; } 3% { opacity: 1; } 47% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 0; } }
-@keyframes rotor-3 { 0% { opacity: 0; } 3% { opacity: 1; } 30.3% { opacity: 1; } 33.3% { opacity: 0; } 100% { opacity: 0; } }
-@keyframes rotor-4 { 0% { opacity: 0; } 3% { opacity: 1; } 22% { opacity: 1; } 25% { opacity: 0; } 100% { opacity: 0; } }
-@keyframes rotor-5 { 0% { opacity: 0; } 3% { opacity: 1; } 17% { opacity: 1; } 20% { opacity: 0; } 100% { opacity: 0; } }
-@keyframes rotor-6 { 0% { opacity: 0; } 3% { opacity: 1; } 13.7% { opacity: 1; } 16.7% { opacity: 0; } 100% { opacity: 0; } }
+@keyframes rotor-2 { 0% { opacity: 1; } 50% { opacity: 1; } 50.1% { opacity: 0; } 100% { opacity: 0; } }
+@keyframes rotor-3 { 0% { opacity: 1; } 33.3% { opacity: 1; } 33.4% { opacity: 0; } 100% { opacity: 0; } }
+@keyframes rotor-4 { 0% { opacity: 1; } 25% { opacity: 1; } 25.1% { opacity: 0; } 100% { opacity: 0; } }
+@keyframes rotor-5 { 0% { opacity: 1; } 20% { opacity: 1; } 20.1% { opacity: 0; } 100% { opacity: 0; } }
+@keyframes rotor-6 { 0% { opacity: 1; } 16.7% { opacity: 1; } 16.8% { opacity: 0; } 100% { opacity: 0; } }
