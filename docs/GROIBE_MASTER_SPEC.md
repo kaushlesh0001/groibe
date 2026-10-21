@@ -561,7 +561,7 @@ Stored in `feature_flags`, cached, toggled in Admin. Defaults:
 - Categories and 40+ skills across: Research, Marketing, Content, Design, Data & Analytics, Technology, Operations, Finance, Sales.
 - Project types: Market Research, Dashboard/Reporting, Content & Social, Process Automation, Website/App Build, Financial Modelling, Operations Support.
 - Agreement templates (placeholders, all five carrying the same placeholder marker, SCR-036), FAQs (10 general, 6 contributor, 6 client), homepage CMS sections with default copy, feature flags.
-- Demo dataset (local/staging only, `DemoSeeder`): 30 contributors, 12 organizations, 8 briefs, 6 projects across all states, 10 open roles, applications, reviews, proof-of-work items. Must never run in production.
+- Demo dataset (local/staging only, `DemoSeeder`): 12 contributors (active, pending review and suspended), 4 organizations with 7 client users, 6 briefs, 8 projects (draft, SOW sent, staffing, active, three accepted, one closed), 4 open roles with 4 applications, 5 reviews, 3 proof-of-work items, featured picks and two clearly fake testimonials. It also publishes labelled demo wording for the Member Agreement, Client MSA and SOW template (SCR-036). Never runs in production. Full list in `docs/DEMO_DATA.md`.
 
 ## 20. Acceptance criteria (summary; per-pass details live in the prompt pack)
 
@@ -638,3 +638,9 @@ Stored in `feature_flags`, cached, toggled in Admin. Defaults:
 | 2026-10-15 | 6.10, 8, 12, 19 | SCR-036: one shared placeholder marker on every seeded agreement template; a placeholder counts as not published and cannot be accepted or used; the admin screen labels it | Founder |
 | 2026-10-15 | 17.4 | SCR-037: the deploy script writes a pre-deploy dump (own file name and retention, size check) before the site goes into maintenance mode, and stops if it fails | Founder |
 | 2026-10-15 | 17.1, 17.2 | SCR-038: `public/.htaccess` redirects plain HTTP to HTTPS and honours `X-Forwarded-Proto` | Founder |
+| 2026-10-21 | 15.1 | Recorded as built, decided in Pass 9 item 2 (SUGGESTIONS 247, 293): an existing email is skipped, never updated; `status` accepts only `pending`; a client row needs a contact name and email; a contact already in another organization is refused; file limit 5 MB and 5,000 rows; invites go out at `groibe.invites.per_minute` (30) | Founder |
+| 2026-10-21 | 7.10 | Recorded as built (SUGGESTIONS 293): plain, non-unique index on `organizations.gstin` | Founder |
+| 2026-10-21 | 17.2 | Recorded as built (SUGGESTIONS 271, 272): data request screens at `/settings/privacy` and System > Data requests; the export is made on the spot, never stored; what a copy holds and what erasure removes and keeps; erasure refused while work or money is open; the person sees the admin's note | Founder |
+| 2026-10-21 | 17.2 | Recorded as built (SUGGESTIONS 312): while a super admin impersonates, every audit entry carries `impersonated_by`, and accepting a SOW, the Client MSA or the Member Agreement, accepting or changing a milestone, showcase consent and opening a data request are refused | Founder |
+| 2026-10-21 | 5, 13 | Recorded as built (SUGGESTIONS 311): an admin role creates only the roles its permission row allows; email, password, status and role of an existing account are super admin only | Founder |
+| 2026-10-21 | 6.11, 12 | Recorded as built (SUGGESTIONS 289, 290, 310): client registration creates the account, a `pending` organization and the owner link; a registered GSTIN is refused; the client Organization page lets owner and manager edit and the owner invite a manager or viewer; changing or removing a member stays an admin task | Founder |

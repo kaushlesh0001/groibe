@@ -235,49 +235,49 @@ Proposed changes only. The spec is edited by the founder, between passes, and lo
 - **Status:** ACCEPTED 2026-10-12 by the founder, to be built in Pass 9 item 2, and written into the master spec (section 15.1 and the section 23 change log).
 - **Gap:** Section 15.1 says "CSV/XLSX", but the stack has no spreadsheet library and the spec names none.
 - **Decision:** Imports accept CSV only. XLSX is deferred to a later release and is logged in `docs/SUGGESTIONS.md`. Exported CSV files start with a UTF-8 byte order mark so Excel reads names correctly.
-- **Code status:** Not built yet.
+- **Code status:** Built in Pass 9 item 2 (SUGGESTIONS 245, 254).
 
 ## SCR-026: Exports above 5,000 rows are refused (spec section 15.2)
 
 - **Status:** ACCEPTED 2026-10-12 by the founder, to be built in Pass 9 item 3, and written into the master spec (section 15.2 and the section 23 change log).
 - **Gap:** Section 15.2 promised a queued export with an emailed link above 5,000 rows, then noted that v1 builds the synchronous path only. The prompt pack asks for queued exports.
 - **Decision:** The queued path is not built. Above 5,000 rows an export is refused with a message asking the admin to narrow the filters. This applies to every export, payouts and invoice references included.
-- **Code status:** Payout and invoice exports already behave this way (SCR-024). The other exports follow in Pass 9 item 3.
+- **Code status:** Built. Payout and invoice exports (SCR-024) and the seven other exports (Pass 9 item 3, SUGGESTIONS 251, 254) all refuse above 5,000 rows.
 
 ## SCR-027: Import bookkeeping columns (spec sections 7.9, 15.1)
 
 - **Status:** ACCEPTED 2026-10-12 by the founder, to be built in Pass 9 item 2, and written into the master spec (sections 7.9, 15.1 and the section 23 change log).
 - **Gap:** `imports` has no place for the column mapping, the dry-run result or the rows skipped.
 - **Decision:** `imports` also gets `mapping` (json), `dry_run` (bool) and `skipped_rows` (int). `status` is a backed enum: `uploaded`, `validated`, `queued`, `running`, `completed`, `failed`. Transitions are one Action each; an illegal one throws `IllegalTransition`.
-- **Code status:** Not built yet.
+- **Code status:** Built in Pass 9 item 2 (SUGGESTIONS 245, 247).
 
 ## SCR-028: Data requests (spec sections 7.9, 17.2)
 
 - **Status:** ACCEPTED 2026-10-12 by the founder, to be built in Pass 9 item 5, and written into the master spec (sections 7.9, 17.2 and the section 23 change log).
 - **Gap:** Section 17.2 asks for user data export and deletion requests, processed by an admin, with no table, states or permission.
 - **Decision:** New table `data_requests`: id, uuid, user_id, type (`export|deletion`), status (`open|in_progress|completed|rejected`), note, handled_by (nullable), handled_at (nullable), timestamps. Deletion means anonymise and soft delete, never a hard delete, so payouts and the audit trail stay intact. Only `super_admin` may process requests. Every state change is in the audit log.
-- **Code status:** Not built yet.
+- **Code status:** Built in Pass 9 item 5 (SUGGESTIONS 271 to 273).
 
 ## SCR-029: Two-factor authentication for admins (spec sections 7.1, 17.2, 18)
 
 - **Status:** ACCEPTED 2026-10-12 by the founder, to be built in Pass 9 item 4, and written into the master spec (sections 7.1, 17.2 and the section 23 change log).
 - **Gap:** Section 17.2 says "Filament-compatible package or custom" and no storage exists.
 - **Decision:** Filament's built-in app authentication (TOTP). `users` gets an encrypted secret and encrypted recovery codes. 2FA is always required for `super_admin`, whatever the `two_factor_admin` flag says. The flag enforces it for every other admin role. An artisan command resets 2FA for one user by email, so a locked-out admin can be recovered from the server; the reset is written to the audit log.
-- **Code status:** Not built yet.
+- **Code status:** Built in Pass 9 item 4 (SUGGESTIONS 260). Reset command: `groibe:two-factor-reset`.
 
 ## SCR-030: Showcase consent changes are audited (spec section 17.2)
 
 - **Status:** ACCEPTED 2026-10-12 by the founder, to be checked in Pass 9 item 5, and written into the master spec (section 17.2 and the section 23 change log).
 - **Gap:** Consent timestamps are stored for agreements. Showcase consent (`projects.showcase_consent`) has no stated audit rule.
 - **Decision:** `agreement_acceptances` is enough for agreements. A change to `showcase_consent` is recorded in the activity log. No data model change. A test is added if one is missing.
-- **Code status:** To be verified.
+- **Code status:** Verified in Pass 9 item 5: already met, pinned by `ConsentRecordsTest` (SUGGESTIONS 274).
 
 ## SCR-031: Permission to import clients (spec sections 5, 15.1)
 
 - **Status:** ACCEPTED 2026-10-12 by the founder, to be built in Pass 9 item 2, and written into the master spec (section 5 and the section 23 change log).
 - **Gap:** The permission matrix lists exports for each role but not who may import clients.
 - **Decision:** New permission `import_export.import_clients`, granted to `super_admin` and `delivery_manager` only. Contributor imports follow the existing Import/Export row.
-- **Code status:** Not built yet.
+- **Code status:** Built in Pass 9 item 2 (`import_export.import_clients`, SUGGESTIONS 245).
 
 ## SCR-032: Email log retention (spec sections 5, 14, 17.1)
 
@@ -295,7 +295,7 @@ Proposed changes only. The spec is edited by the founder, between passes, and lo
   2. The permission is checked when the export runs, not only when the button shows.
   3. Every export respects the filters and tab on screen, is refused above 5,000 rows (SCR-026), starts with a UTF-8 byte order mark (SCR-025), protects formula-looking cells, and is written to the audit log with its row count.
   4. Lists of people (contributors, clients, applicants) carry name and email, never phone. No export carries internal notes, bios, review comments or other free text. Admin users are never exported.
-- **Code status:** Not built yet.
+- **Code status:** Built in Pass 9 item 3 (SUGGESTIONS 251 to 254).
 
 ## SCR-034: Housekeeping jobs (spec sections 17.1, 17.4)
 

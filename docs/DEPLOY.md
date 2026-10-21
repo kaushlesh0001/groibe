@@ -2,6 +2,8 @@
 
 Status: written in Pass 10. This is a procedure, not policy. Anything marked CONFIRM depends on the host (MilesWeb at the time of writing): check it with their support or in cPanel before relying on it.
 
+Day-to-day procedures (data requests, 2FA reset, weekly checks) are in [`docs/OPERATIONS.md`](OPERATIONS.md).
+
 Groibe is one Laravel app. It needs PHP, MySQL, a cron job and an outbound mail server. It needs no Node, no Redis and no background process on the server (spec 17.1).
 
 **Contents**
@@ -23,6 +25,11 @@ Groibe is one Laravel app. It needs PHP, MySQL, a cron job and an outbound mail 
 15. [Post-deploy smoke test](#15-post-deploy-smoke-test)
 16. [Order of work, staging first](#16-order-of-work-staging-first)
 17. [Things to confirm with the host](#17-things-to-confirm-with-the-host)
+18. [Retention and pruning](#18-retention-and-pruning)
+19. [Off-server copies](#19-off-server-copies)
+20. [Uptime monitor](#20-uptime-monitor)
+21. [Incidents and breaches](#21-incidents-and-breaches)
+22. [Test agreement wording on staging](#22-test-agreement-wording-on-staging)
 
 ---
 
@@ -132,7 +139,7 @@ Do this on staging first. Replace `CPUSER`, the repository address and the paths
    Then open `.env`, **delete the value of `ADMIN_PASSWORD`**, and run `$PHP artisan config:cache`. The password is only read when the account is first created.
    `DemoSeeder` (fake people and projects) is refused outside the `local`, `staging` and `testing` environments. Run it on staging only if you want demo data: `$PHP artisan migrate:fresh --seed --seeder=DemoSeeder` wipes that database.
 9. **Document root** (section 3), **cron** (section 7), **permissions** (section 8).
-10. **Sign in** at `/admin/login` as the super admin. Two-factor set-up is compulsory for the super admin: scan the code with an authenticator app and store the recovery codes safely. If you are ever locked out, the server can reset it: `$PHP artisan groibe:two-factor-reset someone@example.com`.
+10. **Sign in** at `/admin/login` as the super admin. Two-factor set-up is compulsory for the super admin: scan the code with an authenticator app and store the recovery codes safely. If you are ever locked out, the server can reset it: `$PHP artisan groibe:two-factor-reset someone@example.com`. The full steps are in [`docs/OPERATIONS.md`](OPERATIONS.md), section 3.
 11. **Admin, once:** System, Agreement Templates: paste and publish the real legal texts. Website: approve the wording of the seeded pages and sections ("Approve wording"), then switch on what should be public. Nothing marked "needs review" is ever public.
 12. Run the smoke test (section 15).
 
@@ -344,13 +351,16 @@ Run this after the first deploy and after every release. Tick each line.
 - [ ] `php artisan groibe:backup-db` writes a file into `GROIBE_BACKUP_PATH` and not into the web root, and the restore drill (section 14) has been done once.
 - [ ] `storage/logs/laravel-DATE.log` is being written, and it contains no passwords or tokens.
 - [ ] `php artisan schedule:list` shows ten jobs.
+- [ ] On production, the test agreement wording check in section 22 prints `0`.
+- [ ] The uptime monitor (section 20) is on and its alert email arrives.
+- [ ] The first encrypted off-server copy (section 19) has been made and opened once.
 
 ## 16. Order of work, staging first
 
 1. Staging subdomain on the host: its own folder, database, `.env` (`APP_ENV=staging`) and mailbox. Install (section 4). Run the smoke test.
 2. Confirm cron is running (System status), send test emails, check spam placement, fix SPF, DKIM and DMARC.
 3. Do the restore drill on a scratch database.
-4. Paste the real legal templates into Admin and publish them. Approve the website wording.
+4. Paste the real legal templates into Admin and publish them. Approve the website wording. On a staging site without demo data, publish the test wording of section 22 first.
 5. Import contributors and clients on staging. Read the error report. Fix the file.
 6. Production: same steps, `APP_ENV=production`, then the Cloudflare settings (section 11).
 7. Import to production. Send invitations in **small batches**, watching the Email Log.
@@ -370,3 +380,108 @@ These cannot be checked from the code. Ask once, in writing, and keep the answer
 | Can the document root of the domain be set to `groibe/public`? | Option A in section 3. |
 | Is the connection MySQL or MariaDB, and its version? | Use `DB_CONNECTION=mysql` either way. FULLTEXT search needs InnoDB. |
 | What do the host's daily backups cover, and for how long? | The dump does not hold files in `storage/app/private`. |
+
+## 18. Retention and pruning
+
+Data that grows without limit eats the host's database quota (`DB_SIZE_LIMIT_MB`) and keeps personal data longer than needed. These are the rules. **Built** means the app already does it. **Decided, not built** means the rule is agreed but needs code, and is listed in SUGGESTIONS 321 for the founder to schedule. Until it is built, nobody prunes it.
+
+| Data | Keep | Status |
+|---|---|---|
+| Email log, `sent` rows | 90 days (daily 03:00, SCR-032) | Built |
+| Email log, `failed` rows | 180 days | Built |
+| Import files and their reports | 30 days after upload; temporary uploads 1 day (daily 03:10, SCR-034) | Built |
+| Stale invites | Reported after 14 days, never deleted (daily 08:30, SCR-034) | Built |
+| Expired password-reset tokens | Cleared daily (SCR-034) | Built |
+| Log files (`storage/logs`) | 14 days (`daily` channel) | Built |
+| Weekly database dumps | Newest `GROIBE_BACKUP_KEEP` (default 4) | Built |
+| `failed_jobs` and `job_batches` | 30 days (`queue:prune-failed --hours=720`, `queue:prune-batches --hours=720`) | Decided, not built (no schedule today) |
+| Notifications that have been read | 180 days. Unread ones stay. | Decided, not built (no command exists) |
+| `activity_log` (audit trail) | 365 days (`activitylog:clean`; `config/activitylog.php` already says 365) | Decided, not built (`activitylog:clean` is not scheduled) |
+
+Payouts, agreement acceptances and the audit entries of erasures follow SCR-028, not this table. If the lawyer sets a longer period for the audit trail or the email log, change this table and the spec first.
+
+## 19. Off-server copies
+
+The host's backups and the weekly dump sit on the same server (section 14). One bad day can take both. So a second copy leaves the server every week.
+
+**Owner: the founder. When: every week, after Sunday 02:30.** The dump holds personal data and is **not encrypted by the app**. It must be encrypted **before it leaves the server**.
+
+1. SSH in. Go to the backup folder (`GROIBE_BACKUP_PATH`) and encrypt the newest dump with a passphrase:
+
+   ```bash
+   cd ~/groibe-backups
+   gpg --symmetric --cipher-algo AES256 groibe-db-YYYYMMDD-HHMMSS.sql.gz
+   ```
+
+   It asks for the passphrase twice and writes `groibe-db-YYYYMMDD-HHMMSS.sql.gz.gpg`. The passphrase lives in the password manager. Never type it into a script or a file on the server.
+2. Download the `.gpg` file by SFTP to a safe place that is not the server and not an open shared folder.
+3. Delete the `.gpg` file from the server. The plain dump stays under the normal retention.
+4. **Monthly:** do the same for `storage/app/private` (it is not in the dump):
+
+   ```bash
+   cd ~/groibe/storage/app
+   tar -czf - private | gpg --symmetric --cipher-algo AES256 -o ~/groibe-backups/private-YYYYMMDD.tar.gz.gpg
+   ```
+
+   Download it, then delete it from the server.
+5. Keep `.env` and `APP_KEY` in the password manager too (section 14). Without `APP_KEY`, encrypted columns in a restored database cannot be read.
+6. Once a quarter, decrypt one copy and run the restore drill (section 14) from it, so you know the passphrase and the file both work.
+
+How many off-server copies to keep is the founder's choice. A starting value is the last 8 weekly dumps and the last 3 monthly file copies.
+
+## 20. Uptime monitor
+
+Set up an outside monitor on `https://SITE/up` (Laravel's health route). Any monitoring service that checks a URL every 5 minutes and sends **email alerts** will do. Send the alerts to the founder and to `contact@groibe.com`. Do this for production, and for staging while it is in use.
+
+- Alert when the check fails twice in a row.
+- `/up` shows that the app starts. It does **not** show that cron runs, so a stopped cron raises no alert. The weekly check of System status in `docs/OPERATIONS.md` covers that. Whether to add an alert for a stopped cron is open (SUGGESTIONS 321).
+- Write down the monitor's account name and who can see it, next to the host answers in section 17.
+
+## 21. Incidents and breaches
+
+These are short checklists. They are not legal advice. **If personal data may have been lost, shown to the wrong person or taken, get legal advice before you tell anyone outside the company, and before you decide whether and when someone must be told. Do not guess at deadlines or duties.**
+
+**Any incident (site down, errors, wrong behaviour)**
+
+1. Note the time, what you saw and who reported it. Write it down as you go.
+2. Check the uptime monitor, System status (cron, failed jobs, database size) and the newest `storage/logs` file.
+3. If a bad release caused it, roll back the code (section 13).
+4. If the site must be closed while you work, run `php artisan down`. Bring it back with `php artisan up`.
+5. Fix it, then run the smoke test (section 15).
+6. Write down the cause and what changed, and add it to SUGGESTIONS if code needs a fix.
+
+**Possible breach (data seen or taken by someone who should not have it)**
+
+1. Stop the damage first: sign the account out and suspend it, reset the password, reset 2FA where needed (`docs/OPERATIONS.md`), and rotate any secret that may have leaked (database password, mail password). Rotate `APP_KEY` only with care, because it affects encrypted data.
+2. **Keep the evidence.** Do not delete logs. Copy `storage/logs`, the audit log and the email log somewhere safe.
+3. Write down: what data, how many people, from when to when, how it happened, and what has been stopped.
+4. **Get legal advice now.** Ask what must be done, by when, and who must be told.
+5. Tell the host's support if the server itself may be affected.
+6. After it is settled, write down what will change so it cannot happen the same way again.
+
+## 22. Test agreement wording on staging
+
+Until real legal wording is published, the Member Agreement, Client MSA and SOW template count as not published (SCR-036). On a staging site **without demo data**, contributors cannot finish onboarding, client owners cannot submit a brief and no SOW can be built. (With demo data, `DemoSeeder` publishes its own labelled wording.) For staging only, publish this test wording.
+
+1. Sign in as super admin on **staging**. Open **System, Agreement Templates**.
+2. For each of the three templates, replace the body with the banner below, then a line of dummy text. For the SOW template keep the variables from spec 8 (`{{client_name}}`, `{{project_title}}`, `{{scope}}`, `{{milestones_table}}`, `{{total_value}}`, `{{payment_terms}}`, `{{start_date}}`, `{{due_date}}`).
+3. **Do not** keep the sentence "Replace with the approved legal text." in the body: while it is there the template still counts as a placeholder.
+4. Publish each one, and check the screen shows "Real wording".
+
+Banner, as the first line of every test body (it is shown to the person who accepts):
+
+```html
+<p><strong>TEST TEXT, NOT LEGAL WORDING. This is a staging site. Nothing here is a contract.</strong></p>
+```
+
+Terms and Privacy stay as placeholders on staging, so `/terms` and `/privacy` stay 404.
+
+**Check that test wording is never live on production.** Do it before go-live, after the real wording is published, and after every deploy:
+
+```bash
+php artisan tinker --execute="echo App\Models\AgreementTemplate::query()->where('is_active', true)->where('body_html', 'like', '%TEST TEXT, NOT LEGAL WORDING%')->count();"
+```
+
+It must print `0`. If it prints more than `0` on production, replace that template with the approved wording at once and ask the lawyer whether anyone accepted it. This check is also in the smoke test (section 15).
+
+This is a manual check. The app does not block the banner text on production. Whether to add a code guard is open (SUGGESTIONS 321).

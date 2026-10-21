@@ -6,6 +6,12 @@ Fake accounts and records for local and staging only. The seeder refuses to run 
 php artisan db:seed --class=DemoSeeder
 ```
 
+For a clean local database use `php artisan migrate:fresh --seed --seeder=DemoSeeder`. On staging the plain `db:seed` command above is the safe one, because it never wipes.
+
+**Totals:** 12 contributors, 4 organizations with 7 client users, 6 briefs, 8 projects, 4 open roles with 4 applications, 5 reviews and 3 proof-of-work items. Spec 19 lists these figures.
+
+**Agreement wording (SCR-036).** The Member Agreement, Client MSA and SOW template are seeded as placeholders, and a placeholder counts as not published. So the seeder publishes a version of each titled "(demo wording)" that says it is not legal text, only while the current version is still a placeholder. Real wording is never replaced. Terms and Privacy stay placeholders, so `/terms` and `/privacy` answer 404.
+
 It adds data and never wipes. Running it again changes nothing: every record is matched on its email, slug or title and left alone if it exists. It sends no email or notifications. The Roles, Taxonomy, Feature Flags and Agreement Templates seeders run first, because the demo data needs them.
 
 ## Logins
