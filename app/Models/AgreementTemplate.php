@@ -73,10 +73,18 @@ class AgreementTemplate extends Model
         $query->where('is_active', true);
     }
 
-    /** True when the body carries the test wording banner, in any letter case (SCR-039). */
+    /**
+     * True when the text of the body carries the test wording banner, in any letter case (SCR-039). The match is on what a reader
+     * sees, not on the raw HTML: tags are stripped (so `TEST <strong>TEXT</strong>` counts), entities are decoded, non-breaking
+     * spaces and runs of spaces and line breaks become one space, and zero-width characters are dropped.
+     */
     public static function bodyHasTestWording(?string $body): bool
     {
-        return str_contains(mb_strtolower((string) $body), mb_strtolower(self::TEST_WORDING_BANNER));
+        $text = html_entity_decode(strip_tags((string) $body), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $text = preg_replace('/[\x{200B}\x{200C}\x{200D}\x{2060}\x{FEFF}\x{00AD}]/u', '', $text) ?? $text;
+        $text = preg_replace('/[\s\x{00A0}\x{202F}\x{2007}]+/u', ' ', $text) ?? $text;
+
+        return str_contains(mb_strtolower(trim($text)), mb_strtolower(self::TEST_WORDING_BANNER));
     }
 
     public function isTestWording(): bool
