@@ -4,6 +4,7 @@
 
 Notes for the reviewer (delete before publishing):
 
+- **Decision (founder, 2026-10-22):** this code will be published as a schedule inside the Member Agreement (SCR-043 option A). Contributors accept it together with the agreement, and that acceptance is already recorded. SCR-043 stays PROPOSED: option B (a separate agreement type) is not chosen and nothing is built. [LAWYER: draft the Member Agreement so that this code is a schedule to it, say which wins if they differ, and say how a change to the code is notified to contributors who are already active.]
 - This code is for contributors. It works together with the Member Agreement. [LAWYER: say whether it is part of the Member Agreement or a separate document, and which wins if they differ.]
 - There is no agreement type for it in the platform. Today only the Member Agreement is accepted and recorded (spec 8). If it must be a separate document with its own recorded acceptance, see **SCR-043 (PROPOSED)** in `docs/SPEC_CHANGE_REQUESTS.md`. Nothing is built. The cheap route with no code change is to publish it as a schedule inside the Member Agreement, which contributors accept with it.
 - Square brackets are placeholders or open questions. No fact is invented. The platform rules named here are the ones in the master spec.
