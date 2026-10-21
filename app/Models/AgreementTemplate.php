@@ -24,6 +24,12 @@ class AgreementTemplate extends Model
      */
     public const PLACEHOLDER_NOTE = 'Replace with the approved legal text.';
 
+    /**
+     * The banner staging test wording starts with (SCR-039, DEPLOY.md section 22). It must never be live on production: the
+     * publish action refuses it there and the System status widget flags it if it is found.
+     */
+    public const TEST_WORDING_BANNER = 'TEST TEXT, NOT LEGAL WORDING';
+
     /** @var list<string> */
     protected $fillable = ['type', 'version', 'title', 'body_html', 'is_active', 'effective_from'];
 
@@ -65,6 +71,17 @@ class AgreementTemplate extends Model
     public function scopeActive(Builder $query): void
     {
         $query->where('is_active', true);
+    }
+
+    /** True when the body carries the test wording banner, in any letter case (SCR-039). */
+    public static function bodyHasTestWording(?string $body): bool
+    {
+        return str_contains(mb_strtolower((string) $body), mb_strtolower(self::TEST_WORDING_BANNER));
+    }
+
+    public function isTestWording(): bool
+    {
+        return self::bodyHasTestWording($this->body_html);
     }
 
     /**

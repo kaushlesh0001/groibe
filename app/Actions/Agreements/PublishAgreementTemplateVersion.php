@@ -7,6 +7,7 @@ use App\Models\AgreementTemplate;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Publishes the next version of an agreement type, or version 1 when the type has none yet. A saved version is
@@ -19,6 +20,13 @@ class PublishAgreementTemplateVersion
     public function __invoke(AgreementType $type, User $actor, array $data): AgreementTemplate
     {
         Gate::forUser($actor)->authorize('create', AgreementTemplate::class);
+
+        // SCR-039: staging test wording must never become live wording on production. Nothing is saved.
+        if (app()->environment('production') && AgreementTemplate::bodyHasTestWording($data['body_html'])) {
+            throw ValidationException::withMessages([
+                'body_html' => 'This text is marked as test wording ('.AgreementTemplate::TEST_WORDING_BANNER.') and cannot be published on the live site. Use the approved legal wording.',
+            ]);
+        }
 
         return DB::transaction(function () use ($type, $actor, $data): AgreementTemplate {
             $previous = AgreementTemplate::query()->where('type', $type)->lockForUpdate()->max('version');

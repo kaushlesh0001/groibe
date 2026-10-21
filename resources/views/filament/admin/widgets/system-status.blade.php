@@ -1,5 +1,15 @@
 <x-filament-widgets::widget wire:poll.30s>
     <x-filament::section heading="System status">
+        @if ($cronStoppedMinutes !== null)
+            <p role="alert" style="margin:0 0 0.75rem;padding:0.5rem 0.75rem;border-radius:0.5rem;background:#fef2f2;color:#991b1b;font-weight:600">
+                Alert: cron has not run for {{ $cronStoppedMinutes }} minutes. Queued email and every scheduled job are stopped.
+            </p>
+        @endif
+        @if ($testWordingTemplates !== [])
+            <p role="alert" style="margin:0 0 0.75rem;padding:0.5rem 0.75rem;border-radius:0.5rem;background:#fef2f2;color:#991b1b;font-weight:600">
+                Alert: test wording is live on the site: {{ implode(', ', $testWordingTemplates) }}. Publish the approved legal wording now.
+            </p>
+        @endif
         <dl style="margin:0">
             <div style="display:flex;justify-content:space-between;padding:0.25rem 0">
                 <dt>Cron</dt>
@@ -37,6 +47,10 @@
                         Not checked yet
                     @endif
                 </dd>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:0.25rem 0">
+                <dt>Data requests waiting over {{ $dataRequestDays }} days</dt>
+                <dd style="margin:0;font-weight:600">{{ number_format($dataRequestsWaiting) }}</dd>
             </div>
         </dl>
     </x-filament::section>

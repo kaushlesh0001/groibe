@@ -2,6 +2,8 @@
 
 namespace App\Filament\Admin\Widgets;
 
+use App\Models\AgreementTemplate;
+use App\Models\DataRequest;
 use App\Services\Admin\DashboardMetrics;
 use App\Services\Ops\CronHeartbeat;
 use App\Services\Ops\DatabaseSize;
@@ -35,10 +37,34 @@ class SystemStatusWidget extends Widget
 
         return [
             'cronHealthy' => $heartbeat->isHealthy(),
+            // SCR-039: a heartbeat older than 10 minutes is an alert; "no run recorded yet" is not.
+            'cronStoppedMinutes' => ! $heartbeat->isHealthy() ? $heartbeat->minutesSinceLastRun() : null,
+            'dataRequestsWaiting' => DataRequest::query()->waitingLongerThan(max(1, (int) config('groibe.ops.data_request_reminder_days')))->count(),
+            'dataRequestDays' => max(1, (int) config('groibe.ops.data_request_reminder_days')),
+            'testWordingTemplates' => $this->testWordingTemplates(),
             'lastRun' => $lastRun?->diffForHumans(),
             'queue' => $queue,
             // The last daily measurement (SCR-034); the page never runs the size query itself.
             'database' => app(DatabaseSize::class)->lastCheck(),
         ];
+    }
+
+    /**
+     * Titles of active agreement templates that still hold the test wording banner, on production only (SCR-039). On staging
+     * the banner is expected, so nothing is flagged there.
+     *
+     * @return list<string>
+     */
+    private function testWordingTemplates(): array
+    {
+        if (! app()->environment('production')) {
+            return [];
+        }
+
+        return AgreementTemplate::query()->active()->get()
+            ->filter(fn (AgreementTemplate $template): bool => $template->isTestWording())
+            ->map(fn (AgreementTemplate $template): string => $template->title.' (version '.$template->version.')')
+            ->values()
+            ->all();
     }
 }

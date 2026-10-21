@@ -57,6 +57,17 @@ return [
         'email_log_sent_days' => 90,
         'email_log_failed_days' => 180,
 
+        // SCR-039: days kept, used when the `settings` row of the same key (retention.<name>) is missing or not a whole number of 1 or more.
+        'retention' => [
+            'failed_jobs_days' => 30,
+            'job_batches_days' => 30,
+            'notifications_read_days' => 180,
+            'activity_log_days' => 365,
+        ],
+
+        // SCR-039: super admins are reminded once a day while a data request that is still waiting is older than this.
+        'data_request_reminder_days' => 7,
+
         // The weekly database dump. Written outside the web root: the command refuses a folder under `public`.
         'backup' => [
             'path' => env('GROIBE_BACKUP_PATH'),

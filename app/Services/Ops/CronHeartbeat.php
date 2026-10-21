@@ -13,8 +13,8 @@ class CronHeartbeat
 {
     public const KEY = 'groibe.cron.last_run';
 
-    /** A beat older than this many minutes means cron has stopped. */
-    public const STALE_AFTER_MINUTES = 5;
+    /** A beat older than this many minutes means cron has stopped, and System status raises an alert (SCR-039). */
+    public const STALE_AFTER_MINUTES = 10;
 
     public function record(): void
     {
@@ -26,6 +26,14 @@ class CronHeartbeat
         $timestamp = Cache::get(self::KEY);
 
         return is_int($timestamp) ? CarbonImmutable::createFromTimestamp($timestamp) : null;
+    }
+
+    /** Whole minutes since the last beat, or null when none was ever recorded. */
+    public function minutesSinceLastRun(): ?int
+    {
+        $last = $this->lastRun();
+
+        return $last === null ? null : (int) $last->diffInMinutes(now(), true);
     }
 
     public function isHealthy(): bool

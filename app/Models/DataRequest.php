@@ -70,6 +70,12 @@ class DataRequest extends Model
         $query->whereIn('status', [DataRequestStatus::Open->value, DataRequestStatus::InProgress->value]);
     }
 
+    /** Still waiting (open or in progress) and made more than this many days ago (SCR-039). @param Builder<DataRequest> $query */
+    public function scopeWaitingLongerThan(Builder $query, int $days): void
+    {
+        $query->whereIn('status', [DataRequestStatus::Open->value, DataRequestStatus::InProgress->value])->where('created_at', '<', now()->subDays($days));
+    }
+
     /** Moves to a new status, or throws when the state machine does not allow it. */
     public function moveTo(DataRequestStatus $to): void
     {
