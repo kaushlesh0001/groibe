@@ -1,5 +1,7 @@
 # Deploying Groibe to a shared cPanel host
 
+**For the first deploy, follow [`docs/STAGING_CHECKLIST.md`](STAGING_CHECKLIST.md). It is the procedure for this account (MilesWeb, PHP at `/opt/ecp-php83/bin/php`, a live WordPress site in `public_html`). This file is the general reference behind it. Where the two differ, the staging checklist wins.**
+
 Status: written in Pass 10. This is a procedure, not policy. Anything marked CONFIRM depends on the host (MilesWeb at the time of writing): check it with their support or in cPanel before relying on it.
 
 Day-to-day procedures (data requests, 2FA reset, weekly checks) are in [`docs/OPERATIONS.md`](OPERATIONS.md).
@@ -47,7 +49,7 @@ Keep **two sites**: a staging subdomain first (its own folder, database and `.en
 
 ## 2. PHP 8.3 and its settings
 
-1. cPanel, **MultiPHP Manager**: choose PHP 8.3 for the domain. The `php` that a plain SSH login runs is often older. Find the path of the 8.3 binary (usually `/opt/cpanel/ea-php83/root/usr/bin/php`, CONFIRM) and use it for everything below, in the deploy script as `PHP_BIN`, and in cron.
+1. cPanel, **MultiPHP Manager**: choose PHP 8.3 for the domain. The `php` that a plain SSH login runs is often older. Find the path of the 8.3 binary and use it for everything below, in the deploy script as `PHP_BIN`, and in cron. On this account (MilesWeb) it is `/opt/ecp-php83/bin/php`. On another host it may differ (for example `/opt/cpanel/ea-php83/root/usr/bin/php`): look in `/opt` and run the candidate with `-v` to check.
 2. cPanel, **Select PHP Version, Extensions**: switch on `ctype`, `curl`, `dom`, `exif`, `fileinfo`, `filter`, `gd` (with JPEG, PNG and WebP), `iconv`, `intl`, `json`, `mbstring`, `openssl`, `pdo_mysql`, `phar`, `session`, `simplexml`, `tokenizer`, `xml`, `xmlreader`, `xmlwriter`, `zip`, `zlib`. Check them with `php -m` on the 8.3 binary.
 3. cPanel, **MultiPHP INI Editor**:
 
@@ -66,37 +68,11 @@ Keep **two sites**: a staging subdomain first (its own folder, database and `.en
 
 The app lives **outside** the web folder, so `.env`, `vendor`, `storage` and the code are never reachable from a browser. Put it beside `public_html`, for example `/home/CPUSER/groibe`.
 
-**Option A (recommended): point the domain at `groibe/public`.**
-cPanel, **Domains, Manage, Document Root**: set it to `groibe/public`. This works for a subdomain such as `staging`. For the primary domain cPanel may lock the document root to `public_html`; if so, use option B or ask the host to change it. Nothing else is needed: `public/.htaccess` already routes requests to `index.php`, and it also sends plain `http://` requests to `https://` (see "HTTP to HTTPS" below).
+**Point the domain at `groibe/public`.** cPanel, **Domains, Manage, Document Root**: set it to `groibe/public`. This works for a subdomain such as `staging`: when you create it, type `groibe-staging/public` and never accept a suggested document root inside `public_html`. For the primary domain cPanel may lock the document root to `public_html`: ask the host to change it. Nothing else is needed: `public/.htaccess` already routes requests to `index.php`, and it also sends plain `http://` requests to `https://` (see "HTTP to HTTPS" below).
 
-**Option B: copy `public` into `public_html`.**
-Use this only if A is not possible.
+**Never copy `public` into `public_html`.** On this account `public_html` holds the live WordPress site, and a copy would overwrite WordPress files such as `.htaccess` and `index.php`. There is no second way to serve the app: the document root is changed, the files are not copied. (`scripts/deploy.sh` still has an unused `PUBLIC_DIR` switch that does that copy. Leave it unset. Removing it is logged in SUGGESTIONS.) The weekly backup command refuses to write below the public folder, so the default backup folder is safe.
 
-1. After each deploy, `scripts/deploy.sh` copies `groibe/public/` into `public_html/` when you set `PUBLIC_DIR=/home/CPUSER/public_html` (it needs `rsync`). It never touches `public_html/index.php`.
-2. Replace `public_html/index.php` once, so it finds the app and tells Laravel where the public folder is:
-
-   ```php
-   <?php
-
-   use Illuminate\Http\Request;
-
-   define('LARAVEL_START', microtime(true));
-
-   if (file_exists($maintenance = __DIR__.'/../groibe/storage/framework/maintenance.php')) {
-       require $maintenance;
-   }
-
-   require __DIR__.'/../groibe/vendor/autoload.php';
-
-   $app = require_once __DIR__.'/../groibe/bootstrap/app.php';
-   $app->usePublicPath(__DIR__);
-
-   $app->handleRequest(Request::capture());
-   ```
-
-3. Nothing else of the app goes in `public_html`. The weekly backup command refuses to write below the public folder, so the default backup folder is safe in both options.
-
-**HTTP to HTTPS (SCR-038).** The first rewrite rule in `public/.htaccess` redirects any request that is not HTTPS, with a 301, to the same address on `https://`.  The paths a certificate authority and cPanel AutoSSL fetch over plain HTTP (`/.well-known/acme-challenge/`, `/.well-known/pki-validation/` and `/.well-known/cpanel-dcv/`) are left out of the redirect, so issuing and renewing the certificate keeps working. It runs before PHP and covers every file, so it works on staging and on production before Cloudflare is switched on. It leaves a request alone when `X-Forwarded-Proto` is `https`, which is what Cloudflare sets, so it cannot loop. The file is committed, so option B copies it too. Do **not** also turn on the cPanel "Force HTTPS Redirect" switch: cPanel writes it into this same tracked file and `scripts/deploy.sh` would then refuse to run on uncommitted changes. It is only read by Apache (LiteSpeed also reads it); nginx and `php artisan serve` ignore it, so local work is unchanged. Rehearsed in tests, not yet run on the real host: prove it with `curl -I http://SITE/` (section 15).
+**HTTP to HTTPS (SCR-038).** The first rewrite rule in `public/.htaccess` redirects any request that is not HTTPS, with a 301, to the same address on `https://`.  The paths a certificate authority and cPanel AutoSSL fetch over plain HTTP (`/.well-known/acme-challenge/`, `/.well-known/pki-validation/` and `/.well-known/cpanel-dcv/`) are left out of the redirect, so issuing and renewing the certificate keeps working. It runs before PHP and covers every file, so it works on staging and on production before Cloudflare is switched on. It leaves a request alone when `X-Forwarded-Proto` is `https`, which is what Cloudflare sets, so it cannot loop. Do **not** also turn on the cPanel "Force HTTPS Redirect" switch: cPanel writes it into this same tracked file and `scripts/deploy.sh` would then refuse to run on uncommitted changes. The same is true of cPanel **Directory Privacy** on the `public` folder: protect the folder above it instead (step 10 of section 4). It is only read by Apache (LiteSpeed also reads it); nginx and `php artisan serve` ignore it, so local work is unchanged. Rehearsed in tests, not yet run on the real host: prove it with `curl -I http://SITE/` (section 15).
 
 **Never** run `php artisan storage:link`. The app does not use a `public/storage` link, and private files are not served that way (section 9).
 
@@ -118,7 +94,7 @@ Do this on staging first. Replace `CPUSER`, the repository address and the paths
 4. **PHP packages.** Composer must run on the PHP 8.3 binary:
 
    ```bash
-   PHP=/opt/cpanel/ea-php83/root/usr/bin/php
+   PHP=/opt/ecp-php83/bin/php
    $PHP $(command -v composer) install --no-dev --optimize-autoloader --no-interaction
    ```
 
@@ -141,9 +117,10 @@ Do this on staging first. Replace `CPUSER`, the repository address and the paths
    Then open `.env`, **delete the value of `ADMIN_PASSWORD`**, and run `$PHP artisan config:cache`. The password is only read when the account is first created.
    `DemoSeeder` (fake people and projects) is refused outside the `local`, `staging` and `testing` environments. Run it on staging only if you want demo data: `$PHP artisan migrate:fresh --seed --seeder=DemoSeeder` wipes that database.
 9. **Document root** (section 3), **cron** (section 7), **permissions** (section 8).
-10. **Sign in** at `/admin/login` as the super admin: email and password, then a 6-digit code that is emailed to the super admin's address (SCR-040). **Mail must work first.** The code is sent at once and is never written anywhere you can read it on production, so if the email does not arrive you cannot sign in. Do step 7 of section 10 (mail) **before** this step, and on staging first. Nothing needs to be set up for the code. If you are ever locked out, the server can clear the lockout and any authenticator app: `$PHP artisan groibe:two-factor-reset someone@example.com`. The full steps, and what to do when the code email does not arrive, are in [`docs/OPERATIONS.md`](OPERATIONS.md), sections 3 and 4.
-11. **Admin, once:** System, Agreement Templates: paste and publish the real legal texts. Website: approve the wording of the seeded pages and sections ("Approve wording"), then switch on what should be public. Nothing marked "needs review" is ever public.
-12. Run the smoke test (section 15).
+10. **Put a login on staging (staging only, never production).** Staging holds test data and must not be open to everyone. In cPanel, **Directory Privacy**, click the **name** of the folder **above** `public` (for example `groibe-staging`), choose the option to protect this directory with a password, and add a login. Use a non-obvious login name and a long random password from your password manager, and never write either in the repository. Do **not** protect `public`: cPanel writes its rules into the `.htaccess` of the protected folder, `public/.htaccess` is tracked in Git, and `scripts/deploy.sh` refuses to run when a tracked file has changed. The parent folder has no `.htaccess`, so cPanel makes a new untracked one. Then run `echo "/.htaccess" >> .git/info/exclude` in the app folder, so `git status` stays clean. Never protect `public_html`, which holds WordPress. Proof: `curl -sI https://STAGING/` prints `401` with a `WWW-Authenticate: Basic` line. Do this **after** the certificate is issued (AutoSSL needs plain access), and look at cPanel **SSL/TLS Status** monthly, because a login can block a certificate renewal. A health check or uptime monitor on staging then gets `401` and needs the login, or it will report a fault (sections 15 and 20). Full steps: [`docs/STAGING_CHECKLIST.md`](STAGING_CHECKLIST.md), Part 7.
+11. **Sign in** at `/admin/login` as the super admin: email and password, then a 6-digit code that is emailed to the super admin's address (SCR-040). **Mail must work first.** The code is sent at once and is never written anywhere you can read it on production, so if the email does not arrive you cannot sign in. Do step 7 of section 10 (mail) **before** this step, and on staging first. Nothing needs to be set up for the code. If you are ever locked out, the server can clear the lockout and any authenticator app: `$PHP artisan groibe:two-factor-reset someone@example.com`. The full steps, and what to do when the code email does not arrive, are in [`docs/OPERATIONS.md`](OPERATIONS.md), sections 3 and 4.
+12. **Admin, once:** System, Agreement Templates: paste and publish the real legal texts. Website: approve the wording of the seeded pages and sections ("Approve wording"), then switch on what should be public. Nothing marked "needs review" is ever public.
+13. Run the smoke test (section 15).
 
 ## 5. The production .env
 
@@ -180,7 +157,7 @@ npm run build
 rsync -az --delete public/build/ CPUSER@HOST:groibe/public/build/
 ```
 
-No `rsync`? Zip `public/build`, upload it with cPanel File Manager or SFTP to `groibe/public/`, and unzip over the old folder. The admin panel's own assets are not uploaded: the deploy script publishes them on the server with `php artisan filament:assets`.
+No `rsync` (Windows PowerShell has none)? On Windows use `tar` and `scp` as in [`docs/STAGING_CHECKLIST.md`](STAGING_CHECKLIST.md), Part 9. Otherwise zip `public/build`, upload it with cPanel File Manager or SFTP to `groibe/public/`, and unzip over the old folder. The admin panel's own assets are not uploaded: the deploy script publishes them on the server with `php artisan filament:assets`.
 
 Upload the build **before** running `scripts/deploy.sh`, so the new pages never meet old assets. Do it for every release that changes anything in `resources/css`, `resources/js` or the views' classes.
 
@@ -189,7 +166,7 @@ Upload the build **before** running `scripts/deploy.sh`, so the new pages never 
 One cron entry runs the whole schedule. In cPanel, **Cron Jobs**, add, every minute (`* * * * *`):
 
 ```
-cd /home/CPUSER/groibe && /opt/cpanel/ea-php83/root/usr/bin/php artisan schedule:run >> /dev/null 2>&1
+cd /home/CPUSER/groibe && /opt/ecp-php83/bin/php artisan schedule:run >> /dev/null 2>&1
 ```
 
 It must use the PHP 8.3 binary and `cd` into the app first. That one line runs: the queue drain every minute (emails and notifications leave within about a minute), the overdue task digest (08:00), overdue invoices (08:15), the stale invite report (08:30), email log retention (03:00), import file clean-up (03:10), the database size check (03:20), the public cache refresh (03:30) and the weekly database backup (Sunday 02:30), and from SCR-039 the queue history clean-up (03:40), read notification clean-up (03:45), audit log clean-up (03:50) and the data request reminder (08:45). Times are in the app time zone, `Asia/Kolkata`.
@@ -212,7 +189,7 @@ Brief files, submissions, message attachments, project files, import uploads, er
 ```bash
 SITE=https://staging.example.com
 
-# 1. None of these may return 200. 403 or 404 is right. (With option A they are not even inside the document root.)
+# 1. None of these may return 200. 403 or 404 is right. (They are not even inside the document root.) On staging, add -u LOGIN to curl: without the login every path answers 401.
 for path in /.env /.git/config /composer.json /artisan /vendor/autoload.php /storage/logs/laravel.log /storage/app/private /storage/app/public /public/storage /backups; do
   printf '%-34s %s\n' "$path" "$(curl -s -o /dev/null -w '%{http_code}' "$SITE$path")"
 done
@@ -278,7 +255,7 @@ Put the site behind Cloudflare once DNS, mail and the smoke test are working.
 
    ```bash
    cd ~/groibe
-   PHP_BIN=/opt/cpanel/ea-php83/root/usr/bin/php COMPOSER_BIN="/opt/cpanel/ea-php83/root/usr/bin/php $(command -v composer)" scripts/deploy.sh
+   PHP_BIN=/opt/ecp-php83/bin/php COMPOSER_BIN="/opt/ecp-php83/bin/php $(command -v composer)" scripts/deploy.sh
    ```
 
    It: checks the setup, **takes a pre-deploy database backup** (see below), records the current release, puts the site in maintenance mode, pulls `main` (fast-forward only), installs packages without dev tools, runs migrations, publishes admin assets, creates and secures the folders, rebuilds the caches (`config:cache`, `route:cache`, `view:cache` and `event:cache`, after clearing the old ones), restarts queue workers, brings the site back, and calls `/up`.
@@ -288,7 +265,7 @@ Put the site behind Cloudflare once DNS, mail and the smoke test are working.
 
 **After a deploy.** `scripts/deploy.sh` clears the command-line opcache only. The web server keeps its own, and no command can reach it. With `opcache.validate_timestamps = 1` (section 2) it notices the new files within a few seconds by itself. If a page still behaves as the old release a minute later, ask the host to restart PHP for the account, or toggle the PHP version once in MultiPHP Manager.
 
-Options for the script, as environment variables: `PHP_BIN`, `COMPOSER_BIN`, `DEPLOY_BRANCH` (default `main`), `DEPLOY_REMOTE` (default `origin`) and `PUBLIC_DIR` (option B only). Run `scripts/deploy.sh check` to run only the safety checks.
+Options for the script, as environment variables: `PHP_BIN`, `COMPOSER_BIN`, `DEPLOY_BRANCH` (default `main`), and `DEPLOY_REMOTE` (default `origin`). Run `scripts/deploy.sh check` to run only the safety checks.
 
 ## 13. Rollback
 
@@ -332,7 +309,7 @@ Both copies sit on the same server. **Download the dump off the server** regular
 Run this after the first deploy and after every release. Tick each line.
 
 **The site**
-- [ ] `curl -s -o /dev/null -w '%{http_code}' https://SITE/up` returns 200.
+- [ ] `curl -s -o /dev/null -w '%{http_code}' https://SITE/up` returns 200. On a staging site behind a login it returns `401` without the login (use `curl -u LOGIN ...`), and the deploy script's own health check warns for the same reason: that warning is expected on staging.
 - [ ] `https://SITE/` opens over HTTPS, in a private window, with no red errors in the browser console (a Content-Security-Policy error means something is injecting scripts: section 11).
 - [ ] `curl -sI http://SITE/ | head -n 3` shows `301` and a `Location: https://SITE/` line, on staging (no Cloudflare) and on production. `curl -sI -H "X-Forwarded-Proto: https" http://SITE/` does **not** show a redirect to https (no loop).
 - [ ] Headers: `curl -sI https://SITE/` shows `strict-transport-security`, `x-frame-options: DENY`, `x-content-type-options: nosniff`, `referrer-policy` and a `content-security-policy`.
@@ -371,7 +348,7 @@ Run this after the first deploy and after every release. Tick each line.
 
 ## 16. Order of work, staging first
 
-1. Staging subdomain on the host: its own folder, database, `.env` (`APP_ENV=staging`) and mailbox. Install (section 4). Run the smoke test.
+1. Staging subdomain on the host: its own folder, its own database and database user (never the production database), `.env` (`APP_ENV=staging`) and mailbox, behind a login (step 10 of section 4). Install (section 4). Run the smoke test.
 2. Confirm cron is running (System status), send test emails, check spam placement, fix SPF, DKIM and DMARC.
 3. Do the restore drill on a scratch database.
 4. Paste the real legal templates into Admin and publish them. Approve the website wording. On a staging site without demo data, publish the test wording of section 22 first.
@@ -391,7 +368,7 @@ These cannot be checked from the code. Ask once, in writing, and keep the answer
 | Can a cron job run every minute? Is SSH on? | The queue is drained by cron (spec 17.1). |
 | The real database size limit, the maximum connections, and the file quota (inodes and disk). | `DB_SIZE_LIMIT_MB`; four weekly dumps also take disk. |
 | The hourly and daily outgoing email limit. | Invitations and notifications are throttled by the host, not by Groibe. |
-| Can the document root of the domain be set to `groibe/public`? | Option A in section 3. |
+| Can the document root of the domain be set to `groibe/public`? | It is the only way the app is served (section 3). If the host cannot change the primary domain's document root, the host does it for you. |
 | Is the connection MySQL or MariaDB, and its version? | Use `DB_CONNECTION=mysql` either way. FULLTEXT search needs InnoDB. |
 | What do the host's daily backups cover, and for how long? | The dump does not hold files in `storage/app/private`. |
 
@@ -446,7 +423,7 @@ How many off-server copies to keep is the founder's choice. A starting value is 
 
 ## 20. Uptime monitor
 
-Set up an outside monitor on `https://SITE/up` (Laravel's health route). Any monitoring service that checks a URL every 5 minutes and sends **email alerts** will do. Send the alerts to the founder and to `contact@groibe.com`. Do this for production, and for staging while it is in use.
+Set up an outside monitor on `https://SITE/up` (Laravel's health route). Any monitoring service that checks a URL every 5 minutes and sends **email alerts** will do. Send the alerts to the founder and to `contact@groibe.com`. Do this for production, and for staging while it is in use. A staging site behind a login answers `401` to a plain check: give the monitor the login (HTTP basic auth), or leave staging out.
 
 - Alert when the check fails twice in a row.
 - `/up` shows that the app starts. It does **not** show that cron runs, so a stopped cron raises no email alert. Instead, Admin's **System status** shows a red "Alert: cron has not run for N minutes" line once the cron heartbeat is more than 10 minutes old (SCR-039). It is only seen when a super admin opens the dashboard, so keep the weekly check in `docs/OPERATIONS.md`. An email alert for a stopped cron is not built.

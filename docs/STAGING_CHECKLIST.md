@@ -47,7 +47,7 @@ Read this table first. Everything not listed here is on the new `staging.groibe.
 
 ## Mismatches between DEPLOY.md and your facts
 
-DEPLOY.md is not changed by this checklist. Fix it after staging works. Each item shows where.
+DEPLOY.md was corrected on 2026-10-22 for items 1 (the PHP path, in DEPLOY.md only), 4, 5 and 6, and it now points here for the first deploy. Items 2, 3, 7, 8 and 10 are still as written. OPERATIONS and `scripts/deploy.sh` still show the old PHP path (SUGGESTIONS 350). Where this checklist and DEPLOY.md differ, this checklist wins.
 
 | # | DEPLOY.md says | Your facts | Effect if you follow DEPLOY.md |
 |---|---|---|---|
