@@ -19,7 +19,7 @@ Status: a procedure for a beginner. It is not policy. Nothing in this file has b
 
 - Host: MilesWeb shared hosting with cPanel. SSH: user `groibe_c1`, host `45.199.139.16`, port 22.
 - PHP 8.3.33 is at `/opt/ecp-php83/bin/php`. Composer 2.10, Git 2.43. Symlinks work.
-- Database `groibe_c1_groibe` on `localhost` (MariaDB 11.4). Its user was made in cPanel.
+- Two databases on `localhost` (MariaDB 11.4), each with **its own user**, made in cPanel: `groibe_c1_groibe` is **production** and `groibe_c1_staging` is **staging** (decision D1). Staging never uses the production database.
 - `groibe.com` runs a **live WordPress site**. It must not be touched until the cutover (Part 17).
 - DNS is on Cloudflare. The GitHub repository is private.
 
@@ -59,16 +59,18 @@ DEPLOY.md is not changed by this checklist. Fix it after staging works. Each ite
 | 6 | "Do **not** also turn on the cPanel Force HTTPS switch" because cPanel writes into the tracked `public/.htaccess` and the deploy script then refuses | The same is true of **Directory Privacy** (HTTP auth), which DEPLOY.md does not mention | If you protect `public`, `scripts/deploy.sh` stops with "uncommitted changes". Part 7 protects the parent folder instead. |
 | 7 | The health check and uptime monitor call `/up` | On staging, HTTP auth answers `401` | The deploy script prints a warning about the health check. That is expected on staging (Part 11). |
 | 8 | Mail: "use an address on your own domain" and add SPF, DKIM, DMARC | `groibe.com` also carries WordPress and, probably, your real company email | See the risk table. Part 13 checks where the mail lives first. |
-| 9 | Staging database "its own database" (section 1, 16) | Only `groibe_c1_groibe` is named | See decision D1 below. |
+| 9 | Staging database "its own database" (section 1, 16) | Staging is `groibe_c1_staging`, production is `groibe_c1_groibe`, each with its own user | Matches DEPLOY.md. See decision D1 below. |
 | 10 | `scripts/deploy.sh` is run as `scripts/deploy.sh` | The file is executable in Git, so this works, but a copy through Windows can lose that | This checklist runs `bash scripts/deploy.sh`, which always works. |
 
 Items that **do** match: 14 scheduled jobs (`php artisan schedule:list` shows 14), FULLTEXT needs InnoDB and `DB_CONNECTION=mysql`, HTTPS rule in `public/.htaccess`, symlinks are not needed (the app never uses `storage:link`).
 
-## Decisions only you can make
+## Decisions (D1 to D3, all made)
 
-- **D1. Which database does staging use, and which will production use?** Your facts name one database, `groibe_c1_groibe`. DEPLOY.md wants staging and production apart. Recommended: staging uses `groibe_c1_groibe` now, and production gets a new, empty database made on cutover day (Part 17), so staging test data never reaches production. Check in cPanel that the plan allows another database. If you would rather reuse this one for production, its tables must be emptied by hand first, and that is a destructive step you must approve at the time. This checklist assumes the recommended path.
-- **D2. Where does the mail for `groibe.com` live today?** Part 13 shows you how to find out. The answer decides which SMTP server staging uses.
-- **D3. The name of the HTTP login for staging.** Pick any name and a long random password. Keep both in your password manager.
+Decided by the founder on 2026-10-22:
+
+- **D1. Databases. DECIDED.** Production is `groibe_c1_groibe`. Staging is `groibe_c1_staging`. Each has its own database user, with **All Privileges on its own database only**. Staging has its own folder (`~/groibe-staging`) and its own `.env`. Production will have its own folder (`~/groibe`) and its own `.env`. Staging test data never reaches production, and a mistake on staging cannot touch production data. Part 8.1 and Part 10.1 each have a check that staging does not point at the production database. The WordPress database is a third database and is never used by Groibe.
+- **D2. Mail for `groibe.com`. DECIDED.** Email for `groibe.com` stays at MilesWeb. The mail records in Cloudflare (`MX`, `mail`, and any other record used for mail) are set to **grey (DNS only)**, never proxied. Part 13.1 still reads the live records, to confirm the answer before anything is changed.
+- **D3. The HTTP login for staging. DECIDED.** The login name is a non-obvious name of your choice (not `admin`, `staging`, `groibe` or `test`). The password is long and random and comes from your password manager. **Neither the name nor the password is ever written in the repository**, in this file, in `.env`, in a commit or in a chat message. In the steps below it appears as `STAGING-LOGIN`.
 
 ---
 
@@ -318,7 +320,7 @@ Staging holds test data and must not be open to everyone. It already tells searc
 **7.1 Protect the folder above `public`.**
 
 - Where: cPanel, **Directory Privacy**
-- Do: click the name `groibe-staging` (click the **name**, not the folder icon). Choose **Password protect this directory**. Name: `Groibe staging`. Save. Then under **Create User** add the name and password from decision D3. Save.
+- Do: click the name `groibe-staging` (click the **name**, not the folder icon). Choose **Password protect this directory**. Name: `Groibe staging`. Save. Then under **Create User** add the name and password from decision D3 (the name you chose and the password from your password manager). Save.
 - Why the parent folder: cPanel writes its rules into the `.htaccess` of the folder you protect. `public/.htaccess` is tracked in Git, and `scripts/deploy.sh` refuses to run when a tracked file has changed. The parent folder has no `.htaccess`, so cPanel makes a new one that Git does not track. **Never protect `public_html`.**
 - Success: you see "Password protect this directory" ticked for `/home/groibe_c1/groibe-staging`.
 - [ ] Done
@@ -349,18 +351,25 @@ Staging holds test data and must not be open to everyone. It already tells searc
 
 ## Part 8. cPanel and SSH: database and backup folder
 
-**8.1 Check the database is yours and empty.**
+**8.1 Check the staging database is its own, and empty.** Staging uses `groibe_c1_staging` and its own user (decision D1). It never uses `groibe_c1_groibe`, which is production.
 
 - Where: cPanel, **MySQL Databases**
-- Do: confirm `groibe_c1_groibe` is listed, and that its user is added to it with **All Privileges**. Write down the user name.
+- Do: confirm `groibe_c1_staging` is listed, and that **its own user** is added to it with **All Privileges**. That user must not be added to `groibe_c1_groibe`, and the production user must not be added to `groibe_c1_staging`. Write down the staging user name.
 - Where: SSH
-- Do (replace `DBUSER`; it asks for the password, type it there):
+- Do (replace `STAGINGUSER`; it asks for the password, type it there):
 
   ```bash
-  mysql -u DBUSER -p groibe_c1_groibe -e "SELECT VERSION(); SHOW TABLES;"
+  mysql -u STAGINGUSER -p groibe_c1_staging -e "SELECT DATABASE(), VERSION(); SHOW TABLES;"
   ```
-- Success: the version line says `11.4...-MariaDB`, and **no table names** follow.
+
+  Then the cross check. It asks for the staging password again and **must be refused**:
+
+  ```bash
+  mysql -u STAGINGUSER -p groibe_c1_groibe -e "SELECT 1;"
+  ```
+- Success: the first command prints `groibe_c1_staging` and a `11.4...-MariaDB` version, and **no table names** follow. The cross check prints `ERROR 1044` or `ERROR 1045` (access denied).
 - If any table is listed: **stop**. This may not be an empty database, and the WordPress database must never be used. Tell me what it lists.
+- If the cross check **works** (it prints `1`): **stop**. The staging user can reach production. In cPanel, **MySQL Databases**, remove that user from `groibe_c1_groibe`.
 - [ ] Done
 
 **8.2 Make the backup folder, outside the web folders.**
@@ -424,7 +433,8 @@ Staging holds test data and must not be open to everyone. It already tells searc
   | `APP_URL` | `https://staging.groibe.com` (no slash at the end) |
   | `DB_CONNECTION` | `mysql` (keep it: with any other word, the search indexes in Part 16 are never made) |
   | `DB_HOST` | `localhost` |
-  | `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` | from cPanel (8.1) |
+  | `DB_DATABASE` | `groibe_c1_staging`. **Never** `groibe_c1_groibe` (production). |
+  | `DB_USERNAME`, `DB_PASSWORD` | the staging database user from 8.1, and its password from your password manager |
   | `DB_SIZE_LIMIT_MB` | a little under the real database limit of your plan (ask MilesWeb if unknown) |
   | `MAIL_MAILER` | `smtp` (never `log`) |
   | `MAIL_HOST`, `MAIL_PORT`, `MAIL_SCHEME`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM_ADDRESS` | filled in Part 13. Leave them empty for now. |
@@ -443,6 +453,16 @@ Staging holds test data and must not be open to everyone. It already tells searc
   ```
 
   prints `staging`, `false`, your URL, `mysql`, `smtp` and an empty `TRUSTED_PROXIES`.
+
+  **Check that staging does not point at production.** Both commands must pass before you go on:
+
+  ```bash
+  grep '^DB_DATABASE=' .env
+  grep -c '^DB_DATABASE=groibe_c1_staging$' .env
+  grep -c 'groibe_c1_groibe' .env
+  ```
+
+  The first prints `DB_DATABASE=groibe_c1_staging`, the second prints `1`, and the third prints `0` (the production database name appears nowhere in the staging `.env`). If the third prints anything but `0`, or `DB_DATABASE` is anything else, **stop and fix `.env`**. Do not run Part 11. The same check is repeated in 11.1, because the deploy runs migrations.
 - [ ] Done
 
 **10.2 Install the PHP packages.**
@@ -484,8 +504,9 @@ Staging holds test data and must not be open to everyone. It already tells searc
   ```bash
   cd ~/groibe-staging
   PHP_BIN=$PHP COMPOSER_BIN="$COMPOSER" bash scripts/deploy.sh check
+  $PHP artisan tinker --execute='echo config("database.connections.mysql.database"), " ", config("app.env");'
   ```
-- Success: `All checks passed. Nothing was changed.`
+- Success: `All checks passed. Nothing was changed.` The last line prints exactly `groibe_c1_staging staging`. If it prints `groibe_c1_groibe`, or `production`, **stop**: staging points at production. Fix `.env` (10.1) and run `$PHP artisan config:clear` before anything else. Never run 11.2 until this line is right.
 - If it fails: the message says what is wrong (`.env` missing, `APP_DEBUG` not false, `APP_KEY` empty, `public/build/manifest.json` missing, a tracked file changed). Fix it and run again.
 - [ ] Done
 
@@ -552,7 +573,7 @@ Check the list of jobs:
 
 ## Part 13. Mail: live SMTP, DNS records, and the emailed admin code
 
-**13.1 Find out where `groibe.com` mail lives today.** This decides what to do next, and protects your real company email.
+**13.1 Confirm where `groibe.com` mail lives.** Decision D2: it stays at MilesWeb, with the mail records in Cloudflare set to **grey (DNS only)**. Read the live records to confirm that, before you change anything. This protects your real company email.
 
 - Where: PC
 - Do:
@@ -562,8 +583,10 @@ Check the list of jobs:
   Resolve-DnsName groibe.com -Type TXT
   ```
 - Write down the MX names and the `v=spf1` line.
-- If the MX names belong to **MilesWeb** (the same host as the server): carry on with 13.2.
-- If they belong to **Zoho, Google or another provider**: **stop here and tell me.** Do not make a cPanel mailbox for `groibe.com` and do not open cPanel **Email Routing**. Staging then sends through that provider's SMTP server instead, and 13.2 and 13.3 change.
+- Where: Cloudflare, `groibe.com`, **DNS**, **Records**. Look at the `MX` records, and at `mail`, `webmail`, `smtp`, `imap`, `pop` and any other record that carries mail. Each must show a **grey** cloud (DNS only). `MX` and `TXT` records have no cloud and cannot be proxied. If an `A` or `CNAME` record used for mail (for example `mail`) is **orange**, click it to make it grey, because a proxied mail host breaks mail. Change nothing else.
+- If the MX names belong to **MilesWeb** (the same host as the server), as decided in D2: carry on with 13.2.
+- If they belong to **Zoho, Google or another provider**: **stop here and tell me.** This differs from D2. Do not make a cPanel mailbox for `groibe.com` and do not open cPanel **Email Routing**. Staging would then send through that provider's SMTP server instead, and 13.2 and 13.3 change.
+- Success: the MX names are MilesWeb's, and every mail-related record that can have a cloud shows grey.
 - [ ] Done
 
 **13.2 Make the sending mailbox.**
@@ -578,7 +601,7 @@ Check the list of jobs:
 **13.3 SPF, DKIM and DMARC.** Without them, the emailed sign-in code lands in spam, and you cannot sign in.
 
 - Where: cPanel, **Email Deliverability**, `groibe.com`, **Manage**
-- Do: read what it suggests. DNS is on Cloudflare, so copy each suggested record into Cloudflare, as a `TXT` record, **DNS only**. Before you add an SPF record, look at the `v=spf1` line you wrote down in 13.1. If one exists, **edit that one record** to add what cPanel suggests. **Never create a second `v=spf1` record.** Never delete a record you did not make. For DMARC, if `_dmarc` does not exist, add a `TXT` named `_dmarc` with:
+- Do: read what it suggests. DNS is on Cloudflare, so copy each suggested record into Cloudflare, as a `TXT` record (a `TXT` record has no proxy, so it is always DNS only). If cPanel suggests an `A` or `CNAME` record for mail, add it **grey (DNS only)** (decision D2). Before you add an SPF record, look at the `v=spf1` line you wrote down in 13.1. If one exists, **edit that one record** to add what cPanel suggests. **Never create a second `v=spf1` record.** Never delete a record you did not make. For DMARC, if `_dmarc` does not exist, add a `TXT` named `_dmarc` with:
 
   ```
   v=DMARC1; p=none; rua=mailto:ADDRESS-SOMEONE-READS; fo=1
@@ -617,13 +640,13 @@ Check the list of jobs:
 
 ## Part 14. Smoke test
 
-Tick every line. These are the lines of DEPLOY.md section 15 that apply to a staging site with no demo data. Replace `staging-user` with the name from D3. The first command asks you for the password and keeps it only for this window.
+Tick every line. These are the lines of DEPLOY.md section 15 that apply to a staging site with no demo data. Replace `STAGING-LOGIN` with the login name you chose in D3 (type it into your own window only; do not save this file with the name in it). The first command asks you for the password and keeps it only for this window.
 
 - Where: PC
 - Do:
 
   ```powershell
-  $u = "staging-user:" + (Read-Host "Staging HTTP password")
+  $u = "STAGING-LOGIN:" + (Read-Host "Staging HTTP password")
   curl.exe -s -o NUL -w "%{http_code}`n" -u $u https://staging.groibe.com/up
   curl.exe -sI -u $u https://staging.groibe.com/ | Select-String -Pattern "strict-transport|x-frame|x-content-type|referrer-policy|content-security|x-robots"
   curl.exe -s -u $u https://staging.groibe.com/robots.txt
@@ -672,7 +695,7 @@ Tick every line. These are the lines of DEPLOY.md section 15 that apply to a sta
 
 ## Part 15. Backup restore drill, into a scratch database
 
-This proves a dump can really be restored. **Never restore into `groibe_c1_groibe`.**
+This proves a dump can really be restored. **Never restore into `groibe_c1_staging` or `groibe_c1_groibe`.** Only into the scratch database.
 
 **15.1 Take a fresh dump.**
 
@@ -714,7 +737,7 @@ This proves a dump can really be restored. **Never restore into `groibe_c1_groib
   ```bash
   Q="SELECT (SELECT COUNT(*) FROM users) AS users, (SELECT COUNT(*) FROM roles) AS roles, (SELECT COUNT(*) FROM migrations) AS migrations;"
   mysql -u SCRATCHUSER -p groibe_c1_scratch -e "$Q"
-  mysql -u DBUSER -p groibe_c1_groibe -e "$Q"
+  mysql -u STAGINGUSER -p groibe_c1_staging -e "$Q"
   mysql -u SCRATCHUSER -p groibe_c1_scratch -e "SHOW INDEX FROM profiles WHERE Index_type = 'FULLTEXT';"
   ```
 - Success: the two count rows are identical (users `1`). The third command lists the FULLTEXT index `profiles_headline_bio_fulltext` on `headline` and `bio`. Do not compare `sessions` or `cache`: the dump leaves them out on purpose.
@@ -736,7 +759,7 @@ Why this matters: search on `/contributors` uses `MATCH ... AGAINST`. The index 
 - Do (it asks for the password):
 
   ```bash
-  mysql -u DBUSER -p groibe_c1_groibe -e "
+  mysql -u STAGINGUSER -p groibe_c1_staging -e "
   SELECT TABLE_NAME, INDEX_NAME, GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX) AS cols
     FROM information_schema.STATISTICS
    WHERE TABLE_SCHEMA = DATABASE() AND INDEX_TYPE = 'FULLTEXT'
@@ -756,7 +779,7 @@ Why this matters: search on `/contributors` uses `MATCH ... AGAINST`. The index 
 
 ## Part 17. Cutover of groibe.com, and rollback to WordPress
 
-**Do not do this on the first staging day.** Do it only after staging has passed Parts 14 to 16, the real legal texts are published (DEPLOY.md section 16, step 4), and you have decided D1. This is the only part that can change what visitors of `groibe.com` see.
+**Do not do this on the first staging day.** Do it only after staging has passed Parts 14 to 16, the real legal texts are published (DEPLOY.md section 16, step 4), and checked the staging and production database names (D1). This is the only part that can change what visitors of `groibe.com` see.
 
 **17.1 Back up WordPress completely. This is your rollback.**
 
@@ -778,8 +801,10 @@ Why this matters: search on `/contributors` uses `MATCH ... AGAINST`. The index 
 
 **17.2 Build production beside staging, without touching `groibe.com`.**
 
-- Where: SSH, with a new empty database (decision D1)
-- Do: repeat Parts 3.4, 8, 9 and 10 to 11 for the production folder `~/groibe`, with: clone into `groibe` (the deploy key is reused), a new database and user, `APP_ENV=production`, `APP_URL=https://groibe.com`, `GROIBE_BACKUP_PATH=/home/groibe_c1/groibe-backups`, new `APP_KEY`, the **real** mail settings, and **no** HTTP login. In place of Part 11.2 run only the check: `PHP_BIN=$PHP COMPOSER_BIN="$COMPOSER" bash scripts/deploy.sh check`. The real deploy runs after the switch.
+- Where: SSH, with the production database `groibe_c1_groibe` and its own production user (decision D1). It must be empty, and the staging user must not be added to it
+- Do: repeat Parts 3.4, 8, 9 and 10 to 11 for the production folder `~/groibe`, with: clone into `groibe` (the deploy key is reused), `DB_DATABASE=groibe_c1_groibe` with the production database user (and `groibe_c1_staging` nowhere in this `.env`), `APP_ENV=production`, `APP_URL=https://groibe.com`, `GROIBE_BACKUP_PATH=/home/groibe_c1/groibe-backups`, new `APP_KEY`, the **real** mail settings, and **no** HTTP login. In place of Part 11.2 run only the check: `PHP_BIN=$PHP COMPOSER_BIN="$COMPOSER" bash scripts/deploy.sh check`. The real deploy runs after the switch.
+
+  Mirror the checks of 8.1, 10.1 and 11.1 for production: the production user is refused on `groibe_c1_staging`, `grep -c 'groibe_c1_staging' .env` prints `0`, and the tinker line prints `groibe_c1_groibe production`.
 
   For production, the cron line uses `cd /home/groibe_c1/groibe` (do not add it until the switch).
 - Success: `check` prints `All checks passed. Nothing was changed.` and `groibe.com` still shows WordPress.
