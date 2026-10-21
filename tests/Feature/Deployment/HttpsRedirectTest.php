@@ -23,6 +23,24 @@ it('puts both conditions directly before the rule, so they apply to it and to no
     );
 });
 
+it('never redirects the paths a certificate authority and cPanel AutoSSL fetch over plain HTTP', function () {
+    $file = htaccess();
+    $exempt = 'RewriteCond %{REQUEST_URI} !^/\.well-known/(cpanel-dcv|pki-validation|acme-challenge)/ [NC]';
+
+    // Part of the same condition run as the redirect, so it applies to it, and it comes before the rule.
+    expect($file)->toContain($exempt)
+        ->and(strpos($file, $exempt))->toBeLessThan(strpos($file, 'RewriteCond %{HTTPS} !=on'));
+
+    // The pattern lets the validation paths through and nothing else.
+    $pattern = '#^/\.well-known/(cpanel-dcv|pki-validation|acme-challenge)/#i';
+    foreach (['/.well-known/acme-challenge/abc_123', '/.well-known/pki-validation/ABCDEF.txt', '/.well-known/cpanel-dcv/token'] as $path) {
+        expect(preg_match($pattern, $path))->toBe(1);
+    }
+    foreach (['/', '/login', '/admin', '/.well-known/security.txt', '/x/.well-known/acme-challenge/a'] as $path) {
+        expect(preg_match($pattern, $path))->toBe(0);
+    }
+});
+
 it('runs the redirect first: after the engine is on, before every other rule', function () {
     $file = htaccess();
     $engine = strpos($file, 'RewriteEngine On');

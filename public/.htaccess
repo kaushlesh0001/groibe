@@ -8,6 +8,9 @@
     # Send plain HTTP to HTTPS with a 301 (SCR-038, spec 17.2). It runs first, before PHP and for every file. Behind Cloudflare
     # the connection to this server may be plain HTTP, so a request Cloudflare already received over HTTPS carries
     # X-Forwarded-Proto: https and is left alone, which stops a redirect loop. Not read by nginx or `php artisan serve`.
+    # The paths a certificate authority and cPanel AutoSSL fetch over plain HTTP to prove the domain are never redirected,
+    # or issuing and renewing the certificate could fail (cPanel's own force-HTTPS rule leaves the same paths alone).
+    RewriteCond %{REQUEST_URI} !^/\.well-known/(cpanel-dcv|pki-validation|acme-challenge)/ [NC]
     RewriteCond %{HTTPS} !=on
     RewriteCond %{HTTP:X-Forwarded-Proto} !=https [NC]
     RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]

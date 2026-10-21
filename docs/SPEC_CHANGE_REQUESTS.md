@@ -371,7 +371,7 @@ Proposed changes only. The spec is edited by the founder, between passes, and lo
   - (c) The cPanel "Force HTTPS Redirect" switch. No code, but cPanel writes the rule into the document root `.htaccess`, which is a tracked file with the recommended setup, so `scripts/deploy.sh` would refuse to run (CONFIRM on the host).
 - **Recommendation:** (a). Keep Cloudflare's rule too. The guide's smoke test already checks that `http://` redirects.
 - **Spec sections affected:** 17.2 (transport security), 17.1, 23. DEPLOY.md sections 3 and 11.
-- **Code status:** Built 2026-10-21, rehearsed, not run on the real host (SUGGESTIONS 322). The rule is at the top of the rewrite block in `public/.htaccess`; `HttpsRedirectTest` pins its text and position. The redirect itself is proven with `curl -I` on staging (DEPLOY 15).
+- **Code status:** Built 2026-10-21, rehearsed, not run on the real host (SUGGESTIONS 322). Audit amendment 2026-10-21 (implementation detail, the spec wording still holds): the validation paths `/.well-known/(cpanel-dcv|pki-validation|acme-challenge)/` are not redirected, so certificate issuing and renewal cannot fail on the redirect (SUGGESTIONS 323). The rule is at the top of the rewrite block in `public/.htaccess`; `HttpsRedirectTest` pins its text and position. The redirect itself is proven with `curl -I` on staging (DEPLOY 15).
 
 ## SCR-039: Retention settings, ops alerts and the test wording guard (spec sections 17.1, 17.4)
 
