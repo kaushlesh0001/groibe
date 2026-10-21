@@ -422,8 +422,8 @@ Proposed changes only. The spec is edited by the founder, between passes, and lo
 
 ## SCR-042: Homepage motion and an automatic community row (proposed; amends spec 10.1 items 1 and 6)
 
-- **Status:** PROPOSED 2026-10-21. Built as the founder asked; the spec text is unchanged and still says otherwise.
-- **Hero (item 1):** the slogan stays plain text in the H1, with each word in a span so CSS can fade the words in over about 700 ms. A subline rotates through the names of real skill categories (up to 6, only categories with an active skill), one every 3 seconds. Screen readers get one fixed sentence.
+- **Status:** ACCEPTED 2026-10-21 by the founder. Built 2026-10-21. Spec 10.1 (items 1 and 6) and section 23 updated.
+- **Hero (item 1):** the slogan stays plain text in the H1, with each word in a span so CSS can fade the words in over about 700 ms. A subline rotates through the names of real skill categories (up to 6, only categories with an active skill), one every 3 seconds, as a hard cut and not a fade (a half-faded word failed the Lighthouse contrast check, SUGGESTIONS 338). Screen readers get one fixed sentence.
 - **Community (item 6):** spec 10.1 says "featured contributors". The row now shows Admin's featured picks first, then the newest other contributors from `Profile::publiclyVisible()` (the directory scope), up to 12 cards. Under 6 people the whole section is left out. The Admin "limit" field for this section no longer applies. Demo accounts (email on `groibe.demo.email_domain`) are labelled "Demo profile" outside production and never shown in production.
 - **No Alpine, no script:** the public layout sends no script and the strict CSP forbids inline styles (SUGGESTIONS 259), so all motion is CSS. The pause control is a labelled checkbox driven by `:has()`. Reduced motion turns every animation off and the row becomes a plain row that scrolls by hand.
 - **Other sections** fade up on scroll with CSS scroll-driven animation, where the browser supports it.

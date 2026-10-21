@@ -347,12 +347,12 @@ Tech: Blade + Livewire + Alpine + Tailwind. Server-rendered, SEO-friendly, fast.
 
 ### 10.1 Homepage sections (each toggleable and ordered in Admin)
 
-1. Hero: "Where Ideas Find People" (the word "People" highlighted in green) + two CTAs ("Explore Opportunities", "Join Groibe") and a secondary line for clients ("Need work delivered? Submit a brief").
+1. Hero: "Where Ideas Find People" (the word "People" highlighted in green) + two CTAs ("Explore Opportunities", "Join Groibe") and a secondary line for clients ("Need work delivered? Submit a brief"). The words of the slogan fade in over about 700 ms. A subline rotates through the names of real skill categories (up to 6, only categories with an active skill), one every 3 seconds, as a hard cut and not a fade (SCR-042). Screen readers get one fixed sentence. All motion is CSS and reduced motion turns it off.
 2. Ecosystem: "One platform. Two sides. One delivery loop." Contributors card, Clients card.
 3. How it works: Brief -> Scope -> Staff -> Deliver -> Prove (contributor view and client view tabs).
 4. Live open roles (featured, dynamic, hidden if flag `open_roles` off or none).
 5. Proof of work showcase (featured, published only).
-6. Community: featured contributors (public profiles only).
+6. Community: Admin's featured contributors first, then the newest other contributors from the public directory scope (public profiles only), up to 12 cards. Under 6 the whole section is left out (SCR-042).
 7. Organizations: logos of featured public organizations.
 8. Stats: counts from DB (contributors, organizations, projects delivered), with admin override values.
 9. Testimonials.
@@ -650,4 +650,5 @@ Stored in `feature_flags`, cached, toggled in Admin. Defaults:
 | 2026-10-21 | 17.4 | SCR-037 amended: the smallest acceptable pre-deploy dump is 4 KB, not 10 KB. A freshly migrated and seeded database dumps to about 7 KB gzipped, so 10 KB would have stopped a deploy on a good dump of a site with no real data yet; 4 KB still catches an empty or cut-off file | Founder |
 | 2026-10-21 | 17.4 | SCR-039 amended: retention settings have minimums (failed jobs and job batches 7 days, read notifications 30, audit log 90); a lower value is ignored and the default is used, and the Settings screen says so. Reason: a typo such as `3` for the audit log would have deleted the trail older than 3 days that night | Founder |
 | 2026-10-21 | 17.4 | SCR-037 further check: the pre-deploy dump is also tested with `gzip -t`, and the deploy stops if the compressed file is cut off or damaged. The size alone cannot tell a complete dump from a truncated one. Already built in `scripts/deploy.sh` (SUGGESTIONS 329) | Founder |
+| 2026-10-21 | 10.1 | SCR-042: hero slogan words fade in and a subline rotates through real skill category names (hard cut, every 3 seconds); the Community row shows Admin's featured picks first, then the newest public contributors from the directory scope, up to 12, and is left out under 6; all motion is CSS | Founder |
 | 2026-10-21 | 17.2, 18 | SCR-040 (amends SCR-029): admin sign-in's second step is a 6-digit code emailed to the admin, always for super admin and for other admin roles while `two_factor_admin` is on; valid 10 minutes, single use, stored hashed, 5 wrong tries lock 15 minutes, one email a minute, sent at once and never queued, never in the email log, audit log or error logs; authenticator app and recovery codes kept as an extra; the reset command also clears the code lockout; no bypass | Founder |
