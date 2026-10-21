@@ -124,17 +124,21 @@ describe('cleared when the data changes', function () {
     it('drops a contributor the moment they are suspended or their profile is made private', function () {
         cachedHome();
         $person = publicContributor('Asha Rao');
+        foreach (range(1, 5) as $i) {
+            publicContributor("Filler{$i} Person", ['slug' => "filler{$i}-person-abc123"]); // the community row needs 6 people (SCR-042)
+        }
         pick(FeaturedItemType::Contributor, $person->id);
-        $this->get('/')->assertSee('Asha Rao');
+        // The row shows first names only (SCR-042).
+        $this->get('/')->assertSee('Asha');
 
         $person->profile->update(['is_public' => false]);
-        $this->get('/')->assertDontSee('Asha Rao');
+        $this->get('/')->assertDontSee('Asha');
 
         $person->profile->update(['is_public' => true]);
-        $this->get('/')->assertSee('Asha Rao');
+        $this->get('/')->assertSee('Asha');
 
         $person->update(['status' => UserStatus::Suspended]);
-        $this->get('/')->assertDontSee('Asha Rao');
+        $this->get('/')->assertDontSee('Asha');
     });
 
     it('drops proof of work when it is hidden or the client withdraws consent', function () {
