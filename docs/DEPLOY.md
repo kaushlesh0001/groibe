@@ -67,7 +67,7 @@ Keep **two sites**: a staging subdomain first (its own folder, database and `.en
 The app lives **outside** the web folder, so `.env`, `vendor`, `storage` and the code are never reachable from a browser. Put it beside `public_html`, for example `/home/CPUSER/groibe`.
 
 **Option A (recommended): point the domain at `groibe/public`.**
-cPanel, **Domains, Manage, Document Root**: set it to `groibe/public`. This works for a subdomain such as `staging`. For the primary domain cPanel may lock the document root to `public_html`; if so, use option B or ask the host to change it. Nothing else is needed: `public/.htaccess` already routes requests to `index.php`.
+cPanel, **Domains, Manage, Document Root**: set it to `groibe/public`. This works for a subdomain such as `staging`. For the primary domain cPanel may lock the document root to `public_html`; if so, use option B or ask the host to change it. Nothing else is needed: `public/.htaccess` already routes requests to `index.php`, and it also sends plain `http://` requests to `https://` (see "HTTP to HTTPS" below).
 
 **Option B: copy `public` into `public_html`.**
 Use this only if A is not possible.
@@ -95,6 +95,8 @@ Use this only if A is not possible.
    ```
 
 3. Nothing else of the app goes in `public_html`. The weekly backup command refuses to write below the public folder, so the default backup folder is safe in both options.
+
+**HTTP to HTTPS (SCR-038).** The first rewrite rule in `public/.htaccess` redirects any request that is not HTTPS, with a 301, to the same address on `https://`. It runs before PHP and covers every file, so it works on staging and on production before Cloudflare is switched on. It leaves a request alone when `X-Forwarded-Proto` is `https`, which is what Cloudflare sets, so it cannot loop. The file is committed, so option B copies it too. Do **not** also turn on the cPanel "Force HTTPS Redirect" switch: cPanel writes it into this same tracked file and `scripts/deploy.sh` would then refuse to run on uncommitted changes. It is only read by Apache (LiteSpeed also reads it); nginx and `php artisan serve` ignore it, so local work is unchanged. Rehearsed in tests, not yet run on the real host: prove it with `curl -I http://SITE/` (section 15).
 
 **Never** run `php artisan storage:link`. The app does not use a `public/storage` link, and private files are not served that way (section 9).
 
@@ -159,6 +161,7 @@ Do this on staging first. Replace `CPUSER`, the repository address and the paths
 | `MAIL_*` | The cPanel mailbox (section 10). |
 | `GROIBE_EXCEPTION_EMAIL` | Where unhandled errors are mailed, once an hour for each. Leave empty and none are sent. |
 | `GROIBE_BACKUP_PATH` | A folder **outside** the web root, for example `/home/CPUSER/groibe-backups`. |
+| `GROIBE_PREDEPLOY_BACKUP_KEEP` | How many pre-deploy dumps to keep (default 5). They are kept apart from the weekly ones. |
 | `TRUSTED_PROXIES` | Cloudflare's address ranges (section 11). |
 | `CSP_REPORT_ONLY` | `true` for the very first deploy if you want to see what the Content-Security-Policy would block without blocking it. Set it back to `false` after. |
 | `ADMIN_PASSWORD` | Present for the first seed only. Delete the value afterwards. |
@@ -252,7 +255,7 @@ Put the site behind Cloudflare once DNS, mail and the smoke test are working.
 |---|---|
 | DNS record for the site | Proxied (orange cloud). |
 | SSL/TLS mode | **Full (strict)**. Install a valid certificate on the host first (cPanel AutoSSL). Never "Flexible": it causes redirect loops and sends traffic to the host in clear. |
-| Always Use HTTPS | On. The app also sends HSTS on HTTPS. |
+| Always Use HTTPS | On. Keep it on even though `public/.htaccess` has its own redirect (section 3, SCR-038): the host rule covers staging and the time before Cloudflare, Cloudflare's covers the edge. The two cannot loop because the host rule honours `X-Forwarded-Proto: https`. The app also sends HSTS on HTTPS. |
 | Rocket Loader, Auto Minify (JavaScript), and any automatic script or analytics injection | **Off.** The public pages send a strict Content-Security-Policy with no inline script, and anything Cloudflare injects is blocked and breaks the page. |
 | Caching | Standard. Do **not** use "Cache Everything" on pages: pages carry forms and sign-in state. Static files (`/build`, `/brand`, `/fonts`, `/css`, `/js`) are cached by default. |
 | Cache bypass rules | `/admin*`, `/app*`, `/livewire*`, `/login`, `/register*`, `/invite*`, `/files*`, `/notifications*`, `/settings*`. |
@@ -270,9 +273,10 @@ Put the site behind Cloudflare once DNS, mail and the smoke test are working.
    PHP_BIN=/opt/cpanel/ea-php83/root/usr/bin/php COMPOSER_BIN="/opt/cpanel/ea-php83/root/usr/bin/php $(command -v composer)" scripts/deploy.sh
    ```
 
-   It: checks the setup, records the current release, puts the site in maintenance mode, pulls `main` (fast-forward only), installs packages without dev tools, runs migrations, publishes admin assets, creates and secures the folders, rebuilds the caches (`config:cache`, `route:cache`, `view:cache` and `event:cache`, after clearing the old ones), restarts queue workers, brings the site back, and calls `/up`.
-3. If it stops part way, **the site stays in maintenance mode on purpose**: the code and the database may not match. Read the error, fix it, run the script again, or roll back (section 13).
-4. Run the smoke test (section 15).
+   It: checks the setup, **takes a pre-deploy database backup** (see below), records the current release, puts the site in maintenance mode, pulls `main` (fast-forward only), installs packages without dev tools, runs migrations, publishes admin assets, creates and secures the folders, rebuilds the caches (`config:cache`, `route:cache`, `view:cache` and `event:cache`, after clearing the old ones), restarts queue workers, brings the site back, and calls `/up`.
+3. **The pre-deploy backup (SCR-037).** Before anything changes, and before the site goes into maintenance mode, the script runs `php artisan groibe:backup-db --predeploy`. That writes `groibe-predeploy-YYYYMMDD-HHMMSS.sql.gz` into `GROIBE_BACKUP_PATH`. The newest `GROIBE_PREDEPLOY_BACKUP_KEEP` (default 5) are kept, apart from the weekly dumps, so frequent deploys never push out the weekly ones. The script **stops, with the site still up and nothing changed**, if the command fails, or if the file is missing, empty or smaller than 10 KB (it does not trust the exit code alone). On a first deploy the database has no tables, there is nothing to dump, and the script says the backup is skipped. There is no switch to skip it: if the disk is full, free space first. Rehearsed with a stand-in command in tests, not yet run on the real host: watch for the line "Pre-deploy backup written" on your first staging deploy.
+4. If it stops part way, **the site stays in maintenance mode on purpose**: the code and the database may not match. Read the error, fix it, run the script again, or roll back (section 13).
+5. Run the smoke test (section 15).
 
 **After a deploy.** `scripts/deploy.sh` clears the command-line opcache only. The web server keeps its own, and no command can reach it. With `opcache.validate_timestamps = 1` (section 2) it notices the new files within a few seconds by itself. If a page still behaves as the old release a minute later, ask the host to restart PHP for the account, or toggle the PHP version once in MultiPHP Manager.
 
@@ -289,13 +293,13 @@ PHP_BIN=... COMPOSER_BIN=... scripts/deploy.sh rollback
 
 It goes back to the commit recorded before the last deploy, reinstalls its packages, rebuilds the caches and brings the site up. It does not undo migrations. The next normal deploy returns to `main` by itself. Upload the matching `public/build` first if the assets differ.
 
-**Code and database.** If the bad release added or changed tables and the old code cannot run on them: roll the code back as above, put the site in maintenance mode (`php artisan down`), restore the last good dump (section 14), run `php artisan up`. You lose what was saved after that dump, so take a fresh dump **before** every deploy that contains migrations: `php artisan groibe:backup-db`.
+**Code and database.** If the bad release added or changed tables and the old code cannot run on them: roll the code back as above, put the site in maintenance mode (`php artisan down`), restore the last good dump (section 14), run `php artisan up`. You lose what was saved after that dump. Every deploy already wrote a `groibe-predeploy-*` dump just before it began (section 12), so the newest one is the state the release started from: use it, not the weekly dump.
 
 Migrations are forward-only here. Do not run `migrate:rollback` on production.
 
 ## 14. Backups and the restore drill
 
-Two copies exist: the host's own daily backups, and the weekly dump from `php artisan groibe:backup-db` (Sunday 02:30, the newest `GROIBE_BACKUP_KEEP` are kept). The dump is a gzipped SQL file in `GROIBE_BACKUP_PATH`. It holds personal data and is written with owner-only permissions. It leaves out the rows of `sessions`, `cache` and password-reset tokens, so after a restore everyone has to sign in again.
+Two copies exist: the host's own daily backups, and the weekly dump from `php artisan groibe:backup-db` (Sunday 02:30, the newest `GROIBE_BACKUP_KEEP` are kept).  A third kind, `groibe-predeploy-*`, is written by `scripts/deploy.sh` before every release (section 12) and is kept apart (newest `GROIBE_PREDEPLOY_BACKUP_KEEP`). The restore drill below works with any of them. The dump is a gzipped SQL file in `GROIBE_BACKUP_PATH`. It holds personal data and is written with owner-only permissions. It leaves out the rows of `sessions`, `cache` and password-reset tokens, so after a restore everyone has to sign in again.
 
 Both copies sit on the same server. **Download the dump off the server** regularly (SFTP to a safe place), and also take a copy of `.env` and `APP_KEY` into the password manager. Files in `storage/app/private` are **not** in the dump: they are covered by the host's backups only, so download `storage/app/private` too, at least monthly.
 
@@ -322,7 +326,7 @@ Run this after the first deploy and after every release. Tick each line.
 **The site**
 - [ ] `curl -s -o /dev/null -w '%{http_code}' https://SITE/up` returns 200.
 - [ ] `https://SITE/` opens over HTTPS, in a private window, with no red errors in the browser console (a Content-Security-Policy error means something is injecting scripts: section 11).
-- [ ] `http://SITE/` redirects to `https://`.
+- [ ] `curl -sI http://SITE/ | head -n 3` shows `301` and a `Location: https://SITE/` line, on staging (no Cloudflare) and on production. `curl -sI -H "X-Forwarded-Proto: https" http://SITE/` does **not** show a redirect to https (no loop).
 - [ ] Headers: `curl -sI https://SITE/` shows `strict-transport-security`, `x-frame-options: DENY`, `x-content-type-options: nosniff`, `referrer-policy` and a `content-security-policy`.
 - [ ] A page that does not exist shows the 404 page, not a stack trace.
 - [ ] `/sitemap.xml` and `/robots.txt` open. Private people and organizations are not in the sitemap.
@@ -349,6 +353,7 @@ Run this after the first deploy and after every release. Tick each line.
 
 **Operations**
 - [ ] `php artisan groibe:backup-db` writes a file into `GROIBE_BACKUP_PATH` and not into the web root, and the restore drill (section 14) has been done once.
+- [ ] A deploy printed "Pre-deploy backup written: groibe-predeploy-…" before it went into maintenance mode, and the file is in `GROIBE_BACKUP_PATH` (SCR-037). The first deploy to a database with no tables says the backup is skipped.
 - [ ] `storage/logs/laravel-DATE.log` is being written, and it contains no passwords or tokens.
 - [ ] `php artisan schedule:list` shows fourteen jobs.
 - [ ] On production, the test agreement wording check in section 22 prints `0`.

@@ -349,7 +349,7 @@ Proposed changes only. The spec is edited by the founder, between passes, and lo
 
 ## SCR-037: Database backup before migrations in the deploy script (spec sections 17.4; DEPLOY.md sections 12, 13, 14)
 
-- **Status:** ACCEPTED 2026-10-15 by the founder, recommendation (a), with pre-deploy dumps kept under their own file name and retention and a sanity check on the dump (see Decision). Not built yet. The founder logs it in spec sections 17.4 and 23.
+- **Status:** ACCEPTED 2026-10-15 by the founder, recommendation (a), with pre-deploy dumps kept under their own file name and retention and a sanity check on the dump (see Decision). Built. The founder logged it in spec sections 17.4 and 23.
 - **Gap:** `scripts/deploy.sh` runs `migrate --force` with no backup. Migrations here are forward-only and rollback is code only (DEPLOY.md 13). The guide tells a person to run `groibe:backup-db` before any release with migrations, but nothing makes them. The first real deploy and every later one rely on memory.
 - **Facts:** `groibe:backup-db` returns a failure code if the dump cannot be written, so a script that stops on error stops on it. It keeps only the newest `GROIBE_BACKUP_KEEP` dumps (default 4), so extra dumps before every deploy would push the weekly Sunday dumps out. Files in `storage/app/private` are not in the dump. On the very first deploy the database has no tables, so a dump has nothing to write and would fail.
 - **Options:**
@@ -359,11 +359,11 @@ Proposed changes only. The spec is edited by the founder, between passes, and lo
 - **Recommendation:** (a). Pre-deploy dumps get their own file name and retention (see Decision), so frequent deploys never push out the weekly dumps. How the script detects "no tables yet" (for example `migrate:status` failing) is checked when it is built.
 - **Spec sections affected:** 17.4 (backups), 23. DEPLOY.md sections 12 to 14 and `DeployFilesTest` (it checks the order of steps) follow the decision.
 - **Decision (2026-10-15, founder):** (1) Pre-deploy dumps are written as `groibe-predeploy-YYYYMMDD-HHMMSS.sql.gz` in the same backup folder, by `groibe:backup-db` with a new option for the pre-deploy kind. They are pruned on their own, keeping the newest `GROIBE_PREDEPLOY_BACKUP_KEEP` (default 5). The weekly pattern `groibe-db-*.sql.gz` and `GROIBE_BACKUP_KEEP` are unchanged, so neither kind evicts the other. `GROIBE_BACKUP_KEEP` is not raised. (2) The script stops, before `artisan down`, if the command exits with an error, or if the dump file is missing, empty or smaller than 10 KB (a starting value: a dump of the full schema is far larger, tune it when built). A non-zero exit alone is not trusted. (3) No emergency skip switch. The open choice in the recommendation is closed./
-- **Code status:** Not built.
+- **Code status:** Built 2026-10-21, rehearsed, not run on the real host (SUGGESTIONS 322). `groibe:backup-db --predeploy`, `GROIBE_PREDEPLOY_BACKUP_KEEP`, the `predeploy_backup` step in `scripts/deploy.sh`, DEPLOY 12 to 14. Tests: `PredeployBackupTest`, `PredeployScriptTest`.
 
 ## SCR-038: Forced HTTPS for hosts without Cloudflare (spec sections 17.1, 17.2)
 
-- **Status:** ACCEPTED 2026-10-15 by the founder, recommendation (a). Not built yet. The founder logs it in spec sections 17.1, 17.2 and 23.
+- **Status:** ACCEPTED 2026-10-15 by the founder, recommendation (a). Built. The founder logged it in spec sections 17.1, 17.2 and 23.
 - **Gap:** Nothing in the code or `public/.htaccess` redirects `http://` to `https://`. The guide relies on Cloudflare's "Always Use HTTPS" (DEPLOY.md 11), but a staging subdomain, or production before Cloudflare is switched on, has no redirect. The app sends HSTS only on a request that is already secure, and the production template sets `SESSION_SECURE_COOKIE=true`, so a person who opens the plain `http://` address cannot stay signed in.
 - **Options, smallest first:**
   - (a) A rule at the top of `public/.htaccess`: if the request is not HTTPS and `X-Forwarded-Proto` is not `https`, answer with a 301 to the same address on `https://`. Runs before PHP, covers every file, is committed so a deploy copies it (option B of the guide too), and cannot loop behind Cloudflare because it honours the forwarded header. Not read by nginx or `php artisan serve`, so local work is unchanged.
@@ -371,7 +371,7 @@ Proposed changes only. The spec is edited by the founder, between passes, and lo
   - (c) The cPanel "Force HTTPS Redirect" switch. No code, but cPanel writes the rule into the document root `.htaccess`, which is a tracked file with the recommended setup, so `scripts/deploy.sh` would refuse to run (CONFIRM on the host).
 - **Recommendation:** (a). Keep Cloudflare's rule too. The guide's smoke test already checks that `http://` redirects.
 - **Spec sections affected:** 17.2 (transport security), 17.1, 23. DEPLOY.md sections 3 and 11.
-- **Code status:** Not built. A test can check the rule text and that `.htaccess` stays a valid rewrite block. The redirect itself is checked with `curl -I` on staging.
+- **Code status:** Built 2026-10-21, rehearsed, not run on the real host (SUGGESTIONS 322). The rule is at the top of the rewrite block in `public/.htaccess`; `HttpsRedirectTest` pins its text and position. The redirect itself is proven with `curl -I` on staging (DEPLOY 15).
 
 ## SCR-039: Retention settings, ops alerts and the test wording guard (spec sections 17.1, 17.4)
 
