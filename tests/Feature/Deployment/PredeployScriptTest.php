@@ -2,7 +2,7 @@
 
 /**
  * SCR-037 (spec 17.4): `scripts/deploy.sh` takes a pre-deploy dump before the site goes into maintenance mode, and stops if the
- * command fails or the file is missing, empty or under 10 KB. The structure is pinned here. The behaviour is rehearsed with a stand-in
+ * command fails or the file is missing, empty or under 4 KB. The structure is pinned here. The behaviour is rehearsed with a stand-in
  * `artisan` where bash is available (the same way the Pass 10 script was exercised); it has not been run on the real host.
  */
 function deployScript(): string
@@ -53,7 +53,7 @@ it('asks for the pre-deploy kind of dump and checks the file itself, not only th
     $script = deployScript();
 
     expect($script)->toContain('groibe:backup-db --predeploy')
-        ->and($script)->toContain('MIN_DUMP_BYTES=10240')
+        ->and($script)->toContain('MIN_DUMP_BYTES=4096')
         ->and($script)->toContain('BACKUP_FILE=')
         ->and($script)->toContain('-f "$file"')
         ->and($script)->toContain('wc -c')
@@ -102,8 +102,8 @@ artisan() {
     fail) echo "disk full"; return 1 ;;
     missing) rm -f "\$FILE"; echo "BACKUP_FILE=\$FILE"; return 0 ;;
     empty) : > "\$FILE"; echo "BACKUP_FILE=\$FILE"; return 0 ;;
-    small) head -c 5000 /dev/zero > "\$FILE"; echo "BACKUP_FILE=\$FILE"; return 0 ;;
-    exactly) head -c 10240 /dev/zero > "\$FILE"; echo "BACKUP_FILE=\$FILE"; return 0 ;;
+    small) head -c 2000 /dev/zero > "\$FILE"; echo "BACKUP_FILE=\$FILE"; return 0 ;;
+    exactly) head -c 4096 /dev/zero > "\$FILE"; echo "BACKUP_FILE=\$FILE"; return 0 ;;
     noline) echo "Wrote it"; return 0 ;;
   esac
 }
@@ -128,7 +128,7 @@ BASH);
         expect($status)->toBe(0)->and($out)->toContain('Pre-deploy backup written')->toContain('CONTINUED');
     });
 
-    it('accepts a dump of exactly 10 KB', function () {
+    it('accepts a dump of exactly 4 KB', function () {
         [$status, $out] = rehearse('exactly');
 
         expect($status)->toBe(0)->and($out)->toContain('CONTINUED');
@@ -146,14 +146,14 @@ BASH);
         expect($status)->toBe(1)->and($out)->toContain('failed')->not->toContain('CONTINUED');
     });
 
-    it('stops when the file is missing, empty, under 10 KB, or never reported', function (string $scenario, string $words) {
+    it('stops when the file is missing, empty, under 4 KB, or never reported', function (string $scenario, string $words) {
         [$status, $out] = rehearse($scenario);
 
         expect($status)->toBe(1)->and($out)->toContain($words)->not->toContain('CONTINUED');
     })->with([
         'missing' => ['missing', 'file is missing'],
         'empty' => ['empty', '0 bytes'],
-        'small' => ['small', '5000 bytes'],
+        'small' => ['small', '2000 bytes'],
         'no file line' => ['noline', 'file is missing'],
     ]);
 });

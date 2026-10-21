@@ -108,9 +108,9 @@ on_failure() {
 }
 
 # SCR-037, spec 17.4. A database dump before anything changes. It runs BEFORE `artisan down`, so a failure leaves the site up and
-# nothing touched. The exit code alone is not trusted: the file itself must exist and be at least 10 KB (a dump of the full schema is
-# far larger). On a first deploy the database has no tables, the command exits with code 2 and the backup is skipped.
-MIN_DUMP_BYTES=10240
+# nothing touched. The exit code alone is not trusted: the file itself must exist and be at least 4 KB (a freshly migrated and seeded database dumps to about
+# 7 KB gzipped, so 4 KB still catches an empty or cut-off file). On a first deploy the database has no tables, the command exits with code 2 and the backup is skipped.
+MIN_DUMP_BYTES=4096
 
 predeploy_backup() {
     say "Backing up the database before anything changes"
