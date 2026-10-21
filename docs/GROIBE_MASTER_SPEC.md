@@ -511,7 +511,7 @@ Route files: `routes/public.php`, `routes/contributor.php`, `routes/client.php`,
 - Private files: `private` disk only; access via signed, authorized routes; never guessable paths.
 - Security headers via middleware (HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, a conservative CSP).
 - Transport: a request that is not HTTPS is redirected with a 301 to the same address on HTTPS by a rule at the top of `public/.htaccess`. The rule honours `X-Forwarded-Proto: https`, so it cannot loop behind Cloudflare. HSTS is sent only on requests that are already secure (SCR-038).
-- Admin: TOTP 2FA through Filament's app authentication, always enforced for `super_admin` and, while `two_factor_admin` is on, for every other admin role. An artisan command resets 2FA for one user by email (SCR-029).
+- Admin: the second step of sign-in is a 6-digit code emailed to the admin (Filament's email authentication), always required for `super_admin` and, while `two_factor_admin` is on, for every other admin role. It is decided by role and flag, so there is nothing to set up. The code is valid for 10 minutes, works once, is stored hashed, and a newer code replaces the older; 5 wrong codes lock that person out for 15 minutes and at most one email is sent a minute. The email is sent at once, never queued, and the code is never written to the email log, the audit log or any error log (SCR-040). The authenticator app and its recovery codes remain as an extra for an admin who has set them up. An artisan command removes one person's authenticator app and recovery codes and clears their code lockout, by email (SCR-029, SCR-040).
 - Sensitive data: do not collect government IDs, bank accounts, or card numbers in v1. Payout `reference` stores only a transaction reference.
 - Audit: activity log on all admin writes, role changes, impersonation, agreement acceptances, showcase consent changes, exports. (SCR-030)
 - DPDP-oriented privacy: collect minimum data, state purpose, allow user data export and deletion request (admin-processed), consent timestamps stored.
@@ -554,7 +554,7 @@ Stored in `feature_flags`, cached, toggled in Admin. Defaults:
 | `client_can_view_shortlist` | off | Global default for the per-project setting |
 | `self_serve_client_signup` | on | Public client registration (else invite-only) |
 | `contributor_signup` | on | Public contributor registration |
-| `two_factor_admin` | on | Enforce 2FA for admins |
+| `two_factor_admin` | on | Require the emailed sign-in code for admins other than super admin (a super admin always needs it) |
 
 ## 19. Seed data
 
@@ -650,3 +650,4 @@ Stored in `feature_flags`, cached, toggled in Admin. Defaults:
 | 2026-10-21 | 17.4 | SCR-037 amended: the smallest acceptable pre-deploy dump is 4 KB, not 10 KB. A freshly migrated and seeded database dumps to about 7 KB gzipped, so 10 KB would have stopped a deploy on a good dump of a site with no real data yet; 4 KB still catches an empty or cut-off file | Founder |
 | 2026-10-21 | 17.4 | SCR-039 amended: retention settings have minimums (failed jobs and job batches 7 days, read notifications 30, audit log 90); a lower value is ignored and the default is used, and the Settings screen says so. Reason: a typo such as `3` for the audit log would have deleted the trail older than 3 days that night | Founder |
 | 2026-10-21 | 17.4 | SCR-037 further check: the pre-deploy dump is also tested with `gzip -t`, and the deploy stops if the compressed file is cut off or damaged. The size alone cannot tell a complete dump from a truncated one. Already built in `scripts/deploy.sh` (SUGGESTIONS 329) | Founder |
+| 2026-10-21 | 17.2, 18 | SCR-040 (amends SCR-029): admin sign-in's second step is a 6-digit code emailed to the admin, always for super admin and for other admin roles while `two_factor_admin` is on; valid 10 minutes, single use, stored hashed, 5 wrong tries lock 15 minutes, one email a minute, sent at once and never queued, never in the email log, audit log or error logs; authenticator app and recovery codes kept as an extra; the reset command also clears the code lockout; no bypass | Founder |
