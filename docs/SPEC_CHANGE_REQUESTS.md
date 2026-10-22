@@ -443,3 +443,11 @@ Proposed changes only. The spec is edited by the founder, between passes, and lo
 - **Not decided here:** the wording of the code (lawyer), and whether it is public.
 - **Spec sections affected if B is accepted:** 6.10, 7.7, 8, 11, 19 and 23.
 - **Code status:** Not built.
+
+## SCR-044: Contributors never see the client's name or organization (amends spec 11, 14; answers PRIVACY_AUDIT promise 2)
+
+- **Status:** ACCEPTED 2026-10-22 by the founder. Built 2026-10-22. Spec 11, 14 and section 23 updated.
+- **Gap:** Spec 14 said a contributor sees a client person by first name and organization. The privacy audit found this contradicts the promise "contributors never see client names".
+- **Decision:** A contributor sees only the project title, the project code and their own role. A client author is labelled "Client" in project threads and on task pages. Clients and admins see names as before. Notifications and emails to contributors already carried only the project title and role, and tests now pin that.
+- **Not covered by code:** text people type (project title, scope, task text, messages, file names and contents). That needs a staff rule.
+- **Code status:** Built. `AuthorLabel::for` and `AuthorLabel::forTaskComment`; `TaskDetail` loads the author's role. Tests: `tests/Feature/Privacy/ContributorSeesNoClientIdentityTest.php` (19 cases, six fail on the old code), `MessagePostingTest`. Messaging, Work and Privacy folders pass.
