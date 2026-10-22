@@ -7,7 +7,7 @@ Notes for the reviewer (delete before publishing):
 - Paste the final text into Admin, System, Agreement Templates, type "terms". It must never be put in code.
 - These terms cover use of the website and the platform. Contributors accept the separate Member Agreement and clients accept the separate Client MSA. [LAWYER: say which document wins if they differ.]
 - Square brackets are placeholders or open questions. Nothing is invented: each rule describes how the platform works today (master spec, `docs/GROIBE_MASTER_SPEC.md`).
-- The public copy rule in `CLAUDE.md` bans em dashes and AI-related wording. This draft follows it.
+- The public copy rule in the project rules file bans em dashes and AI-related wording. This draft follows it.
 
 Version: [VERSION NUMBER]. Effective from: [EFFECTIVE DATE].
 

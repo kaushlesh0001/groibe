@@ -7,7 +7,7 @@ Notes for the reviewer (delete before publishing):
 - This is a plain-language commitment to clients. [LAWYER: decide whether it is a public page, an annex to the Client MSA, or both. If it is an annex, say how it ranks against the MSA.]
 - It is written against `docs/PRIVACY_AUDIT.md`. Each promise below is tagged **[OK]** (the platform does it today; sections 2 and 5 are built and tested since 2026-10-22), **[CHANGED]** (worded to match what the platform does today, not the shorter promise first planned) or **[DO NOT PUBLISH UNTIL BUILT]**.
 - Square brackets are placeholders or open questions. No fact is invented.
-- The public copy rule in `CLAUDE.md` bans em dashes and AI-related wording. The AI promise in section 7 conflicts with that rule: see the two options there. The founder decides.
+- The public copy rule in the project rules file bans em dashes and AI-related wording. The AI promise in section 7 conflicts with that rule: see the two options there. The founder decides.
 - The Digital Personal Data Protection Act, 2023 and the Digital Personal Data Protection Rules, 2025 apply to personal data in what you share. Most duties start on 13 May 2027 under the phase-in. [LAWYER: confirm what applies today, and whether Groibe is a processor for the client's personal data inside files.]
 
 Version: [VERSION NUMBER]. Effective from: [EFFECTIVE DATE].
@@ -59,7 +59,7 @@ Some records are kept after erasure, for example payment records, the log of adm
 
 **[OK today, cannot be proved by software alone.]** The platform has no automated or machine-learning features and does not send your files or data to any outside service to learn from. Groibe will not use your files or data to train, tune or improve any automated model, and will not let anyone else do so.
 
-- **Option A (clear, breaks the public copy rule in `CLAUDE.md`):** "We do not use your data to train AI."
+- **Option A (clear, breaks the public copy rule in the project rules file):** "We do not use your data to train AI."
 - **Option B (follows the rule, less direct):** the sentence above, without the word "AI". [FOUNDER DECISION.]
 
 Contributors and staff are bound by the same rule in the Member Agreement and the Contributor Code. [CONFIRM that both documents contain it. The Member Agreement text is not in this repo.]

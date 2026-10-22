@@ -15,7 +15,7 @@ It is one Laravel app: the public site, the contributor app (`/app/contributor`)
 | Fake data for local and staging | `docs/DEMO_DATA.md` |
 | Putting the app on the shared cPanel host | `docs/DEPLOY.md` |
 | Running it day to day (data requests, 2FA reset, weekly checks) | `docs/OPERATIONS.md` |
-| Rules for people and AI working in this repo | `CLAUDE.md` |
+| Rules for people and AI working in this repo | the project rules file |
 
 If the code and the spec disagree, the spec wins. Do not edit the spec to match the code. Propose the change in `docs/SPEC_CHANGE_REQUESTS.md`.
 

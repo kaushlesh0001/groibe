@@ -132,7 +132,7 @@ Proposed changes only. The spec is edited by the founder, between passes, and lo
 
 ## SCR-017: New brand (spec sections 1, 10.1, 10.3)
 
-- **Status:** ACCEPTED 2026-10-10. Spec sections 1, 10.1, 10.3 and 23 updated. Design rules in `CLAUDE.md` updated to match.
+- **Status:** ACCEPTED 2026-10-10. Spec sections 1, 10.1, 10.3 and 23 updated. Design rules in the project rules file updated to match.
 - **Gap:** The founder supplied a brand brief with different colors, a different slogan, a named font and logo files, which contradicted section 10.3 (navy `#001844`, green `#14C352`, blue `#137AE5`) and the tagline in sections 1 and 10.1.
 - **Decision:** Adopt the brief. Colors become `brand-navy` `#042B65`, `brand-green` `#0EAE44`, `brand-green-alt` `#25A446`, `brand-blue` `#046CEA` and `brand-teal` `#06A2A7`. The tagline and hero become "Where Ideas Find People". Inter is the only font. The logo files in `public/brand` are used as supplied, and are never retyped, recolored or stretched.
 - **Contrast rules added** (measured, not assumed): navy on white 13.7:1; navy on green 4.65:1 (so green buttons use navy text); white on green 2.9:1 (fails AA, never used); green on white 2.9:1 (never text); `brand-green-alt` on white 3.2:1 (large text and graphics only); blue on white 4.8:1 (links on light surfaces); blue on navy 2.8:1 (never); teal on white 3.1:1 (decorative only).

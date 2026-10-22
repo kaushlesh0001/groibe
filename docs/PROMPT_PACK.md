@@ -1,11 +1,11 @@
-# GROIBE PROMPT PACK (for Claude Code, Sonnet 5.5)
+# GROIBE PROMPT PACK (for the coding assistant)
 
 ## How to use this
-- Repo layout: put `CLAUDE.md` in the repo root. Put this file and `GROIBE_MASTER_SPEC.md` in `docs/`.
-- One pass per Claude Code session. Start every session with the **Session Opener**.
+- Repo layout: put the project rules file in the repo root. Put this file and `GROIBE_MASTER_SPEC.md` in `docs/`.
+- One pass per the coding assistant session. Start every session with the **Session Opener**.
 - Do not move to the next pass until the **Gate** at the end of the current pass is green.
 - Commit and tag at the end of each pass (`pass-1-done`, etc.) so you can roll back.
-- If Claude Code deviates from the spec, use the **Repair Prompt**.
+- If the coding assistant deviates from the spec, use the **Repair Prompt**.
 - Keep sessions focused. If context gets long, start a new session with the Session Opener.
 
 ---
@@ -13,7 +13,7 @@
 ## Session Opener (paste at the start of every session)
 
 ```
-Read CLAUDE.md, then read docs/GROIBE_MASTER_SPEC.md completely, start to end, before doing anything else.
+Read the project rules file, then read docs/GROIBE_MASTER_SPEC.md completely, start to end, before doing anything else.
 Then read docs/PROMPT_PACK.md and find the pass I name below.
 Confirm in 5 bullets: the pass goal, the spec sections it covers, the models/tables involved, the tests required, and anything ambiguous.
 If anything is ambiguous in data model, permissions, or state machines, stop and ask. Otherwise proceed.
@@ -43,8 +43,8 @@ Report findings by severity. Fix critical and high ones. Log the rest in docs/SU
 - [ ] Domain DNS, Cloudflare account, MilesWeb PHP set to 8.3, SSH, Git, Composer verified.
 - [ ] MySQL database and user created on MilesWeb. SMTP mailbox created.
 - [ ] Local: PHP 8.3, Composer, Node, MySQL (Laravel Herd works well).
-- [ ] Private GitHub repo. Add `CLAUDE.md`, `docs/GROIBE_MASTER_SPEC.md`, `docs/PROMPT_PACK.md`.
-- [ ] Paste real legal text into a separate file for later (Member Agreement, Client MSA, SOW template). Do not give Claude Code anything confidential you would not commit.
+- [ ] Private GitHub repo. Add the project rules file, `docs/GROIBE_MASTER_SPEC.md`, `docs/PROMPT_PACK.md`.
+- [ ] Paste real legal text into a separate file for later (Member Agreement, Client MSA, SOW template). Do not give the coding assistant anything confidential you would not commit.
 - [ ] Confirm the spec section 22 defaults are acceptable. Edit the spec now if not.
 
 ---
@@ -65,7 +65,7 @@ Execute PASS 1: Foundation.
 6. Implement auth: login, logout, forgot/reset password, email verification, throttling, `/register/contributor`, `/register/client` (accounts only for now, no onboarding steps yet), and signed `/invite/{token}` activation for admin-created users.
 7. Implement the FeatureFlags and Settings services with caching, and a Filament admin for Users, Organizations, Skills, Categories, Project Types, Feature Flags and Settings.
 8. Impersonation (super_admin only) with a visible banner and activity logging. Admin audit log page (read-only).
-9. Base layouts: public layout, app layout (contributor/client), Tailwind brand tokens from CLAUDE.md, self-hosted font.
+9. Base layouts: public layout, app layout (contributor/client), Tailwind brand tokens from the project rules file, self-hosted font.
 10. Seeders: roles/permissions, super admin from env, categories, skills, project types, feature flags per spec 18.
 11. Tests: auth flows, role middleware, policy tests for User/Organization (including cross-organization denial), impersonation logging, feature flag toggling.
 
@@ -279,7 +279,7 @@ Write docs/DEPLOY.md for a shared cPanel host (MilesWeb) covering: PHP 8.3 selec
 Also create a deploy script (`scripts/deploy.sh`) usable over SSH that pulls from Git, installs dependencies, migrates, caches, and clears opcache safely. Do not include secrets.
 ```
 
-**Your manual checklist after Claude Code finishes:**
+**Your manual checklist after the coding assistant finishes:**
 - [ ] Deploy to a staging subdomain first. Run the smoke test.
 - [ ] Verify cron is running (system status widget).
 - [ ] Send test emails, check spam placement, fix SPF/DKIM/DMARC.
@@ -293,10 +293,10 @@ Also create a deploy script (`scripts/deploy.sh`) usable over SSH that pulls fro
 
 ## Tips that save rework
 
-- **Always start with the Session Opener.** Claude Code forgetting the spec is the main cause of broken linking.
+- **Always start with the Session Opener.** The coding assistant forgetting the spec is the main cause of broken linking.
 - **Keep passes small.** If a pass feels too big, split by numbered item and run them as sub-sessions, still opening each with the Session Opener.
 - **Demand tests as proof.** "Done" without a green test run is not done.
 - **Use `git diff` between passes.** Read what changed in migrations and policies before moving on, since those are the expensive things to fix later.
-- **Spec changes go through the change log (spec section 23).** If you change the data model mid-build, update the spec first, then tell Claude Code to reconcile.
+- **Spec changes go through the change log (spec section 23).** If you change the data model mid-build, update the spec first, then tell the coding assistant to reconcile.
 - **Run on staging with the demo dataset** before touching real data.
-- **If a package's API seems off,** tell Claude Code to read the installed version's docs and `vendor/` source rather than relying on memory.
+- **If a package's API seems off,** tell the coding assistant to read the installed version's docs and `vendor/` source rather than relying on memory.

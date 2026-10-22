@@ -1,4 +1,4 @@
-# CLAUDE.md: Groibe
+# Project rules: Groibe
 
 ## What this repo is
 - Groibe: managed-delivery platform for skilled Indian professionals and mid-market clients. Open applications are a controlled add-on.

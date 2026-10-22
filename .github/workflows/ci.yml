@@ -6,7 +6,7 @@ name: ci
 #   plan   Manual runs only: lists every test folder.
 #   full   Manual runs only: one job per test folder, so each stays inside the 1 GB memory limit.
 #
-# Rules this file follows (CLAUDE.md): PHP 8.3 (the version in composer.json and on the host); `npm run build` before the tests
+# Rules this file follows (the project rules file): PHP 8.3 (the version in composer.json and on the host); `npm run build` before the tests
 # (pages that use @vite need public/build); Pest folder by folder with `php -d memory_limit=1G`, never the all-in-one test command; Pint only on
 # explicit paths, never on the whole repo or the docs folder.
 

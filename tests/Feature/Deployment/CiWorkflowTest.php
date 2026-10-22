@@ -1,7 +1,7 @@
 <?php
 
 /**
- * The CI workflow is code too. These tests keep it to the rules in CLAUDE.md, so it cannot drift back to what made the old
+ * The CI workflow is code too. These tests keep it to the rules in the project rules file, so it cannot drift back to what made the old
  * workflows fail on every push (`phpunit` instead of Pest, PHP 8.4, Pint on the whole repo).
  */
 function ciFile(): string

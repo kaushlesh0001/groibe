@@ -4,10 +4,10 @@
 
 Notes for the reviewer (delete before publishing):
 
-- Paste the final text into Admin, System, Agreement Templates, type "privacy". The text must never be put in code (CLAUDE.md).
+- Paste the final text into Admin, System, Agreement Templates, type "privacy". The text must never be put in code (the project rules file).
 - Every item in square brackets is a placeholder or an open question. No fact in this draft is invented: each statement describes what the platform does today (see `docs/PRIVACY_AUDIT.md`), and anything that does not match is marked **[CONFIRM]**.
 - The Digital Personal Data Protection Act, 2023 and the Digital Personal Data Protection Rules, 2025 are named below. The founder's note is that most duties start on 13 May 2027 under the phase-in. The lawyer must confirm which duties apply today and which apply from that date.
-- The public copy rule in `CLAUDE.md` bans em dashes and AI-related wording. This draft follows it.
+- The public copy rule in the project rules file bans em dashes and AI-related wording. This draft follows it.
 
 Version: [VERSION NUMBER]. Effective from: [EFFECTIVE DATE].
 

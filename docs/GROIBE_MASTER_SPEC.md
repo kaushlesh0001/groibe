@@ -1,7 +1,7 @@
 # GROIBE MASTER SPEC v1.0
 
 Status: FROZEN for build. Changes only between build passes, logged in section 23.
-Audience: Claude Code (Sonnet 5.5) and any human developer.
+Audience: the coding assistant and any human developer.
 Rule: read this whole document before generating any code.
 
 ---
