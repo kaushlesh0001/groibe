@@ -51,7 +51,7 @@ Contributors who leave a project must delete your files from their own devices. 
 
 ## 6. Your data, your requests
 
-**[OK]** You can ask for a copy of the personal data we hold about you, and ask us to erase it, from Settings, then Privacy. We reply within [RESPONSE TIME SET BY LAWYER]. For data about your organization as a business, write to [GRIEVANCE EMAIL]. [LAWYER: no screen exists for company data requests.]
+**[OK]** You can ask for a copy of the personal data we hold about you, and ask us to erase it, from Settings, then Privacy. We reply within [RESPONSE TIME SET BY LAWYER]. For data about your organization as a business, write to contact@groibe.com. [LAWYER: no screen exists for company data requests.]
 
 Some records are kept after erasure, for example payment records, the log of admin actions, project messages and agreements you accepted. The Privacy Policy lists them and says why.
 
@@ -86,4 +86,4 @@ If your data is lost, shown to the wrong person or taken, we will tell you [WITH
 
 ## 11. Questions and complaints
 
-[GRIEVANCE OFFICER NAME], [GRIEVANCE EMAIL], [REGISTERED ADDRESS]. Governing law: [GOVERNING LAW]. [LAWYER: courts or arbitration.]
+Kaushlesh Kumar [CONFIRM WITH LAWYER], contact@groibe.com, [REGISTERED ADDRESS]. Governing law: [GOVERNING LAW]. [LAWYER: courts or arbitration.]

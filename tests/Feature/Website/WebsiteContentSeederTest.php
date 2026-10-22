@@ -27,11 +27,13 @@ it('seeds ten general, six contributor and six client questions, all drafts that
         ->and(Faq::query()->active()->count())->toBe(0);
 });
 
-it('seeds the About page as a hidden draft with no founder claims', function () {
+it('seeds the About page as a hidden draft whose founder line holds only the name, city and email the founder gave', function () {
     $about = Page::query()->where('slug', 'about')->firstOrFail();
 
     expect($about->is_active)->toBeFalse()->and($about->needs_review)->toBeTrue()
-        ->and($about->body_html)->not->toContain('Kaushlesh')->not->toContain('Kolkata');
+        ->and($about->body_html)->toContain('is founded by')->toContain('Kaushlesh Kumar')->toContain('Kolkata, India')->toContain('contact@groibe.com')
+        // No biography, no past roles, no phone number, no street address.
+        ->not->toMatch('/(formerly|previously|years of experience|MBA|graduate|\+91|Road|Street)/i');
 });
 
 it('seeds no testimonial, because a testimonial must be a real quote', function () {

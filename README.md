@@ -71,3 +71,7 @@ Do not run `php artisan test`: it runs out of memory. Run Pest one folder at a t
 ## Contact
 
 Questions: `contact@groibe.com`.
+
+## Founder and contact
+
+Groibe is founded by Kaushlesh Kumar, based in Kolkata, India. Contact: contact@groibe.com

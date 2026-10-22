@@ -89,7 +89,7 @@ class WebsiteContentSeeder extends Seeder
         ];
     }
 
-    /** The old site's About text that was not flagged. The founder block is left out on purpose: it needs the founder's own confirmation. */
+    /** The old site's About text that was not flagged. The founder line carries only the name, the city and the contact email the founder gave (2026-10-22); no biography. The page stays flagged "needs review" until it is approved. */
     private function aboutBody(): string
     {
         return '<p>Groibe began with a simple belief: the right people change everything.</p>'
@@ -97,6 +97,8 @@ class WebsiteContentSeeder extends Seeder
             .'<h2>Mission</h2>'
             .'<p>Build a trusted community where curious people grow together and businesses build with confidence.</p>'
             .'<p>Groibe sits between community, consulting, technology, and managed delivery.</p>'
-            .'<p>The goal is not to copy existing platforms. The goal is to create a better trust layer for people and businesses.</p>';
+            .'<p>The goal is not to copy existing platforms. The goal is to create a better trust layer for people and businesses.</p>'
+            .'<h2>Founder</h2>'
+            .'<p>Groibe is founded by Kaushlesh Kumar, based in Kolkata, India. You can write to contact@groibe.com.</p>';
     }
 }

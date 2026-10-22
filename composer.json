@@ -3,7 +3,16 @@
     "name": "laravel/livewire-starter-kit",
     "type": "project",
     "description": "The official Laravel starter kit for Livewire.",
-    "keywords": ["laravel", "framework"],
+    "authors": [
+        {
+            "name": "Kaushlesh Kumar",
+            "email": "contact@groibe.com"
+        }
+    ],
+    "keywords": [
+        "laravel",
+        "framework"
+    ],
     "license": "MIT",
     "require": {
         "php": "^8.2",

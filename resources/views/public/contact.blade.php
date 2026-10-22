@@ -12,6 +12,9 @@
         <div class="flex flex-col gap-2">
             <h1 class="text-3xl font-semibold">Contact</h1>
             <p class="text-zinc-700">Send a message to the Groibe team. We use your details only to reply to you.</p>
+            @if (filled(config('groibe.contact_email')))
+                <p class="text-zinc-700">You can also write to <a class="text-brand-blue underline" href="mailto:{{ config('groibe.contact_email') }}">{{ config('groibe.contact_email') }}</a>.</p>
+            @endif
         </div>
 
         @if (session('status'))

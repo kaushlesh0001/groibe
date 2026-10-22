@@ -41,7 +41,7 @@ Contributors do real work for real businesses. Clients trust Groibe with their f
 5. **Do not copy client data to places you do not control.** Do not put it on personal cloud drives, personal email, or messaging apps.
 6. **Do not paste client files or data into an outside automated or AI tool, and do not use them to train or tune any model.** [FOUNDER DECISION: public wording conflicts with the rule in `CLAUDE.md`. Option A keeps the words "AI tool". Option B says "any outside online tool or service that stores or learns from what you give it".]
 7. **When your seat ends, delete client files** from your devices and accounts, and confirm if we ask. Groibe cannot check your device. You remain bound by this rule after the project. [LAWYER: period, wording, exceptions for your own submitted work.]
-8. **Report problems at once.** If you lose a device, share a file by mistake or think someone saw client data, write to [INCIDENT EMAIL] within [HOURS SET BY LAWYER] and say what happened. We will not punish a quick honest report.
+8. **Report problems at once.** If you lose a device, share a file by mistake or think someone saw client data, write to contact@groibe.com within [HOURS SET BY LAWYER] and say what happened. We will not punish a quick honest report.
 9. **Keep the client's name out of what you write.** On the platform, contributors know a client only as "Client". Do not put a client's company name, or the name of a person at the client, in a task title, task text, comment, message or file name, and do not ask anyone for it. If you learn it anyway, do not repeat it. Groibe staff follow the same rule when they write project titles, scope, task text and messages for contributors to read. The platform cannot filter what people type, so this rule is how the promise to clients is kept. [LAWYER: wording, and the consequence of a breach.]
 
 ## 5. Personal data of other people
@@ -63,7 +63,7 @@ Client files may hold personal data about people who are not you. Treat it as pr
 - You are not asked to do work outside the scope without a new, agreed seat or amount. [LAWYER: wording.]
 - Payment timing is [PAYMENT TERMS SET BY FOUNDER AND LAWYER]. Groibe records the payment and a transaction reference in the platform.
 - We keep your personal data as set out in the Privacy Policy. You can ask for a copy or for erasure in Settings, then Privacy.
-- You can raise a concern with [GRIEVANCE OFFICER NAME] at [GRIEVANCE EMAIL]. We do not retaliate against a good-faith report.
+- You can raise a concern with Kaushlesh Kumar [CONFIRM WITH LAWYER] at contact@groibe.com. We do not retaliate against a good-faith report.
 
 ## 8. What happens if the code is broken
 

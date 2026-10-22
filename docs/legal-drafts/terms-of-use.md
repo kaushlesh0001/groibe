@@ -75,8 +75,8 @@ You may close your account in Settings, or ask us to. Obligations that are meant
 
 ## 12. Disputes and law
 
-Please write to [GRIEVANCE EMAIL] first. These terms are governed by [GOVERNING LAW]. [LAWYER: choice of courts or arbitration, seat and language.]
+Please write to contact@groibe.com first. These terms are governed by [GOVERNING LAW]. [LAWYER: choice of courts or arbitration, seat and language.]
 
 ## 13. Contact
 
-[COMPANY LEGAL NAME], [REGISTERED ADDRESS]. Email: [GRIEVANCE EMAIL]. Grievance officer: [GRIEVANCE OFFICER NAME].
+[COMPANY LEGAL NAME], [REGISTERED ADDRESS]. Email: contact@groibe.com. Grievance officer: Kaushlesh Kumar [CONFIRM WITH LAWYER].

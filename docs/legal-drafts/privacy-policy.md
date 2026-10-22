@@ -94,7 +94,7 @@ You can ask us to:
 - [NOMINATE another person to act for you if you die or cannot act. LAWYER: not built];
 - raise a grievance (section 9).
 
-**How.** Signed in, open Settings, then Privacy, and make a request. We answer within [RESPONSE TIME SET BY LAWYER]. We reply to the email address on your account, and we may ask you to prove it is you. If you cannot sign in, write to [GRIEVANCE EMAIL].
+**How.** Signed in, open Settings, then Privacy, and make a request. We answer within [RESPONSE TIME SET BY LAWYER]. We reply to the email address on your account, and we may ask you to prove it is you. If you cannot sign in, write to contact@groibe.com.
 
 **What erasure does.** We remove your name, email, password, sign-in data, profile and photo, skills, written application answers, proof-of-work text, support conversations and notifications, and the address on email log rows. Your account stays as an anonymous record. **We keep** payout records, the log of admin actions, project messages and comments, submitted work, published reviews, records of agreements you accepted and reputation figures, because [LEGAL REASON, LAWYER TO CONFIRM FOR EACH]. We cannot refuse a request because of work in progress without telling you why, and we cannot erase an account while work or payments are still open. [LAWYER: confirm.]
 
@@ -112,8 +112,8 @@ No system is perfectly secure. If a breach affects your personal data we will te
 
 ## 9. Grievances and contact
 
-Grievance officer: [GRIEVANCE OFFICER NAME], [DESIGNATION].
-Email: [GRIEVANCE EMAIL]. Address: [REGISTERED ADDRESS]. We reply within [RESPONSE TIME].
+Grievance officer: Kaushlesh Kumar [CONFIRM WITH LAWYER], Founder [CONFIRM WITH LAWYER].
+Email: contact@groibe.com. Address: [REGISTERED ADDRESS]. We reply within [RESPONSE TIME].
 If you are not satisfied you may complain to the Data Protection Board of India. [LAWYER: confirm the route and the wording.]
 
 ## 10. Children
