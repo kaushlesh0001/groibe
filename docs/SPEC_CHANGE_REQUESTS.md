@@ -451,3 +451,13 @@ Proposed changes only. The spec is edited by the founder, between passes, and lo
 - **Decision:** A contributor sees only the project title, the project code and their own role. A client author is labelled "Client" in project threads and on task pages. Clients and admins see names as before. Notifications and emails to contributors already carried only the project title and role, and tests now pin that.
 - **Not covered by code:** text people type (project title, scope, task text, messages, file names and contents). That needs a staff rule.
 - **Code status:** Built. `AuthorLabel::for` and `AuthorLabel::forTaskComment`; `TaskDetail` loads the author's role. Tests: `tests/Feature/Privacy/ContributorSeesNoClientIdentityTest.php` (19 cases, six fail on the old code), `MessagePostingTest`. Messaging, Work and Privacy folders pass.
+
+## SCR-045: Audit log of file downloads (amends spec 17.2; answers PRIVACY_AUDIT promise 8)
+
+- **Status:** ACCEPTED 2026-10-22 by the founder. Built 2026-10-22. Spec 17.2 and section 23 updated.
+- **Gap:** `MediaDownloadController` wrote no entry, so nobody could say who opened a client file.
+- **Decision:** One audit entry (log `file`) per download, written after the policy allows it: the person, the file (media id, collection, display name and size), and the time. Never the contents or the stored path. Routes covered: `files/{media}` (brief, project, submission and message files), the client SOW PDF (`downloaded`), the client SOW print page (`opened`), and the admin SOW PDF action (`downloaded`). Refused requests, guests, bad or expired links, guessed ids and missing files write nothing.
+- **Already logged before this SCR:** uploads, CSV exports, import report downloads, data export downloads.
+- **Not logged, by choice:** profile photos (own photo, loaded on every page; the public directory photo is public). Say if you want them.
+- **Retention:** the entries follow the audit log retention, 365 days by default (spec 17.4).
+- **Code status:** Built. `App\Actions\Files\LogFileDownload`; `MediaDownloadController`, `SowDocumentController`, `SowsRelationManager`. Tests: `tests/Feature/Security/FileDownloadAuditTest.php` (18 cases: each file collection, each SOW route, denied access, guest, bad signature, expired link, missing file).
