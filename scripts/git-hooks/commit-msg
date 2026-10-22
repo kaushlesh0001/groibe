@@ -1,0 +1,10 @@
+#!/bin/sh
+#
+# Local commit-msg hook: removes any line that names the coding assistant or its vendor from a commit message.
+# Install (once per clone): cp scripts/git-hooks/commit-msg .git/hooks/commit-msg
+# It rewrites only the message being written. It never touches history that already exists.
+
+file="$1"
+
+grep -v -i -E 'anthropic|^co-authored-by:[[:space:]]*claude|^claude-session:|^generated with' "$file" > "$file.tmp" || true
+mv "$file.tmp" "$file"
