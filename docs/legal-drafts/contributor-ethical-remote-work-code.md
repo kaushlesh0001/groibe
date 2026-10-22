@@ -42,6 +42,7 @@ Contributors do real work for real businesses. Clients trust Groibe with their f
 6. **Do not paste client files or data into an outside automated or AI tool, and do not use them to train or tune any model.** [FOUNDER DECISION: public wording conflicts with the rule in `CLAUDE.md`. Option A keeps the words "AI tool". Option B says "any outside online tool or service that stores or learns from what you give it".]
 7. **When your seat ends, delete client files** from your devices and accounts, and confirm if we ask. Groibe cannot check your device. You remain bound by this rule after the project. [LAWYER: period, wording, exceptions for your own submitted work.]
 8. **Report problems at once.** If you lose a device, share a file by mistake or think someone saw client data, write to [INCIDENT EMAIL] within [HOURS SET BY LAWYER] and say what happened. We will not punish a quick honest report.
+9. **Keep the client's name out of what you write.** On the platform, contributors know a client only as "Client". Do not put a client's company name, or the name of a person at the client, in a task title, task text, comment, message or file name, and do not ask anyone for it. If you learn it anyway, do not repeat it. Groibe staff follow the same rule when they write project titles, scope, task text and messages for contributors to read. The platform cannot filter what people type, so this rule is how the promise to clients is kept. [LAWYER: wording, and the consequence of a breach.]
 
 ## 5. Personal data of other people
 

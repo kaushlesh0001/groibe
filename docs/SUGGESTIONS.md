@@ -662,3 +662,5 @@ Scope: everything built since the Pass 9 documentation audit (commits 62c8f47 to
 
 351. **SCR-044 built; resolves 340 (names) and replaces the naming rule in 201.** Contributors now see a client author only as "Client". Staff typing a client name into a title, scope, task or message is still not stopped by code.
 352. **SCR-045 built (promise 8).** Profile photos are not in the download log. The log is pruned at 365 days with the rest of the audit trail, so a longer promise about who opened a file needs a longer `retention.activity_log_days` or a separate export.
+
+353. **Done: SUGGESTIONS 350.** `PUBLIC_DIR` is removed from `scripts/deploy.sh`, and the old PHP path is replaced in `docs/OPERATIONS.md` and the script comment. The script tests that run `bash` skip on this Windows PC, so the edit was checked with `bash -n` and `DeployFilesTest` only.

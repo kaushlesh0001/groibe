@@ -10,10 +10,9 @@
 # final health check. It never prints a password, and it never runs npm: the built assets are uploaded, not built here.
 #
 # Settings, all optional, as environment variables:
-#   PHP_BIN=/opt/cpanel/ea-php83/root/usr/bin/php   the PHP 8.3 binary (the `php` on a cPanel SSH login is often older)
+#   PHP_BIN=/opt/ecp-php83/bin/php                  the PHP 8.3 binary (the `php` on a cPanel SSH login is often older)
 #   COMPOSER_BIN=composer                           or `"$PHP_BIN" /home/USER/composer.phar`
 #   DEPLOY_BRANCH=main     DEPLOY_REMOTE=origin
-#   PUBLIC_DIR=/home/USER/public_html               only when the site is served from a copy of `public` (DEPLOY.md, option B)
 
 set -euo pipefail
 
@@ -22,7 +21,6 @@ PHP_BIN="${PHP_BIN:-php}"
 COMPOSER_BIN="${COMPOSER_BIN:-composer}"
 BRANCH="${DEPLOY_BRANCH:-main}"
 REMOTE="${DEPLOY_REMOTE:-origin}"
-PUBLIC_DIR="${PUBLIC_DIR:-}"
 ACTION="${1:-deploy}"
 
 say() { printf '\n==> %s\n' "$*"; }
@@ -62,7 +60,6 @@ preflight() {
     # Vite output is not in Git. It is built on a computer and uploaded.
     [ -f public/build/manifest.json ] || fail "public/build/manifest.json is missing. Build with 'npm run build' on a computer and upload public/build first (DEPLOY.md, step 5)."
 
-    [ -z "$PUBLIC_DIR" ] || command -v rsync >/dev/null || fail "PUBLIC_DIR is set but rsync is not installed."
 }
 
 prepare_folders() {
@@ -83,12 +80,6 @@ reset_opcache() {
     # This clears the command-line cache only. The web server keeps its own, and no command here can reach it. It picks up the new
     # files by itself while opcache.validate_timestamps is 1 (the cPanel default). See DEPLOY.md, "After a deploy".
     "$PHP_BIN" -r 'if (function_exists("opcache_reset")) { opcache_reset(); }' || true
-}
-
-sync_public() {
-    [ -n "$PUBLIC_DIR" ] || return 0
-    say "Copying public/ to $PUBLIC_DIR (index.php there is yours and is left alone)"
-    rsync -a --exclude 'index.php' "$APP_DIR/public/" "$PUBLIC_DIR/"
 }
 
 health_check() {
@@ -173,7 +164,6 @@ deploy() {
     artisan queue:restart || true
     reset_opcache
 
-    sync_public
 
     artisan up
     trap - ERR
@@ -198,7 +188,6 @@ rollback() {
     prepare_folders
     rebuild_caches
     reset_opcache
-    sync_public
 
     artisan up
     trap - ERR

@@ -72,7 +72,7 @@ Use this procedure when an admin lost their authenticator app and recovery codes
 
    ```bash
    cd ~/groibe
-   /opt/cpanel/ea-php83/root/usr/bin/php artisan groibe:two-factor-reset person@example.com
+   /opt/ecp-php83/bin/php artisan groibe:two-factor-reset person@example.com
    ```
 
    Replace the PHP path with the one in your `.env` notes (DEPLOY section 7), and the email with the admin's. If the person has an authenticator app or recovery codes it asks you to confirm. Add `--force` only in a script.
@@ -99,7 +99,7 @@ Go through these in order:
 
    ```bash
    cd ~/groibe
-   /opt/cpanel/ea-php83/root/usr/bin/php artisan tinker --execute="App\Models\User::where('email', 'old@example.com')->firstOrFail()->update(['email' => 'new@example.com']);"
+   /opt/ecp-php83/bin/php artisan tinker --execute="App\Models\User::where('email', 'old@example.com')->firstOrFail()->update(['email' => 'new@example.com']);"
    ```
 
    Do this only after proving who is asking (section 3, step 1). Do **not** switch production to the `log` mailer to read a code: that writes every code into a file.

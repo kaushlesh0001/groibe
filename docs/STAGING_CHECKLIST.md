@@ -86,11 +86,11 @@ Decided by the founder on 2026-10-22:
   git status --short
   git log -1 --oneline
   git push origin main
-  git push origin staging-ready
+  git push origin staging-ready-2
   ```
 
   Push the one tag by name. Do not use `git push --tags`.
-- Success: `git status --short` prints nothing. The push ends with `main -> main` and `[new tag] staging-ready -> staging-ready`. Write down the short commit code from `git log -1 --oneline`. You will compare it on the server in Part 3.
+- Success: `git status --short` prints nothing. The push ends with `main -> main` and `[new tag] staging-ready-2 -> staging-ready-2`. Write down the short commit code from `git log -1 --oneline`. You will compare it on the server in Part 3.
 - If it fails: a push error about login means GitHub needs your sign-in. Fix that first.
 - [ ] Done
 
