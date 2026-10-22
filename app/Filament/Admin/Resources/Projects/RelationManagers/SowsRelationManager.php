@@ -2,6 +2,7 @@
 
 namespace App\Filament\Admin\Resources\Projects\RelationManagers;
 
+use App\Actions\Files\LogFileDownload;
 use App\Actions\Sows\CreateSow;
 use App\Actions\Sows\SendSow;
 use App\Actions\Sows\UpdateSow;
@@ -103,6 +104,7 @@ class SowsRelationManager extends RelationManager
                     ->visible(fn (Sow $record): bool => (bool) auth()->user()?->can('view', $record))
                     ->action(function (Sow $record) {
                         $pdf = app(SowPdf::class);
+                        app(LogFileDownload::class)->sow($record, auth()->user(), 'downloaded');
 
                         return response()->streamDownload(function () use ($pdf, $record): void {
                             echo $pdf->render($record);

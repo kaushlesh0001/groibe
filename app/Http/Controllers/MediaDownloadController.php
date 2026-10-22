@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Files\LogFileDownload;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
@@ -13,9 +15,13 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class MediaDownloadController extends Controller
 {
-    public function __invoke(Media $media): StreamedResponse
+    public function __invoke(Request $request, Media $media, LogFileDownload $log): StreamedResponse
     {
         Gate::authorize('view', $media);
+
+        abort_unless(Storage::disk($media->disk)->exists($media->getPathRelativeToRoot()), 404);
+
+        $log->media($media, $request->user());
 
         $downloadName = $media->name.'.'.$media->extension;
 
