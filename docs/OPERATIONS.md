@@ -150,6 +150,6 @@ Data is deleted for good by these jobs and cannot be brought back, except from a
 Commit messages and pull request text in this repository do not carry the coding assistant's name, its vendor's name, a co-author line for it, or a session line.
 
 1. `.claude/settings.json` sets the assistant's commit and pull request attribution to empty.
-2. A local `commit-msg` hook deletes any line that holds "anthropic", starts with "Co-Authored-By: Claude", "Claude-Session:" or "Generated with". The tracked copy is `scripts/git-hooks/commit-msg`. Git does not share hooks, so on a new clone install it once: `cp scripts/git-hooks/commit-msg .git/hooks/commit-msg`.
+2. A local `commit-msg` hook deletes any line that names the assistant or its vendor, any co-author line for the assistant, any session line and any "Generated with" line. The tracked copy is `scripts/git-hooks/commit-msg`. Git does not share hooks, so on a new clone install it once: `cp scripts/git-hooks/commit-msg .git/hooks/commit-msg`.
 3. The hook only changes the message being written. It never rewrites commits that already exist, and history is never rewritten to remove old trailers.
 4. Check a clone has it: `ls -l .git/hooks/commit-msg`.
