@@ -78,7 +78,7 @@
         <flux:heading id="comments-heading" size="lg" level="2">Comments</flux:heading>
         @forelse ($comments as $item)
             <div wire:key="comment-{{ $item->id }}" class="rounded-lg border border-zinc-200 p-3">
-                <p class="text-sm text-zinc-600">{{ $item->user->name }} &middot; {{ $item->created_at->toDayDateTimeString() }}</p>
+                <p class="text-sm text-zinc-600">{{ $labels->forTaskComment($item->user) }} &middot; {{ $item->created_at->toDayDateTimeString() }}</p>
                 <p class="whitespace-pre-line">{{ $item->body }}</p>
             </div>
         @empty

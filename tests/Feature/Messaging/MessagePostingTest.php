@@ -176,14 +176,23 @@ describe('names shown to each reader', function () {
             ->assertDontSee('Meera')->assertSee('Project team');
     });
 
-    it('shows client people to contributors by first name and organization, and staff as Groibe', function () {
+    it('shows client people to contributors only as Client (SCR-044), and staff as Groibe', function () {
         ($this->post)($this->owner, 'Thanks for the update.');
         ($this->post)($this->dm, 'You are welcome.');
 
         $firstName = explode(' ', $this->owner->name)[0];
 
         Livewire::actingAs($this->seat)->test(Conversation::class, ['thread' => $this->thread])
-            ->assertSee("{$firstName}, Acme Foods")->assertSee('(Groibe)')->assertDontSee($this->dm->name);
+            ->assertSee('Client')->assertDontSee($firstName)->assertDontSee('Acme Foods')->assertSee('(Groibe)')->assertDontSee($this->dm->name);
+    });
+
+    it('still shows client people to clients and admins by first name and organization', function () {
+        ($this->post)($this->owner, 'Thanks for the update.');
+
+        $firstName = explode(' ', $this->owner->name)[0];
+
+        Livewire::actingAs($this->manager)->test(Conversation::class, ['thread' => $this->thread])->assertSee("{$firstName}, Acme Foods");
+        Livewire::actingAs($this->dm)->test(Conversation::class, ['thread' => $this->thread])->assertSee("{$firstName}, Acme Foods");
     });
 });
 
