@@ -5,7 +5,7 @@
 Notes for the reviewer (delete before publishing):
 
 - This is a plain-language commitment to clients. [LAWYER: decide whether it is a public page, an annex to the Client MSA, or both. If it is an annex, say how it ranks against the MSA.]
-- It is written against `docs/PRIVACY_AUDIT.md`. Each promise below is tagged **[OK]** (the platform does it today), **[CHANGED]** (worded to match what the platform does today, not the shorter promise first planned) or **[DO NOT PUBLISH UNTIL BUILT]**.
+- It is written against `docs/PRIVACY_AUDIT.md`. Each promise below is tagged **[OK]** (the platform does it today; sections 2 and 5 are built and tested since 2026-10-22), **[CHANGED]** (worded to match what the platform does today, not the shorter promise first planned) or **[DO NOT PUBLISH UNTIL BUILT]**.
 - Square brackets are placeholders or open questions. No fact is invented.
 - The public copy rule in `CLAUDE.md` bans em dashes and AI-related wording. The AI promise in section 7 conflicts with that rule: see the two options there. The founder decides.
 - The Digital Personal Data Protection Act, 2023 and the Digital Personal Data Protection Rules, 2025 apply to personal data in what you share. Most duties start on 13 May 2027 under the phase-in. [LAWYER: confirm what applies today, and whether Groibe is a processor for the client's personal data inside files.]
@@ -27,11 +27,11 @@ Version: [VERSION NUMBER]. Effective from: [EFFECTIVE DATE].
 
 ## 2. Who sees your name and what you pay
 
-**[CHANGED]** Contributors do not see what you pay Groibe, your contract value, or your budget. They see their own agreed amount and payouts only.
+**[OK]** Contributors do not see what you pay Groibe, your contract value, or your budget. They see their own agreed amount and payouts only.
 
-**[DO NOT PUBLISH: "contributors never see your name".]** In project conversations, a contributor sees the first name of your people who post, and your organization's name. Contributor identity is not shown to you before you accept the statement of work, and you see contributors by first name, role and headline, unless the project hides its team. [FOUNDER DECISION: keep this wording, or change the platform so contributors see only "Client". An SCR is needed for the second.]
+**[OK, built 2026-10-22, SCR-044]** Contributors do not see your organization's name or the name of any person in your organization. On a project they see the project title, the project code and their own role. In project conversations your people appear to them only as "Client". The same holds on task pages, in notifications and in emails sent to contributors. Contributor identity is not shown to you before you accept the statement of work, and you see contributors by first name, role and headline, unless the project hides its team.
 
-Please do not put your company's name or secrets in a project title or task text if you want them kept from contributors. [LAWYER: wording.]
+Groibe cannot filter what people type. Please do not put your company's name or secrets in a project title, scope, task text, message or file name if you want them kept from contributors, and Groibe staff follow the same rule when they write those. [LAWYER: wording.]
 
 ## 3. Files are opened only through short links
 
@@ -47,9 +47,7 @@ Contributors who leave a project must delete your files from their own devices. 
 
 ## 5. A record of who opened your files
 
-**[DO NOT PUBLISH UNTIL BUILT.]** "We keep a record of every download of your files." Today the platform records uploads but not downloads. This needs a change to the platform (SCR) before it is promised. [FOUNDER DECISION.]
-
-When built: say how long the record is kept and whether clients can ask to see it.
+**[OK, built 2026-10-22, SCR-045]** We keep a record of every download of your files: who opened which file and when. The record never holds the contents of the file. It covers brief files, project files, submitted work and message attachments, and the statement of work as a PDF or print page. A request that is refused leaves no entry, because nothing was opened. The record is kept for [PERIOD SET BY LAWYER; the platform default is 365 days, then it is deleted with the rest of the admin log]. [FOUNDER DECISION: whether clients may ask to see the record for their own files, and how.] The record cannot show what a person did with a file after they downloaded it.
 
 ## 6. Your data, your requests
 
